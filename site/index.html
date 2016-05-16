@@ -17,6 +17,9 @@
     <!-- Custom CSS -->
     <link href="css/freelancer.css" rel="stylesheet">
 
+    <!-- Additional Custom CSS -->
+    <link href="css/mine.css" rel="stylesheet">
+
     <!-- Custom Fonts -->
     <link href="font-awesome/css/font-awesome.min.css" rel="stylesheet" type="text/css">
     <link href="http://fonts.googleapis.com/css?family=Montserrat:400,700" rel="stylesheet" type="text/css">
@@ -78,7 +81,7 @@
                     <div class="intro-text">
                         <span class="name">Cooper Riehl</span>
                         <hr class="star-light">
-                        <span class="skills">Programmer - Game Designer - Instructor</span>
+                        <span class="skills">Software Engineer - Game Designer - Instructor</span>
                     </div>
                 </div>
             </div>
@@ -140,7 +143,11 @@
             </div>
             <div class="row">
                 <div class="col-lg-8 col-lg-offset-2 text-center">
-                    <p>I am a student at the University of Michigan, studying Computer Science Engineering.<br>This site is a place for me to show off some of my personal projects.<br>Feel free to contact me below if you are interested in my work.</p>
+                    <p>
+                        I am a Computer Science Engineering student at the University of Michigan.<br>
+                        This site is a place for me to show off some of my personal projects.<br>
+                        Feel free to contact me below if you are interested in my work.
+                    </p>
                 </div>
             </div>
         </div>
@@ -208,7 +215,7 @@
                 <div class="row">
                     <div class="footer-col col-md-4">
                         <h3>Location</h3>
-                        <p>Ann Arbor, MI</p>
+                        <p>University of Michigan<br>Ann Arbor, MI</p>
                     </div>
                     <div class="footer-col col-md-4">
                         <h3>Around the Web</h3>
@@ -218,6 +225,9 @@
                             </li>
                             <li>
                                 <a href="https://www.linkedin.com/in/cooper-riehl-73071090" class="btn-social btn-outline"><i class="fa fa-fw fa-linkedin"></i></a>
+                            </li>
+                            <li>
+                                <a href="https://www.quora.com/profile/Cooper-Riehl" class="btn-social btn-outline"><span class="fa fa-fw"><strong>Q</strong></span></a>
                             </li>
                         </ul>
                     </div>
@@ -261,22 +271,28 @@
                         <div class="modal-body">
                             <h2>Small Fry's Big Adventure</h2>
                             <hr class="star-primary">
-                            <img src="img/portfolio/SmallFry.jpg" class="img-responsive img-centered" alt="">
-                            <p class="text-left">This game was built in Unity for a 48-hour Game Jam at the University of Michigan. The theme for this game jam was randomly selected for each team at the start of the competition. As a result, this game was developed from conception to completion in 48 hours.</p>
-                            <p class="text-left">My main contribution to this project was the dialogue engine, which included learning the Unity UI system in a single weekend. I also helped my teammates learn how to use version control, which made the development process very smooth.</p>
-                            <p class="text-left">We ended up taking second place in the competition, and won an award for "Best Artwork". We also won a trophy for "Most Useless Feature", for including the ability to dance with the D-pad. We originally planned another mechanic involving dancing but ran out of time to implement it. However, our artist worked so hard on the dance animations that we couldn't resist leaving them in the final product.</p>
-                            <p class="text-left">On that note, our artist was amazing and her website/portfolio can be found <a href="http://www.nicolecischke.com/">here</a>. You should definitely check her out.</p>
-                            <p class="text-left"><b>Note that</b> this game was designed to be used with an Xbox controller, and I recommend using one if you plan on playing. It was also built using Unity's experimental WebGL build, so some features may not work as originally intended.</p>
-                            <ul class="list-inline item-details">
-                                <ul class="list-inline">
-                                    <li>
-                                        <a href="https://bitbucket.org/cariehl/spacejam/src/859768e2b629c866796591dc0c54b9e94508b2e6?at=master" class="btn btn-default"> Source</a>
-                                    </li>
-                                    <li>
-                                        <a href="games/SmallFry/index.html" class="btn btn-default"> Play</a>
-                                    </li>
-                                </ul>
+                            <img src="img/portfolio/SmallFry.jpg" class="img-responsive img-centered" alt="Small Fry begins his journey">
+                            <ul class="list-inline">
+                                <li>
+                                    <a href="https://bitbucket.org/cariehl/spacejam/src/859768e2b629c866796591dc0c54b9e94508b2e6?at=master" class="btn btn-default"> Source</a>
+                                </li>
+                                <li>
+                                    <a href="games/SmallFry/index.html" class="btn btn-default"> Play</a>
+                                </li>
                             </ul>
+                            <h3>Team Members</h3>
+                            <ul class="list-inline font-size-normal">
+                                <li><a href="http://www.nicolecischke.com/">Nicole Cischke</a></li>
+                                <li>Jacob Haas</li>
+                                <li>Tomas Medina</li>
+                            </ul>
+                            <h3>About Small Fry</h3>
+                            <div class="text-left">
+                                <p>This game was built in Unity for a 48-hour Game Jam at the University of Michigan. The theme for this game jam was randomly selected for each team at the start of the competition. As a result, this game was developed from conception to completion in 48 hours.</p>
+                                <p>My main contribution to this project was the dialogue engine, which included learning the Unity UI system in a single weekend. I also helped my teammates learn how to use version control, which made the development process very smooth.</p>
+                                <p>We ended up taking second place in the competition, and won an award for "Best Artwork". We also won a trophy for "Most Useless Feature", for including the ability to dance with the D-pad. We originally planned another mechanic involving dancing but ran out of time to implement it. However, our artist worked so hard on the dance animations that we couldn't resist leaving them in the final product.</p>
+                                <p><b>Note that</b> this game was designed to be used with an Xbox controller, and I recommend using one if you plan on playing. It was also built using Unity's experimental WebGL build, so some features may not work as originally intended.</p>
+                            </div>
                             <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>
                         </div>
                     </div>
@@ -298,22 +314,29 @@
                         <div class="modal-body">
                             <h2>The World Below</h2>
                             <hr class="star-primary">
-                            <img src="img/portfolio/WorldBelowIcon.png" class="img-responsive img-centered" alt="">
-                            <p class="text-left">The World Below is an in-development adventure game built in Unity. It is rooted heavily in Filipino folklore, and tells the story of a girl who has fallen from her home in the sky. The player takes on the role of the girl, and must explore the world in order to get back home.</p>
-                            <p class="text-left">This game was conceived by a fellow student at the University of Michigan, Nicole Cischke. She got together a small team to design the first level for her senior design thesis, and we had the drive to continue working on the project afterwards. Nikki's portfolio website can be found <a href="http://www.nicolecischke.com/">here</a>.</p>
-                            <p class="text-left">I am currently contributing heavily to the software design of this project, as well as designing new mechanics and levels for the player to encounter. The team consists of four dedicated individuals, and we are keeping in constant contact with each other this summer in order to continue our development.</p>
-                            <ul class="list-inline item-details">
-                                <ul class="list-inline">
-                                    <li>
-                                        <a href="https://github.com/TheWorldBelowGame/TheWorldBelow" class="btn btn-default"> Source</a>
-                                    </li>
-                                    <!--
-                                    <li>
-                                        <a href="" class="btn btn-default"> Play</a>
-                                    </li>
-                                    -->
-                                </ul>
+                            <img src="img/portfolio/WorldBelowIcon.png" class="img-responsive img-centered" alt="Title logo">
+                            <ul class="list-inline">
+                                <li>
+                                    <a href="https://github.com/TheWorldBelowGame/TheWorldBelow" class="btn btn-default"> Source</a>
+                                </li>
+                                <!--
+                                <li>
+                                    <a href="" class="btn btn-default"> Play</a>
+                                </li>
+                                -->
                             </ul>
+                            <h3>Team Members</h3>
+                            <ul class="list-inline font-size-normal">
+                                <li><a href="http://www.nicolecischke.com/">Nicole Cischke</a></li>
+                                <li>Jacob Haas</li>
+                                <li>Tomas Medina</li>
+                            </ul>
+                            <h3>About The World Below</h3>
+                            <div class="text-left">
+                                <p class="text-left">The World Below is an in-development adventure game built in Unity. It is rooted heavily in Filipino folklore, and tells the story of a girl who has fallen from her home in the sky. The player takes on the role of the girl, and must explore the world in order to get back home.</p>
+                                <p class="text-left">This game was conceived by a fellow student at the University of Michigan, Nicole Cischke. She got together a small team to design the first level for her senior design thesis, and we had the drive to continue working on the project afterwards. Nikki's portfolio website can be found <a href="http://www.nicolecischke.com/">here</a>.</p>
+                                <p class="text-left">I am currently contributing heavily to the software design of this project, as well as designing new mechanics and levels for the player to encounter. The team consists of four dedicated individuals, and we are keeping in constant contact with each other this summer in order to continue our development.</p>
+                            </div>
                             <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>
                         </div>
                     </div>
@@ -336,9 +359,8 @@
                             <h2>Coming Soon</h2>
                             <hr class="star-primary">
                             <img src="img/portfolio/placeholder.png" class="img-responsive img-centered" alt="">
-                            <p></p>
                             <!--
-                            <ul class="list-inline item-details">
+                            <ul class="list-inline">
                                 <ul class="list-inline">
                                     <li>
                                         <a href="" class="btn btn-default"> Source</a>
@@ -349,6 +371,7 @@
                                 </ul>
                             </ul>
                             -->
+                            <p>Placeholder project!</p>
                             <button type="button" class="btn btn-default" data-dismiss="modal"><i class="fa fa-times"></i> Close</button>
                         </div>
                     </div>
