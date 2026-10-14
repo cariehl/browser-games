@@ -1,0 +1,602 @@
+{
+ "alloy_blade": {
+  "id": "alloy_blade",
+  "display_name": "Alloy blade",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.68,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "A.Blade",
+  "weapon_type": "blade",
+  "accuracy": 28,
+  "power": 26,
+  "equip_level": 10
+ },
+ "alloy_chestplate": {
+  "id": "alloy_chestplate",
+  "display_name": "Alloy chestplate",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "Chest",
+  "armor_slot": "torso",
+  "defence_bonus": 21,
+  "equip_level": 10
+ },
+ "alloy_gauntlets": {
+  "id": "alloy_gauntlets",
+  "display_name": "Alloy gauntlets",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "Gaunt",
+  "armor_slot": "arms",
+  "defence_bonus": 7,
+  "equip_level": 10
+ },
+ "alloy_greaves": {
+  "id": "alloy_greaves",
+  "display_name": "Alloy greaves",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "Grvs",
+  "armor_slot": "legs",
+  "defence_bonus": 14,
+  "equip_level": 10
+ },
+ "alloy_helmet": {
+  "id": "alloy_helmet",
+  "display_name": "Alloy helmet",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "Helm",
+  "armor_slot": "head",
+  "defence_bonus": 10,
+  "equip_level": 10
+ },
+ "alloy_pistol": {
+  "id": "alloy_pistol",
+  "display_name": "Alloy pistol",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.63,
+   0.72,
+   1.0
+  ],
+  "abbreviation": "A.Pistol",
+  "weapon_type": "pistol",
+  "accuracy": 38,
+  "power": 24,
+  "ammo": "gas_cartridge",
+  "equip_level": 10
+ },
+ "alloy_plating": {
+  "id": "alloy_plating",
+  "display_name": "Alloy plating",
+  "color": [
+   0.42,
+   0.55,
+   0.68,
+   1.0
+  ],
+  "abbreviation": "Alloy",
+  "craft_xp": 25.0
+ },
+ "breacher_plate": {
+  "id": "breacher_plate",
+  "display_name": "Breacher plate",
+  "stackable": false,
+  "color": [
+   0.66,
+   0.56,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "BPlate",
+  "armor_slot": "torso",
+  "defence_bonus": 28,
+  "equip_level": 15
+ },
+ "canister": {
+  "id": "canister",
+  "display_name": "Canister",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.6,
+   0.58,
+   1.0
+  ],
+  "abbreviation": "Can"
+ },
+ "coolant": {
+  "id": "coolant",
+  "display_name": "Coolant",
+  "color": [
+   0.35,
+   0.75,
+   0.95,
+   1.0
+  ],
+  "abbreviation": "Cool",
+  "stackable": true,
+  "container": "canister",
+  "capacity": 50,
+  "craft_xp": 2.0
+ },
+ "deadeye_injector": {
+  "id": "deadeye_injector",
+  "display_name": "Deadeye injector",
+  "stackable": false,
+  "color": [
+   0.35,
+   0.6,
+   1.0,
+   1.0
+  ],
+  "abbreviation": "Dead",
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector",
+  "boost_skill": "firearms",
+  "boost_base": 3,
+  "boost_percent": 10,
+  "boost_ticks": 500
+ },
+ "edge_injector": {
+  "id": "edge_injector",
+  "display_name": "Edge injector",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.35,
+   0.3,
+   1.0
+  ],
+  "abbreviation": "Edge",
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector",
+  "boost_skill": "melee",
+  "boost_base": 2,
+  "boost_percent": 10,
+  "boost_ticks": 500
+ },
+ "empty_injector": {
+  "id": "empty_injector",
+  "display_name": "Empty injector",
+  "stackable": false,
+  "color": [
+   0.62,
+   0.68,
+   0.74,
+   1.0
+  ],
+  "abbreviation": "Inj"
+ },
+ "gas_cartridge": {
+  "id": "gas_cartridge",
+  "display_name": "Gas cartridge",
+  "stackable": true,
+  "color": [
+   0.62,
+   0.78,
+   0.38,
+   1.0
+  ],
+  "abbreviation": "Ammo"
+ },
+ "glowroot": {
+  "id": "glowroot",
+  "display_name": "Glowroot",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.95,
+   0.5,
+   1.0
+  ],
+  "abbreviation": "Groot",
+  "craft_xp": 34.0
+ },
+ "healing_injector": {
+  "id": "healing_injector",
+  "display_name": "Healing injector",
+  "stackable": false,
+  "color": [
+   0.92,
+   0.32,
+   0.42,
+   1.0
+  ],
+  "abbreviation": "Heal",
+  "heal": 3,
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector"
+ },
+ "ichor": {
+  "id": "ichor",
+  "display_name": "Ichor",
+  "stackable": true,
+  "color": [
+   0.72,
+   0.3,
+   0.9,
+   1.0
+  ],
+  "abbreviation": "Ich",
+  "container": "canister",
+  "capacity": 50,
+  "craft_xp": 1.0
+ },
+ "pipe_pistol": {
+  "id": "pipe_pistol",
+  "display_name": "Pipe pistol",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.46,
+   0.4,
+   1.0
+  ],
+  "abbreviation": "Pistol",
+  "weapon_type": "pistol",
+  "accuracy": 16,
+  "power": 12,
+  "ammo": "gas_cartridge"
+ },
+ "relic_blade": {
+  "id": "relic_blade",
+  "display_name": "Relic blade",
+  "stackable": false,
+  "color": [
+   0.78,
+   0.45,
+   0.38,
+   1.0
+  ],
+  "abbreviation": "R.Blade",
+  "weapon_type": "blade",
+  "accuracy": 20,
+  "power": 19,
+  "equip_level": 5
+ },
+ "relic_chestplate": {
+  "id": "relic_chestplate",
+  "display_name": "Relic chestplate",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Chest",
+  "armor_slot": "torso",
+  "defence_bonus": 15,
+  "equip_level": 5
+ },
+ "relic_circuitry": {
+  "id": "relic_circuitry",
+  "display_name": "Relic circuitry",
+  "stackable": false,
+  "color": [
+   0.82,
+   0.36,
+   0.3,
+   1.0
+  ],
+  "abbreviation": "Relic",
+  "craft_xp": 15.0
+ },
+ "relic_gauntlets": {
+  "id": "relic_gauntlets",
+  "display_name": "Relic gauntlets",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Gaunt",
+  "armor_slot": "arms",
+  "defence_bonus": 5,
+  "equip_level": 5
+ },
+ "relic_greaves": {
+  "id": "relic_greaves",
+  "display_name": "Relic greaves",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Grv",
+  "armor_slot": "legs",
+  "defence_bonus": 10,
+  "equip_level": 5
+ },
+ "relic_helmet": {
+  "id": "relic_helmet",
+  "display_name": "Relic helmet",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Helm",
+  "armor_slot": "head",
+  "defence_bonus": 6,
+  "equip_level": 5
+ },
+ "relic_pistol": {
+  "id": "relic_pistol",
+  "display_name": "Relic pistol",
+  "stackable": false,
+  "color": [
+   0.78,
+   0.5,
+   0.42,
+   1.0
+  ],
+  "abbreviation": "R.Pistol",
+  "weapon_type": "pistol",
+  "accuracy": 28,
+  "power": 18,
+  "ammo": "gas_cartridge",
+  "equip_level": 5
+ },
+ "rustcap": {
+  "id": "rustcap",
+  "display_name": "Rustcap",
+  "stackable": false,
+  "color": [
+   0.78,
+   0.42,
+   0.22,
+   1.0
+  ],
+  "abbreviation": "Rcap",
+  "craft_xp": 26.0
+ },
+ "scrap_blade": {
+  "id": "scrap_blade",
+  "display_name": "Scrap blade",
+  "stackable": false,
+  "color": [
+   0.72,
+   0.7,
+   0.64,
+   1.0
+  ],
+  "abbreviation": "Blade",
+  "weapon_type": "blade",
+  "accuracy": 10,
+  "power": 12
+ },
+ "scrap_chestplate": {
+  "id": "scrap_chestplate",
+  "display_name": "Scrap chestplate",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Chest",
+  "armor_slot": "torso",
+  "defence_bonus": 9
+ },
+ "scrap_gauntlets": {
+  "id": "scrap_gauntlets",
+  "display_name": "Scrap gauntlets",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Gaunt",
+  "armor_slot": "arms",
+  "defence_bonus": 3
+ },
+ "scrap_greaves": {
+  "id": "scrap_greaves",
+  "display_name": "Scrap greaves",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Grvs",
+  "armor_slot": "legs",
+  "defence_bonus": 6
+ },
+ "scrap_helmet": {
+  "id": "scrap_helmet",
+  "display_name": "Scrap helmet",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Helm",
+  "armor_slot": "head",
+  "defence_bonus": 4
+ },
+ "scrap_metal": {
+  "id": "scrap_metal",
+  "display_name": "Scrap metal",
+  "color": [
+   0.58,
+   0.56,
+   0.52,
+   1.0
+  ],
+  "abbreviation": "Scrap",
+  "craft_xp": 7.0
+ },
+ "seep_moss": {
+  "id": "seep_moss",
+  "display_name": "Seep moss",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.4,
+   0.75,
+   1.0
+  ],
+  "abbreviation": "Moss",
+  "craft_xp": 18.0
+ },
+ "servo_actuator": {
+  "id": "servo_actuator",
+  "display_name": "Servo actuator",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.75,
+   0.3,
+   1.0
+  ],
+  "abbreviation": "Servo",
+  "craft_xp": 40.0
+ },
+ "servo_blade": {
+  "id": "servo_blade",
+  "display_name": "Servo blade",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.72,
+   0.35,
+   1.0
+  ],
+  "abbreviation": "S.Blade",
+  "weapon_type": "blade",
+  "accuracy": 36,
+  "power": 32,
+  "equip_level": 15
+ },
+ "servo_grease": {
+  "id": "servo_grease",
+  "display_name": "Servo grease",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.27,
+   0.2,
+   1.0
+  ],
+  "abbreviation": "Grease",
+  "craft_xp": 12.0
+ },
+ "servo_pistol": {
+  "id": "servo_pistol",
+  "display_name": "Servo pistol",
+  "stackable": false,
+  "color": [
+   0.88,
+   0.7,
+   0.4,
+   1.0
+  ],
+  "abbreviation": "S.Pistol",
+  "weapon_type": "pistol",
+  "accuracy": 46,
+  "power": 29,
+  "ammo": "gas_cartridge",
+  "equip_level": 15
+ },
+ "surge_injector": {
+  "id": "surge_injector",
+  "display_name": "Surge injector",
+  "stackable": false,
+  "color": [
+   1.0,
+   0.55,
+   0.4,
+   1.0
+  ],
+  "abbreviation": "Surge",
+  "heal": 7,
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector"
+ },
+ "vent_gas": {
+  "id": "vent_gas",
+  "display_name": "Vent gas",
+  "stackable": true,
+  "color": [
+   0.36,
+   0.72,
+   0.45,
+   1.0
+  ],
+  "abbreviation": "Gas",
+  "container": "canister",
+  "capacity": 50,
+  "craft_xp": 1.0
+ },
+ "vent_salt": {
+  "id": "vent_salt",
+  "display_name": "Vent salt",
+  "stackable": true,
+  "color": [
+   0.9,
+   0.88,
+   0.75,
+   1.0
+  ],
+  "abbreviation": "Salt",
+  "craft_xp": 8.0
+ },
+ "ventbloom": {
+  "id": "ventbloom",
+  "display_name": "Ventbloom",
+  "stackable": false,
+  "color": [
+   0.45,
+   0.85,
+   0.78,
+   1.0
+  ],
+  "abbreviation": "Vb",
+  "craft_xp": 10.0
+ }
+}

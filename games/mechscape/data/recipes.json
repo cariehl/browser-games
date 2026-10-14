@@ -1,0 +1,487 @@
+{
+ "alloy_blade": {
+  "id": "alloy_blade",
+  "level_required": 12,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 2
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "alloy_blade",
+  "action_ticks": 5
+ },
+ "alloy_chestplate": {
+  "id": "alloy_chestplate",
+  "skill": "engineering",
+  "level_required": 15,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 5
+   }
+  ],
+  "output": "alloy_chestplate",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "alloy_gauntlets": {
+  "id": "alloy_gauntlets",
+  "skill": "engineering",
+  "level_required": 11,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 2
+   }
+  ],
+  "output": "alloy_gauntlets",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "alloy_greaves": {
+  "id": "alloy_greaves",
+  "skill": "engineering",
+  "level_required": 13,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 3
+   }
+  ],
+  "output": "alloy_greaves",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "alloy_helmet": {
+  "id": "alloy_helmet",
+  "skill": "engineering",
+  "level_required": 10,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 2
+   }
+  ],
+  "output": "alloy_helmet",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "alloy_pistol": {
+  "id": "alloy_pistol",
+  "skill": "engineering",
+  "level_required": 13,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 2
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 2
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "alloy_pistol",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "breacher_plate": {
+  "id": "breacher_plate",
+  "skill": "engineering",
+  "level_required": 16,
+  "inputs": [
+   {
+    "item": "servo_actuator",
+    "count": 1
+   },
+   {
+    "item": "alloy_plating",
+    "count": 4
+   }
+  ],
+  "output": "breacher_plate",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "canister": {
+  "id": "canister",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "canister",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "deadeye_injector": {
+  "id": "deadeye_injector",
+  "skill": "splicing",
+  "level_required": 15,
+  "inputs": [
+   {
+    "item": "empty_injector",
+    "count": 1
+   },
+   {
+    "item": "glowroot",
+    "count": 1
+   },
+   {
+    "item": "coolant",
+    "count": 10
+   },
+   {
+    "item": "alloy_plating",
+    "count": 1
+   }
+  ],
+  "output": "deadeye_injector",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "edge_injector": {
+  "id": "edge_injector",
+  "skill": "splicing",
+  "level_required": 5,
+  "inputs": [
+   {
+    "item": "empty_injector",
+    "count": 1
+   },
+   {
+    "item": "seep_moss",
+    "count": 1
+   },
+   {
+    "item": "ichor",
+    "count": 5
+   },
+   {
+    "item": "servo_grease",
+    "count": 1
+   }
+  ],
+  "output": "edge_injector",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "empty_injector": {
+  "id": "empty_injector",
+  "skill": "engineering",
+  "level_required": 2,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 1
+   }
+  ],
+  "output": "empty_injector",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "gas_cartridges": {
+  "id": "gas_cartridges",
+  "level_required": 3,
+  "inputs": [
+   {
+    "item": "scrap_metal"
+   },
+   {
+    "item": "vent_gas",
+    "count": 10
+   }
+  ],
+  "output": "gas_cartridge",
+  "output_count": 10,
+  "action_ticks": 3
+ },
+ "healing_injector": {
+  "id": "healing_injector",
+  "skill": "splicing",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "empty_injector",
+    "count": 1
+   },
+   {
+    "item": "ventbloom",
+    "count": 1
+   },
+   {
+    "item": "ichor",
+    "count": 5
+   },
+   {
+    "item": "vent_salt",
+    "count": 1
+   }
+  ],
+  "output": "healing_injector",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "pipe_pistol": {
+  "id": "pipe_pistol",
+  "skill": "engineering",
+  "level_required": 5,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 4
+   }
+  ],
+  "output": "pipe_pistol",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "relic_blade": {
+  "id": "relic_blade",
+  "level_required": 8,
+  "inputs": [
+   {
+    "item": "relic_circuitry"
+   },
+   {
+    "item": "scrap_metal",
+    "count": 3
+   }
+  ],
+  "output": "relic_blade",
+  "action_ticks": 5
+ },
+ "relic_chestplate": {
+  "id": "relic_chestplate",
+  "skill": "engineering",
+  "level_required": 8,
+  "inputs": [
+   {
+    "item": "relic_circuitry",
+    "count": 3
+   },
+   {
+    "item": "scrap_metal",
+    "count": 3
+   }
+  ],
+  "output": "relic_chestplate",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "relic_gauntlets": {
+  "id": "relic_gauntlets",
+  "skill": "engineering",
+  "level_required": 6,
+  "inputs": [
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "relic_gauntlets",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "relic_greaves": {
+  "id": "relic_greaves",
+  "skill": "engineering",
+  "level_required": 7,
+  "inputs": [
+   {
+    "item": "relic_circuitry",
+    "count": 2
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "relic_greaves",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "relic_helmet": {
+  "id": "relic_helmet",
+  "skill": "engineering",
+  "level_required": 5,
+  "inputs": [
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "relic_helmet",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "relic_pistol": {
+  "id": "relic_pistol",
+  "skill": "engineering",
+  "level_required": 10,
+  "inputs": [
+   {
+    "item": "relic_circuitry",
+    "count": 2
+   },
+   {
+    "item": "scrap_metal",
+    "count": 3
+   }
+  ],
+  "output": "relic_pistol",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "scrap_blade": {
+  "id": "scrap_blade",
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 3
+   }
+  ],
+  "output": "scrap_blade"
+ },
+ "scrap_chestplate": {
+  "id": "scrap_chestplate",
+  "skill": "engineering",
+  "level_required": 6,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 5
+   }
+  ],
+  "output": "scrap_chestplate",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "scrap_gauntlets": {
+  "id": "scrap_gauntlets",
+  "skill": "engineering",
+  "level_required": 2,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "scrap_gauntlets",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "scrap_greaves": {
+  "id": "scrap_greaves",
+  "skill": "engineering",
+  "level_required": 4,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 3
+   }
+  ],
+  "output": "scrap_greaves",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "scrap_helmet": {
+  "id": "scrap_helmet",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "scrap_helmet",
+  "output_count": 1,
+  "action_ticks": 4
+ },
+ "servo_blade": {
+  "id": "servo_blade",
+  "skill": "engineering",
+  "level_required": 15,
+  "inputs": [
+   {
+    "item": "servo_actuator",
+    "count": 1
+   },
+   {
+    "item": "alloy_plating",
+    "count": 2
+   }
+  ],
+  "output": "servo_blade",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "servo_pistol": {
+  "id": "servo_pistol",
+  "skill": "engineering",
+  "level_required": 15,
+  "inputs": [
+   {
+    "item": "servo_actuator",
+    "count": 1
+   },
+   {
+    "item": "alloy_plating",
+    "count": 1
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 2
+   }
+  ],
+  "output": "servo_pistol",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "surge_injector": {
+  "id": "surge_injector",
+  "skill": "splicing",
+  "level_required": 10,
+  "inputs": [
+   {
+    "item": "empty_injector",
+    "count": 1
+   },
+   {
+    "item": "rustcap",
+    "count": 1
+   },
+   {
+    "item": "coolant",
+    "count": 10
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   }
+  ],
+  "output": "surge_injector",
+  "output_count": 1,
+  "action_ticks": 4
+ }
+}

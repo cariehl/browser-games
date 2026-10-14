@@ -1,0 +1,195 @@
+// Boots the game in the browser: loads the content, maps and models, picks
+// up the saved game (or starts a new one), then builds the 3D views and the
+// UI around the sim and runs the frame loop.
+//
+// The sim (src/sim/) knows nothing about any of this. Each frame, time goes
+// into the GameLoop, which runs whole 0.6s ticks; views read the World and
+// interpolate between ticks with the loop's alpha.
+
+import * as THREE from 'three';
+import { Content, CONTENT_FILES } from './sim/defs.js';
+import { MapData } from './sim/map_data.js';
+import { World, DEFAULT_MAP } from './sim/world.js';
+import { ClientState } from './client/client_state.js';
+import { SimulatedLink } from './client/simulated_link.js';
+import { PlayerController } from './client/player_controller.js';
+import { SaveManager } from './client/save_manager.js';
+import { Models } from './view/models.js';
+import { WorldViews, modelFiles } from './view/world_views.js';
+import { CameraRig } from './view/camera_rig.js';
+import { ClickMarker } from './view/click_marker.js';
+import { DebugOverlay } from './view/debug_overlay.js';
+import { color } from './view/tile_math.js';
+import { Screen, el } from './ui/screen.js';
+import { HoverText } from './ui/hover_text.js';
+import { ContextMenu } from './ui/context_menu.js';
+import { InspectWindow } from './ui/inspect_window.js';
+import { CombatOverlay } from './ui/combat_overlay.js';
+import { XpDrops } from './ui/xp_drops.js';
+import { MessageLog } from './ui/message_log.js';
+import { PlayerPanel } from './ui/player_panel.js';
+import { SkillGuide } from './ui/skill_guide.js';
+import { CraftMenu } from './ui/craft_menu.js';
+import { StorageMenu } from './ui/storage_menu.js';
+import { DebugHud } from './ui/debug_hud.js';
+
+const MAPS = [DEFAULT_MAP];
+/** Longest frame fed to the game, so a hidden tab doesn't come back to a burst of ticks. */
+const MAX_FRAME_SECONDS = 0.25;
+
+async function loadContent() {
+  const bundle = {};
+  await Promise.all(Object.entries(CONTENT_FILES).map(async ([kind, file]) => {
+    bundle[kind] = await fetchOk(`data/${file}.json`).then((r) => r.json());
+  }));
+  Content.load(bundle);
+  await Promise.all(MAPS.map(async (path) => MapData.register(path, await fetchOk(path).then((r) => r.text()))));
+}
+
+async function fetchOk(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Couldn't load ${url} (${response.status})`);
+  return response;
+}
+
+function makeRenderer(canvas) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  return renderer;
+}
+
+/**
+ * Light to match the Godot scene: a sun at rotation (-55°, 35°, 0°) with
+ * shadows, a flat ambient, and a flat sky colour. Godot's light energy 1 is
+ * three.js intensity π (three divides diffuse light by π; Godot doesn't).
+ */
+function addEnvironment(scene) {
+  scene.background = color([0.55, 0.62, 0.68]);
+  scene.add(new THREE.AmbientLight(color([0.6, 0.62, 0.66]), 0.6 * Math.PI));
+  const sun = new THREE.DirectionalLight(0xffffff, Math.PI);
+  // The direction the light travels: Godot's -Z after its rotation.
+  const travel = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(
+    THREE.MathUtils.degToRad(-55), THREE.MathUtils.degToRad(35), 0, 'YXZ',
+  ));
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(2048, 2048);
+  const s = sun.shadow.camera;
+  s.left = -22;
+  s.right = 22;
+  s.top = 22;
+  s.bottom = -22;
+  s.near = 1;
+  s.far = 120;
+  sun.shadow.bias = -0.0005;
+  sun.shadow.normalBias = 0.02;
+  scene.add(sun);
+  scene.add(sun.target);
+  /** Keeps the shadow box centred on what the camera is looking at. */
+  return (focus) => {
+    sun.target.position.copy(focus);
+    sun.position.copy(focus).addScaledVector(travel, -50);
+  };
+}
+
+async function main() {
+  const status = document.getElementById('loading');
+  await loadContent();
+  status.textContent = 'Loading models…';
+  await Models.preload(modelFiles(Content));
+
+  const { world, notice } = SaveManager.startingWorld(() => new World(DEFAULT_MAP));
+  ClientState.start(world);
+  ClientState.notice = notice;
+  ClientState.localPlayer();
+  status.remove();
+
+  const canvas = document.getElementById('game');
+  const ui = document.getElementById('ui');
+  const renderer = makeRenderer(canvas);
+  const scene = new THREE.Scene();
+  const followSun = addEnvironment(scene);
+
+  const views = new WorldViews(scene, world);
+  const rig = new CameraRig(canvas);
+  rig.target = views.playerView;
+  rig.snap();
+  Screen.camera = rig.camera;
+  Screen.layer = el('div', 'labels', '', ui);
+
+  const marker = new ClickMarker();
+  scene.add(marker);
+  const overlay = new DebugOverlay();
+  scene.add(overlay);
+
+  const link = new SimulatedLink();
+  const combat = new CombatOverlay(ui, views.entities);
+  const xpDrops = new XpDrops(views.playerView);
+  const messageLog = new MessageLog(ui);
+  const saves = new SaveManager(messageLog);
+  const hover = new HoverText(ui);
+  const menu = new ContextMenu(ui);
+  const inspector = new InspectWindow(ui);
+  const guide = new SkillGuide(ui);
+  const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide });
+  const craft = new CraftMenu(ui, link);
+  const storage = new StorageMenu(ui, link, menu);
+  const hud = new DebugHud(ui, { overlay, link, saves });
+  const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector });
+
+  // The game has its own right-click menu.
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const resize = () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    rig.camera.aspect = w / h;
+    rig.camera.updateProjectionMatrix();
+    Screen.width = w;
+    Screen.height = h;
+  };
+  window.addEventListener('resize', resize);
+  resize();
+
+  let last = performance.now();
+  const frame = (now) => {
+    const real = Math.min((now - last) / 1000, MAX_FRAME_SECONDS);
+    last = now;
+    // Frame time scaled by the debug tick speed, like Godot's Engine.time_scale.
+    const delta = real * ClientState.speed;
+    link.update();
+    ClientState.loop.advance(delta);
+    views.update(delta);
+    marker.update(delta);
+    rig.update(real);
+    followSun(rig.position);
+    overlay.update();
+    combat.update(delta);
+    xpDrops.update(delta);
+    controller.update();
+    inspector.update();
+    panel.update();
+    craft.update();
+    storage.update();
+    hud.update();
+    renderer.render(scene, rig.camera);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+
+  // For poking at the game from the browser console.
+  window.mechscape = { ClientState, views, link, saves, rig, renderer, scene };
+}
+
+main().catch((error) => {
+  console.error(error);
+  const status = document.getElementById('loading');
+  if (status) {
+    status.textContent = `Couldn't start the game: ${error.message}`;
+    status.classList.add('error');
+  }
+});

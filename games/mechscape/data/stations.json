@@ -1,0 +1,108 @@
+{
+ "bio_still": {
+  "id": "bio_still",
+  "display_name": "Bio-still",
+  "description": "Distils herbs in ichor",
+  "skill": "splicing",
+  "recipes": [
+   "healing_injector",
+   "edge_injector",
+   "surge_injector",
+   "deadeye_injector"
+  ],
+  "model": "bio_still.glb",
+  "model_scale": 1.0,
+  "color": [
+   0.55,
+   0.42,
+   0.3,
+   1.0
+  ]
+ },
+ "manufactory": {
+  "id": "manufactory",
+  "display_name": "Manufactory",
+  "description": "Prints you a new body when you die",
+  "skill": "",
+  "kind": "respawn",
+  "color": [
+   0.55,
+   0.6,
+   0.66,
+   1.0
+  ],
+  "model": "manufactory.glb",
+  "model_scale": 1.0
+ },
+ "metal_press": {
+  "id": "metal_press",
+  "description": "Presses armor and canisters",
+  "display_name": "Metal press",
+  "skill": "engineering",
+  "recipes": [
+   "canister",
+   "scrap_helmet",
+   "scrap_gauntlets",
+   "scrap_greaves",
+   "scrap_chestplate",
+   "relic_helmet",
+   "relic_gauntlets",
+   "relic_greaves",
+   "relic_chestplate",
+   "alloy_helmet",
+   "alloy_gauntlets",
+   "alloy_greaves",
+   "alloy_chestplate",
+   "breacher_plate"
+  ],
+  "model": "metal_press.glb",
+  "model_scale": 0.85,
+  "color": [
+   0.36,
+   0.4,
+   0.46,
+   1.0
+  ]
+ },
+ "storage_locker": {
+  "id": "storage_locker",
+  "display_name": "Storage locker",
+  "description": "Your storage, reachable from any locker",
+  "skill": "",
+  "kind": "storage",
+  "color": [
+   0.3,
+   0.42,
+   0.5,
+   1.0
+  ],
+  "model": "storage_locker.glb",
+  "model_scale": 1.0
+ },
+ "weapons_bench": {
+  "id": "weapons_bench",
+  "description": "Weapon crafting station",
+  "display_name": "Weapons bench",
+  "skill": "engineering",
+  "recipes": [
+   "scrap_blade",
+   "gas_cartridges",
+   "empty_injector",
+   "pipe_pistol",
+   "relic_blade",
+   "relic_pistol",
+   "alloy_blade",
+   "alloy_pistol",
+   "servo_blade",
+   "servo_pistol"
+  ],
+  "model": "weapons_bench.glb",
+  "model_scale": 0.6,
+  "color": [
+   0.45,
+   0.38,
+   0.3,
+   1.0
+  ]
+ }
+}
