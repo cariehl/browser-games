@@ -4,15 +4,18 @@ A tick-based MMO prototype in the browser: RuneScape's structure, with guns, mec
 
 ## Running it
 
-You need [Node.js](https://nodejs.org) 18 or newer (only to serve the files and run the tests; the game itself has no build step and no dependencies to install).
+You need [Node.js](https://nodejs.org) 22 or newer (Colyseus 0.18 requires it). The game is multiplayer: one Node server runs the world and everyone plays in it from a browser.
 
 ```
-node tools/serve.js
+npm install
+npm start
 ```
 
-Then open <http://localhost:8000>. Any static file server works the same (`python -m http.server 8000`, for one); browsers just won't load ES modules from a `file://` URL, so double-clicking `index.html` doesn't work.
+Then open <http://localhost:2567>, pick a pilot name and play. Friends open `http://<your address>:2567` and pick their own names (see [Multiplayer](#multiplayer) for hosting). `npm run dev` does the same with the debug cheats allowed.
 
-three.js 0.170.0 is vendored in `vendor/three/` (only the files the game uses) and loaded with an import map in `index.html`, so it runs offline.
+To play alone without a server, `npm run offline` serves the files and you open <http://localhost:8000/?offline>. That runs the whole sim in the page, with local saves, as before. Any static file server works for this (`python -m http.server 8000`, for one); browsers just won't load ES modules from a `file://` URL, so double-clicking `index.html` doesn't work.
+
+The page has no build step. three.js 0.170.0 is vendored in `vendor/three/` (only the files the game uses) and loaded with an import map in `index.html`; the Colyseus browser client is vendored in `vendor/colyseus/` (`npm run vendor-sdk` copies it again after an upgrade).
 
 Controls:
 - **Mouse:** hover over an NPC, node or station to see what a left click does ("Attack Loader mech", "Salvage Crashed drone"). Left-click does it; left-click open ground to walk there.
@@ -94,7 +97,9 @@ The top-right panel has three tabs:
 
 The chatbox (bottom left) keeps the last 500 messages; scroll it with the mouse wheel. It stays put while you're scrolled up and follows new messages when you're at the bottom.
 
-Saving: the game autosaves every 100 ticks (one minute) and when you close or reload the tab, and loads your save automatically on startup. **Ctrl+S** saves, **Ctrl+L** loads (or use the debug window's buttons, since some browsers keep Ctrl+L for the address bar). The save is the same readable JSON as before, kept in the browser's local storage under `mechscape_save`, so it belongs to that browser and that address (`localhost:8000`). In-progress actions aren't saved, so you come back standing still, like logging out in OSRS. The save before it is kept as `mechscape_save.bak`. If the save can't be read (from a newer build, say), the backup is loaded instead, and the unreadable save is moved aside as `mechscape_save.unreadable-<date>` rather than overwritten. The message log says which happened. Loading and New game reload the page.
+Saving online: the server keeps the world in `saves/world.json`, autosaving every 100 ticks (one minute) and on shutdown (Ctrl+C), with the previous save kept as `world.json.bak`. Restarting the server carries on from it; `npm start -- --new` starts a fresh world instead (the old save becomes the .bak). See [Multiplayer](#multiplayer).
+
+Saving offline: the game autosaves every 100 ticks (one minute) and when you close or reload the tab, and loads your save automatically on startup. **Ctrl+S** saves, **Ctrl+L** loads (or use the debug window's buttons, since some browsers keep Ctrl+L for the address bar). The save is the same readable JSON as before, kept in the browser's local storage under `mechscape_save`, so it belongs to that browser and that address (`localhost:8000`). In-progress actions aren't saved, so you come back standing still, like logging out in OSRS. The save before it is kept as `mechscape_save.bak`. If the save can't be read (from a newer build, say), the backup is loaded instead, and the unreadable save is moved aside as `mechscape_save.unreadable-<date>` rather than overwritten. The message log says which happened. Loading and New game reload the page.
 
 The debug window (top left, **F4** or click its header to collapse) has:
 
@@ -102,10 +107,10 @@ The debug window (top left, **F4** or click its header to collapse) has:
 - **True tile** (**F2**): an outline on the tile the simulation has the player on.
 - **Tick metronome** (**F3**): a click on every tick.
 - **Hitboxes** (**F5**): wireframes of what's clickable.
-- **Tick speed** (**[** and **]**): 0.25x to 8x. It scales the game's clock, so the simulation and everything animated speed up together; the camera and simulated latency stay at real time.
-- **Simulated input delay**: base and fuzz in milliseconds. Each action is turned into JSON and held for base ± fuzz before the loop receives it, in order, like a reliable network channel.
-- **Grant XP**: pick a skill and an amount; it arrives on the next tick as a normal XP drop (and level-up), e.g. 1,154 XP for Salvaging 10.
-- **Save / Load / New game**, and when it last saved. New game deletes the save.
+- **Tick speed** (**[** and **]**, offline only): 0.25x to 8x. It scales the game's clock, so the simulation and everything animated speed up together; the camera and simulated latency stay at real time.
+- **Simulated input delay**: base and fuzz in milliseconds. Each action is turned into JSON and held for base ± fuzz before it's sent, in order, like a reliable network channel. Online this is on top of the real network.
+- **Grant XP**: pick a skill and an amount; it arrives on the next tick as a normal XP drop (and level-up), e.g. 1,154 XP for Salvaging 10. Online it only shows when the server runs with `npm run dev`; otherwise the server refuses it.
+- **Save / Load / New game** (offline only), and when it last saved. New game deletes the save.
 
 The browser console has `window.mechscape` for poking at the running game.
 
@@ -116,21 +121,22 @@ npm test              # node --test tests/*.test.js
 npm run check-loops   # node tools/check_loops.js
 ```
 
-The tests cover the tick, pathing, gathering, crafting, combat (commit and land, overkill, ammo, line of sight), injectors and boosts, gear, dropping and taking, storage, death and wrecks, the action JSON round trip, and a save that carries on exactly as the original world would have over 300 ticks. `check_loops` is the economy rule: with combat skills removed, the production graph must have no cycles, so every loop goes through combat.
+`npm test` starts a real server on a spare port for one of its tests, so run `npm install` first. The tests cover the tick, pathing, gathering, crafting, combat (commit and land, overkill, ammo, line of sight), injectors and boosts, gear, dropping and taking, storage, death and wrecks, the action JSON round trip, and a save that carries on exactly as the original world would have over 300 ticks. For multiplayer they cover malformed actions being turned away, a browser mirror fed snapshots ending up identical to the server's world, what's kept private, joining, leaving and coming back, the server save across a restart, and two Colyseus clients on a real server. `check_loops` is the economy rule: with combat skills removed, the production graph must have no cycles, so every loop goes through combat.
 
 ## How it's organised
 
 | Folder | What lives there | Rule |
 | --- | --- | --- |
-| `src/sim/` | Game state and rules: `World`, `EntityState`, actions, tasks, combat, `SaveGame`, the `GameLoop` tick driver | Plain ES modules. No DOM, no three.js, no timers: runs unchanged in Node (the tests, a future headless server). |
-| `src/client/` | `ClientState` (the one place views read the game from), `SimulatedLink`, the player controller, saving | Only talks to the sim by sending actions through the link, which feeds `GameLoop.submit()`. |
+| `src/sim/` | Game state and rules: `World`, `EntityState`, actions, tasks, combat, `SaveGame`, snapshots, the `GameLoop` tick driver | Plain ES modules. No DOM, no three.js, no timers: runs unchanged in Node (the server, the tests) and in the browser. |
+| `server/` | The game server: `Game` (the world, who's online, logged-out pilots, autosave), the Colyseus room, the save file, static files | Node only. The only place that runs ticks when playing online. |
+| `src/client/` | `ClientState` (the one place views read the game from), the links that send actions (`SimulatedLink` offline, `NetLink` online), `NetLoop` (the online mirror), the player controller, offline saving | Only talks to the sim by sending actions through the link. |
 | `src/view/` | three.js: the map, models, animation, camera, hitboxes, debug overlay | Reads sim state through `ClientState`, never writes it. |
 | `src/ui/` | DOM overlays: panels, menus, hover text, hitsplats, XP drops, the message log | Same rule as the views. |
 | `data/` | Items, gather nodes, recipes, stations, NPCs, terrain and weapon types as JSON keyed by id, and maps as `.map` text | Content, not code. |
 | `assets/models/` | The `.glb` models, copied from the Godot project | Set as a def's `model`. |
-| `tools/` | `serve.js` (static server), `check_loops.js`, and `convert_godot_data.py` | |
-| `tests/` | Node tests of the sim, on their own small map | |
-| `vendor/three/` | three.js 0.170.0 (MIT) | |
+| `tools/` | `serve.js` (static server for offline play), `check_loops.js`, `vendor_sdk.js` and `convert_godot_data.py` | |
+| `tests/` | Node tests of the sim (on their own small map) and of the server | |
+| `vendor/` | three.js 0.170.0 and the Colyseus browser client 0.18 (both MIT) | |
 
 The JSON in `data/` was generated from the Godot `.tres` files by `tools/convert_godot_data.py` (`python3 tools/convert_godot_data.py <godot project> .`). Field names are the Godot ones, references are ids, colours are `[r, g, b, a]` in sRGB, and models are file names in `assets/models/`. Now that this is its own project, edit the JSON directly.
 
@@ -187,7 +193,20 @@ The headless tests use their own small map, `tests/maps/test_yard.map` (the orig
 
 `GameLoop` accumulates frame time and runs a fixed 0.6s tick. Each tick, `World.runTick()` runs in a fixed order: apply queued actions (in the order the client sent them) → NPC brains (respawns, aggression, wandering) → movement → tasks (hits committed last tick land first, then gathering, crafting and new attacks; damage and deaths resolve here) → regeneration → husk, wreck and ground-item cleanup. Views interpolate between the last two tick states using `ClientState.tickAlpha`, so rendering runs at any frame rate. The random number generator is seeded and saved, so a loaded world carries on exactly as the original would have.
 
-Input is queued: clicking sends an action through `SimulatedLink`, as JSON, and the latest action per slot wins until the next tick consumes it. `GameLoop.submit()` is the network boundary: for the alpha, the link becomes a WebSocket and a Node server runs this same `src/sim/` with `setInterval`.
+Input is queued: clicking sends an action as JSON, and the latest action per slot wins until the next tick consumes it. Offline, `SimulatedLink` hands it to the `GameLoop` in the page. Online, `NetLink` sends it to the server, which queues it for the sender's own pilot.
+
+## Multiplayer
+
+The server is authoritative and built on [Colyseus](https://colyseus.io) 0.18. It runs the same `src/sim/` as the browser: one `World`, ticking every 0.6 s, in one Colyseus room called `scrapyard` that up to 16 players share. One Node process serves both the game's files and the room, on one port (2567 by default; `npm start -- --port 8080` to change it).
+
+- **Each tick** the server sends every player a snapshot of the world as they may see it (`src/sim/snapshot.js`): every player and NPC, the gather nodes, items on the ground, their own wrecks, and the tick's events. Other players' inventories, storage, wrecks and messages aren't sent. Snapshots are whole, not differences: for a few friends on one map that's simple and small, around 7 KB a tick as JSON and less as Colyseus's msgpack.
+- **The browser keeps a mirror**: a `World` built from the same map that never runs a tick, only applies each snapshot in place, keeping every object's id. `NetLoop` stands in for `GameLoop`, so the views and UI don't know the difference. Between snapshots, views interpolate on the time since the last one arrived.
+- **Actions** go up as JSON. The server checks every field's type before building an action (`Action.FIELDS`), applies it to the sender's own pilot whatever id the client claims, refuses debug actions unless it runs with `--debug`, and skips an action that throws instead of stopping the world.
+- **Joining** takes a pilot name (up to 12 letters, numbers, spaces, `-` or `_`). The page remembers it, or takes `?name=` in the URL. Names are unique among players online.
+- **Leaving and coming back**: if the connection drops, the client reconnects by itself and the pilot waits in the world for 30 seconds. Reloading the page takes the waiting pilot straight back. After that the pilot logs out of the world, and the server remembers it by name (inventory, gear, XP, storage, where it stood) until that name joins again. Wrecks follow their owner back.
+- **Restarts**: the autosave (`saves/world.json`, every minute and on Ctrl+C) has the world and every pilot. After a restart everyone is logged out and gets their pilot back by joining with the same name. Nothing carries over between play sessions unless you keep the save; start each session with `npm start -- --new`.
+
+Hosting for friends: run `npm start` on the host and give friends `http://<address>:2567`. On one network that's the host's LAN address (`ipconfig` on Windows). Over the internet, forward TCP port 2567 on the router to the host and use its public address, or use a tunnel such as Tailscale. There are no accounts or passwords, so anyone who can reach the port can join under any free name; only share the address with friends.
 
 ## Differences from the Godot version
 
@@ -196,10 +215,12 @@ Input is queued: clicking sends an action through `SimulatedLink`, as JSON, and 
 - **Fixed: no lying dead at the manufactory.** A player dies and is printed in the same tick; Godot's animator stopped at the death event and never played Print, so the player lay in the death pose until it ended. Here the print wins.
 - **Labels and the HUD are HTML** over the canvas instead of Godot controls and `Label3D`, with the same layout and colours.
 - **No catalog export:** the debug window's Export catalog button isn't ported (`CATALOG.md`, copied from the Godot project, still describes the same content).
-- **Nothing is installed:** no engine, no npm packages. three.js is vendored.
+- **Multiplayer:** the Godot MVP was single player; this one is played on a Colyseus server, with offline single player kept behind `?offline`. Each player gets their own colour by id (player 1 keeps the original orange), and other players' names float over them.
+- **The page installs nothing:** no engine and no build. three.js and the Colyseus client are vendored; only the server needs `npm install`.
 
 ## Roadmap
 
 - [x] Rebuild the Godot MVP in three.js: sim, map, models, animation, UI, debug tools, saving
 - [ ] MVP check: a fresh character, one evening, start to alloy tier
-- [ ] Alpha: friends on one server (a Node server running `src/sim/`, WebSocket clients)
+- [x] Multiplayer: an authoritative Colyseus server running `src/sim/`, browser clients mirroring it
+- [ ] Alpha: friends on one hosted server for a session

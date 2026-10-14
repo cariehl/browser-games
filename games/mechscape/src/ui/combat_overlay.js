@@ -35,6 +35,12 @@ export class CombatOverlay {
 
   update(delta) {
     const world = ClientState.world;
+    // Bars of players who've logged out.
+    for (const [id, bar] of this._bars) {
+      if (this.views.has(id)) continue;
+      bar.bar.remove();
+      this._bars.delete(id);
+    }
     for (const [id, view] of this.views) {
       const state = world.entities.get(id);
       const bar = this._barFor(id);

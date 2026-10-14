@@ -20,7 +20,7 @@ const BARE = [0.78, 0.8, 0.82];
 export class PlayerAppearance {
   constructor(model, state) {
     this.state = state;
-    /** The player's own colour. Fixed for now; picked at join in the alpha. */
+    /** The player's own colour (WorldViews sets it from their id). */
     this.primary = [0.85, 0.55, 0.25];
     /** Material name -> the (per-player) material using it. */
     this._materials = new Map();

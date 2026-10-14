@@ -2,8 +2,8 @@
 // tick speed, simulated input latency, and cheats for testing progression.
 // Click the header (or press F4) to expand or collapse it.
 //
-// Local play only: its cheats are debug actions a server refuses, and tick
-// speed only exists when you run the sim yourself.
+// Online, the server runs the ticks, so there's no tick speed and no
+// save/load, and the XP cheat only shows when the server allows debug actions.
 
 import { ClientState, SPEEDS, TICK_SECONDS } from '../client/client_state.js';
 import { AUTOSAVE_TICKS } from '../client/save_manager.js';
@@ -14,10 +14,12 @@ import { isTyping } from '../view/camera_rig.js';
 import { el } from './screen.js';
 
 export class DebugHud {
-  constructor(parent, { overlay, link, saves }) {
+  /** [saves]: the SaveManager, or null online. [cheats]: whether to offer debug actions. */
+  constructor(parent, { overlay, link, saves, messageLog, cheats = true }) {
     this.overlay = overlay;
     this.link = link;
     this.saves = saves;
+    this.messageLog = messageLog;
     this.el = el('div', 'debug-hud panel', '', parent);
     this._header = el('button', 'flat header', '', this.el);
     this._header.addEventListener('click', () => this._toggle());
@@ -45,6 +47,7 @@ export class DebugHud {
     });
 
     const speedRow = el('div', 'row', '', this._body);
+    if (!saves) speedRow.style.display = 'none';
     el('span', 'label', 'Tick speed', speedRow);
     this._speed = el('select', '', '', speedRow);
     for (const value of SPEEDS) el('option', '', `${value}x`, this._speed);
@@ -60,9 +63,11 @@ export class DebugHud {
     this._spinRow('Fuzz ±', 1000, (v) => { link.fuzzMs = v; });
     this._inFlight = el('div', '', '', this._body);
 
-    el('hr', '', '', this._body);
-    el('div', 'muted', 'Grant XP (arrives as a normal XP drop)', this._body);
-    const xpRow = el('div', 'row', '', this._body);
+    const xp = el('div', '', '', this._body);
+    if (!cheats) xp.style.display = 'none';
+    el('hr', '', '', xp);
+    el('div', 'muted', 'Grant XP (arrives as a normal XP drop)', xp);
+    const xpRow = el('div', 'row', '', xp);
     this._xpSkill = el('select', '', '', xpRow);
     for (const skill of Skills.ALL) el('option', '', Skills.displayName(skill), this._xpSkill);
     this._xpAmount = el('input', 'number', '', xpRow);
@@ -78,18 +83,23 @@ export class DebugHud {
 
     el('hr', '', '', this._body);
     this._saved = el('div', '', '', this._body);
-    const saveRow = el('div', 'row', '', this._body);
-    for (const [text, fn] of [['Save', () => saves.save()], ['Load', () => saves.load()], ['New game', () => saves.newGame()]]) {
-      el('button', '', text, saveRow).addEventListener('click', fn);
+    if (saves) {
+      const saveRow = el('div', 'row', '', this._body);
+      for (const [text, fn] of [['Save', () => saves.save()], ['Load', () => saves.load()], ['New game', () => saves.newGame()]]) {
+        el('button', '', text, saveRow).addEventListener('click', fn);
+      }
+      el('div', 'muted small', 'Right-click: options · R: run · Ctrl+S/L: save/load · F4: hide', this._body);
+    } else {
+      this._saved.textContent = 'The server saves the world every minute.';
+      el('div', 'muted small', 'Right-click: options · R: run · F4: hide', this._body);
     }
-    el('div', 'muted small', 'Right-click: options · R: run · Ctrl+S/L: save/load · F4: hide', this._body);
 
     window.addEventListener('keydown', (e) => {
       if (e.repeat || isTyping(e)) return;
       if (e.key === 'F4') this._toggle();
       else if (e.key === 'F5') Hitbox.setDebugVisible(!Hitbox.debugVisible);
-      else if (e.key === '[') this._stepSpeed(-1);
-      else if (e.key === ']') this._stepSpeed(1);
+      else if (e.key === '[' && saves) this._stepSpeed(-1);
+      else if (e.key === ']' && saves) this._stepSpeed(1);
       else return;
       e.preventDefault();
     });
@@ -116,7 +126,7 @@ export class DebugHud {
   _stepSpeed(direction) {
     const index = Math.min(Math.max(SPEEDS.indexOf(ClientState.speed) + direction, 0), SPEEDS.length - 1);
     ClientState.setSpeed(SPEEDS[index]);
-    this.saves.messageLog.push(`Tick speed: ${SPEEDS[index]}x (one tick every ${(TICK_SECONDS / SPEEDS[index]).toFixed(2)}s)`);
+    this.messageLog.push(`Tick speed: ${SPEEDS[index]}x (one tick every ${(TICK_SECONDS / SPEEDS[index]).toFixed(2)}s)`);
   }
 
   /** Sends the XP through the normal input queue, so it lands on a tick, respects simulated latency, and shows up as a regular XP drop. */
@@ -140,6 +150,7 @@ export class DebugHud {
     const index = SPEEDS.indexOf(ClientState.speed);
     if (index >= 0 && this._speed.selectedIndex !== index) this._speed.selectedIndex = index;
     setText(this._inFlight, `Actions in flight: ${this.link.inFlight()}`);
+    if (!this.saves) return;
     setText(this._saved, this.saves.lastSavedTick >= 0
       ? `Last saved: tick ${this.saves.lastSavedTick} (autosaves every ${AUTOSAVE_TICKS})`
       : `Not saved yet (autosaves every ${AUTOSAVE_TICKS} ticks)`);

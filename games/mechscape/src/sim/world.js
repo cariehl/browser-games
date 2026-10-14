@@ -107,8 +107,13 @@ export class World {
       const order = queued.map((_, i) => i).sort((a, b) => (queued[a].seq - queued[b].seq) || (a - b));
       for (const i of order) {
         const action = queued[i];
-        if (action.cancelsTask()) entity.clearTask();
-        action.apply(this, entity);
+        try {
+          if (action.cancelsTask()) entity.clearTask();
+          action.apply(this, entity);
+        } catch (err) {
+          // One player's bad input mustn't stop the world for everyone.
+          console.error(`action ${action.constructor.TYPE} from ${id} failed:`, err);
+        }
         entity.last_action_seq = Math.max(entity.last_action_seq, action.seq);
       }
     }
@@ -220,6 +225,22 @@ export class World {
       }
     }
     return null;
+  }
+
+  /**
+   * Takes a player out of the world (they logged out). Hits to or from them
+   * miss and anyone fighting them stops. Their wreck stays and crumbles as
+   * usual; ground items stay too.
+   */
+  removePlayer(id) {
+    const player = this.entities.get(id);
+    if (!player || player.isNpc()) return null;
+    this.entities.delete(id);
+    this.pending_hits = this.pending_hits.filter((h) => h.target_id !== id && h.attacker_id !== id);
+    for (const other of this.entities.values()) {
+      if (other.task instanceof AttackTask && other.task.target_id === id) other.clearTask();
+    }
+    return player;
   }
 
   /** The living player closest to [tile] (Chebyshev) within [radius], ties to the lowest id. */

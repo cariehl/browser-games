@@ -238,7 +238,7 @@ export const CONTENT_FILES = {
 };
 
 /** Items whose id changed: old id -> new id, so old saves still find them. */
-const RENAMED_ITEMS = { gas_canister: 'canister' };
+const RENAMED_ITEMS = Object.assign(Object.create(null), { gas_canister: 'canister' });
 
 /**
  * Looks up game content by id. Saves and maps store ids, never object
@@ -250,7 +250,7 @@ export const Content = {
   /** [bundle]: kind -> { id -> raw data }, kinds as in CONTENT_FILES. */
   load(bundle) {
     for (const [kind, cls] of Object.entries(KINDS)) {
-      this[kind] = {};
+      this[kind] = Object.create(null); // Ids come from saves and clients; no inherited keys.
       for (const [id, raw] of Object.entries(bundle[kind] || {})) this[kind][id] = new cls(raw);
     }
     for (const kind of Object.keys(KINDS)) {

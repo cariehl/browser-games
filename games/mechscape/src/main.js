@@ -1,10 +1,12 @@
-// Boots the game in the browser: loads the content, maps and models, picks
-// up the saved game (or starts a new one), then builds the 3D views and the
-// UI around the sim and runs the frame loop.
+// Boots the game in the browser: loads the content, maps and models, joins
+// the game server (or, with ?offline, picks up the local save), then builds
+// the 3D views and the UI around the world and runs the frame loop.
 //
-// The sim (src/sim/) knows nothing about any of this. Each frame, time goes
-// into the GameLoop, which runs whole 0.6s ticks; views read the World and
-// interpolate between ticks with the loop's alpha.
+// The sim (src/sim/) knows nothing about any of this. Offline, each frame's
+// time goes into a GameLoop in this page, which runs whole 0.6s ticks.
+// Online, the server runs them and a NetLoop mirrors each one as it arrives.
+// Either way views read the World and interpolate between ticks with the
+// loop's alpha.
 
 import * as THREE from 'three';
 import { Content, CONTENT_FILES } from './sim/defs.js';
@@ -14,6 +16,7 @@ import { ClientState } from './client/client_state.js';
 import { SimulatedLink } from './client/simulated_link.js';
 import { PlayerController } from './client/player_controller.js';
 import { SaveManager } from './client/save_manager.js';
+import { NetLink, join, savedName, askName } from './client/net_client.js';
 import { Models } from './view/models.js';
 import { WorldViews, modelFiles } from './view/world_views.js';
 import { CameraRig } from './view/camera_rig.js';
@@ -95,16 +98,56 @@ function addEnvironment(scene) {
   };
 }
 
+/** Asks for a name if there isn't one, and joins; asks again if the server turns it away. */
+async function joinServer(status) {
+  let name = savedName();
+  let error = '';
+  for (;;) {
+    if (!name || error) name = await askName(status, name, error);
+    status.textContent = `Joining as ${name}…`;
+    try {
+      return await join(name, DEFAULT_MAP);
+    } catch (e) {
+      console.error(e);
+      error = e.message || "Couldn't reach the game server.";
+    }
+  }
+}
+
+/** A red line at the top of the screen while the connection is down. */
+function watchConnection(room, ui) {
+  const banner = el('div', 'connection-banner', '', ui);
+  banner.style.display = 'none';
+  const show = (text) => {
+    banner.textContent = text;
+    banner.style.display = text ? '' : 'none';
+  };
+  room.onDrop(() => show('Connection lost. Reconnecting…'));
+  room.onReconnect(() => show(''));
+  room.onLeave(() => show('Disconnected from the server. Reload the page to rejoin.'));
+}
+
 async function main() {
   const status = document.getElementById('loading');
+  const offline = new URLSearchParams(window.location.search).has('offline');
   await loadContent();
   status.textContent = 'Loading models…';
   await Models.preload(modelFiles(Content));
 
-  const { world, notice } = SaveManager.startingWorld(() => new World(DEFAULT_MAP));
-  ClientState.start(world);
-  ClientState.notice = notice;
-  ClientState.localPlayer();
+  let net = null;
+  if (offline) {
+    const { world, notice } = SaveManager.startingWorld(() => new World(DEFAULT_MAP));
+    ClientState.start(world);
+    ClientState.notice = notice;
+    ClientState.localPlayer();
+  } else {
+    net = await joinServer(status);
+    ClientState.online = true;
+    ClientState.start(net.loop.world, net.loop);
+    ClientState.localPlayerId = net.id;
+    ClientState.notice = `You're playing as ${ClientState.me().display_name}.`;
+  }
+  const world = ClientState.world;
   status.remove();
 
   const canvas = document.getElementById('game');
@@ -125,11 +168,21 @@ async function main() {
   const overlay = new DebugOverlay();
   scene.add(overlay);
 
-  const link = new SimulatedLink();
+  const link = net ? new NetLink(net.room) : new SimulatedLink();
   const combat = new CombatOverlay(ui, views.entities);
   const xpDrops = new XpDrops(views.playerView);
   const messageLog = new MessageLog(ui);
-  const saves = new SaveManager(messageLog);
+  const saves = net ? null : new SaveManager(messageLog);
+  if (net) {
+    watchConnection(net.room, ui);
+    net.room.onMessage('notice', ({ text }) => messageLog.push(text));
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && ['s', 'l'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        messageLog.push('The server saves the world by itself every minute.');
+      }
+    });
+  }
   const hover = new HoverText(ui);
   const menu = new ContextMenu(ui);
   const inspector = new InspectWindow(ui);
@@ -137,7 +190,7 @@ async function main() {
   const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide });
   const craft = new CraftMenu(ui, link);
   const storage = new StorageMenu(ui, link, menu);
-  const hud = new DebugHud(ui, { overlay, link, saves });
+  const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
   const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector });
 
   // The game has its own right-click menu.
@@ -182,7 +235,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // For poking at the game from the browser console.
-  window.mechscape = { ClientState, views, link, saves, rig, renderer, scene };
+  window.mechscape = { ClientState, views, link, saves, rig, renderer, scene, room: net && net.room };
 }
 
 main().catch((error) => {

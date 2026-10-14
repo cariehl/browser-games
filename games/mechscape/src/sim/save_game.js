@@ -37,14 +37,7 @@ export const SaveGame = {
         if (!eq(entity.husk_tile, NO_TARGET)) npc.husk_tile = entity.husk_tile;
         npcs.push(npc);
       } else {
-        const player = entityDict(entity);
-        player.display_name = entity.display_name;
-        player.inventory = entity.inventory.slots.map((s) => (s ? { item: s.item.id, count: s.count } : null));
-        player.weapon = entity.weapon ? entity.weapon.id : '';
-        player.armor = Object.fromEntries(Object.entries(entity.armor).map(([slot, item]) => [slot, item.id]));
-        player.train_endurance = entity.train_endurance;
-        player.storage = Object.fromEntries(entity.storage.items().map((item) => [item.id, entity.storage.countOf(item)]));
-        players.push(player);
+        players.push(SaveGame.playerToDict(entity));
       }
     }
     const nodes = [];
@@ -100,27 +93,7 @@ export const SaveGame = {
       npc.dead_until = entry.dead_until;
       if (entry.husk_tile) npc.husk_tile = { ...entry.husk_tile };
     }
-    for (const entry of data.players) {
-      const player = world.spawn(entry.id, entry.tile);
-      applyEntity(player, entry);
-      bySavedId.set(entry.id, player);
-      player.display_name = entry.display_name || '';
-      player.inventory = new Inventory();
-      entry.inventory.forEach((line, i) => {
-        const item = line && Content.item(line.item);
-        if (item && i < Inventory.SIZE) player.inventory.slots[i] = new ItemStack(item, line.count);
-      });
-      player.weapon = entry.weapon ? Content.item(entry.weapon) : null;
-      for (const [slot, id] of Object.entries(entry.armor || {})) {
-        const item = Content.item(id);
-        if (item && item.isArmor()) player.armor[slot] = item;
-      }
-      player.train_endurance = !!entry.train_endurance;
-      for (const [id, count] of Object.entries(entry.storage || {})) {
-        const item = Content.item(id);
-        if (item) player.storage.deposit(item, count);
-      }
-    }
+    for (const entry of data.players) bySavedId.set(entry.id, SaveGame.playerFromDict(world, entry));
 
     world._nextObjectId = Math.max(world._nextObjectId, data.next_object_id);
     for (const entry of data.nodes) {
@@ -170,6 +143,41 @@ export const SaveGame = {
       }
     }
     return world;
+  },
+
+  /** One player as plain data (also how the server keeps a logged-out player). */
+  playerToDict(entity) {
+    const player = entityDict(entity);
+    player.display_name = entity.display_name;
+    player.inventory = entity.inventory.slots.map((s) => (s ? { item: s.item.id, count: s.count } : null));
+    player.weapon = entity.weapon ? entity.weapon.id : '';
+    player.armor = Object.fromEntries(Object.entries(entity.armor).map(([slot, item]) => [slot, item.id]));
+    player.train_endurance = entity.train_endurance;
+    player.storage = Object.fromEntries(entity.storage.items().map((item) => [item.id, entity.storage.countOf(item)]));
+    return player;
+  },
+
+  /** Adds a player from playerToDict() data to [world], with id [id] (default: the saved one). */
+  playerFromDict(world, entry, id = entry.id) {
+    const player = world.spawn(id, entry.tile);
+    applyEntity(player, entry);
+    player.display_name = entry.display_name || '';
+    player.inventory = new Inventory();
+    entry.inventory.forEach((line, i) => {
+      const item = line && Content.item(line.item);
+      if (item && i < Inventory.SIZE) player.inventory.slots[i] = new ItemStack(item, line.count);
+    });
+    player.weapon = entry.weapon ? Content.item(entry.weapon) : null;
+    for (const [slot, itemId] of Object.entries(entry.armor || {})) {
+      const item = Content.item(itemId);
+      if (item && item.isArmor()) player.armor[slot] = item;
+    }
+    player.train_endurance = !!entry.train_endurance;
+    for (const [itemId, count] of Object.entries(entry.storage || {})) {
+      const item = Content.item(itemId);
+      if (item) player.storage.deposit(item, count);
+    }
+    return player;
   },
 
   toJSON(world) {

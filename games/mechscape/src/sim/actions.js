@@ -35,7 +35,10 @@ export class Action {
     return false;
   }
 
-  /** A cheat for testing. The alpha server will refuse these unless allowed. */
+  /** Fields fromJSON() accepts, by kind ('int', 'bool', 'id' or 'tile'). */
+  static FIELDS = {};
+
+  /** A cheat for testing. The server refuses these unless debug is on. */
   isDebug() {
     return false;
   }
@@ -48,20 +51,50 @@ export class Action {
     return out;
   }
 
+  /**
+   * Rebuilds an action from data a client sent. Returns null if the data
+   * isn't a well-formed action: unknown type, missing or wrongly typed
+   * fields. Only the fields the type declares (FIELDS) are copied, so a
+   * client can't smuggle anything else in. Whether the action makes sense
+   * (in reach, owned, affordable) is still each apply()'s job.
+   */
   static fromJSON(data) {
-    const cls = ACTION_TYPES[data.type];
+    if (typeof data !== 'object' || data == null) return null;
+    const cls = Object.hasOwn(ACTION_TYPES, data.type) ? ACTION_TYPES[data.type] : null;
     if (!cls) return null;
     const action = Object.create(cls.prototype);
-    Object.assign(action, data);
-    delete action.type;
+    action.seq = Number.isSafeInteger(data.seq) && data.seq >= 0 ? data.seq : 0;
+    for (const [name, kind] of Object.entries(cls.FIELDS)) {
+      const value = readField(kind, data[name]);
+      if (value === undefined) return null;
+      action[name] = value;
+    }
     action._unique = nextUnique++;
     return action;
+  }
+}
+
+const MAX_INT = 1 << 30;
+
+/** Checks one field against its kind. Returns the value to use, or undefined if it's bad. */
+function readField(kind, value) {
+  switch (kind) {
+    case 'int': return Number.isSafeInteger(value) && Math.abs(value) <= MAX_INT ? value : undefined;
+    case 'bool': return typeof value === 'boolean' ? value : undefined;
+    case 'id': return typeof value === 'string' && /^[a-z][a-z0-9_]{0,63}$/.test(value) ? value : undefined;
+    case 'tile': {
+      if (typeof value !== 'object' || value == null) return undefined;
+      const { x, y } = value;
+      return Number.isSafeInteger(x) && Number.isSafeInteger(y) && Math.abs(x) <= 100000 && Math.abs(y) <= 100000 ? { x, y } : undefined;
+    }
+    default: throw new Error(`unknown field kind ${kind}`);
   }
 }
 
 /** Walk (or run) to a tile. */
 export class MoveAction extends Action {
   static TYPE = 'move';
+  static FIELDS = { target: 'tile' };
   constructor(target) {
     super();
     this.target = { ...target };
@@ -77,6 +110,7 @@ export class MoveAction extends Action {
 /** Clicked an NPC: chase and fight it. */
 export class AttackAction extends Action {
   static TYPE = 'attack';
+  static FIELDS = { target_id: 'int' };
   constructor(targetId) {
     super();
     this.target_id = targetId;
@@ -95,6 +129,7 @@ export class AttackAction extends Action {
 /** Clicked a world object: walk beside it, then gather, open its menu, or salvage your wreck. */
 export class InteractAction extends Action {
   static TYPE = 'interact';
+  static FIELDS = { object_id: 'int' };
   constructor(objectId) {
     super();
     this.object_id = objectId;
@@ -126,6 +161,7 @@ export class InteractAction extends Action {
 /** Picked a recipe in a station's menu: make [count] of it (-1 = All). */
 export class CraftAction extends Action {
   static TYPE = 'craft';
+  static FIELDS = { station_id: 'int', recipe_index: 'int', count: 'int' };
   static ALL = -1;
   constructor(stationId, recipeIndex, count) {
     super();
@@ -138,6 +174,7 @@ export class CraftAction extends Action {
   apply(world, entity) {
     const station = world.stations.get(this.station_id);
     if (!station || this.recipe_index < 0 || this.recipe_index >= station.def.recipes.length) return;
+    if (this.count === 0 || this.count < CraftAction.ALL) return;
     // Server-side validation: the client could claim anything.
     if (!station.isAdjacent(entity.tile)) {
       world.message(entity.id, `You need to be next to the ${station.def.display_name.toLowerCase()}.`);
@@ -151,6 +188,7 @@ export class CraftAction extends Action {
 /** Clicked an item on the ground: walk onto its tile and pick it up. */
 export class TakeAction extends Action {
   static TYPE = 'take';
+  static FIELDS = { ground_id: 'int' };
   constructor(groundId) {
     super();
     this.ground_id = groundId;
@@ -175,6 +213,7 @@ export class TakeAction extends Action {
 /** Toggle between walking (1 tile/tick) and running (2 tiles/tick). */
 export class SetRunAction extends Action {
   static TYPE = 'set_run';
+  static FIELDS = { run: 'bool' };
   constructor(run) {
     super();
     this.run = run;
@@ -188,6 +227,7 @@ export class SetRunAction extends Action {
 /** Where combat XP goes: the weapon's skill, or Endurance. */
 export class SetCombatStyleAction extends Action {
   static TYPE = 'set_combat_style';
+  static FIELDS = { train_endurance: 'bool' };
   constructor(trainEndurance) {
     super();
     this.train_endurance = trainEndurance;
@@ -201,6 +241,7 @@ export class SetCombatStyleAction extends Action {
 /** Swap two inventory slots (dragging). Either may be empty. */
 export class SwapItemsAction extends Action {
   static TYPE = 'swap_items';
+  static FIELDS = { from_index: 'int', to_index: 'int' };
   constructor(from, to) {
     super();
     this.from_index = from;
@@ -218,6 +259,7 @@ export class SwapItemsAction extends Action {
 /** Drop the item in one slot onto your tile. */
 export class DropAction extends Action {
   static TYPE = 'drop';
+  static FIELDS = { slot_index: 'int' };
   constructor(slotIndex) {
     super();
     this.slot_index = slotIndex;
@@ -232,6 +274,7 @@ export class DropAction extends Action {
 /** Wield the weapon, or wear the armor, in a slot. A straight swap with what was equipped. */
 export class EquipAction extends Action {
   static TYPE = 'equip';
+  static FIELDS = { slot_index: 'int' };
   constructor(slotIndex) {
     super();
     this.slot_index = slotIndex;
@@ -264,6 +307,7 @@ export class EquipAction extends Action {
 /** Take off the weapon ('weapon') or the armor in one slot. */
 export class UnequipAction extends Action {
   static TYPE = 'unequip';
+  static FIELDS = { equip_slot: 'id' };
   static WEAPON = 'weapon';
   constructor(equipSlot = 'weapon') {
     super();
@@ -272,6 +316,7 @@ export class UnequipAction extends Action {
   slot() { return `unequip_${this.equip_slot}`; }
   apply(world, entity) {
     const weapon = this.equip_slot === UnequipAction.WEAPON;
+    if (!weapon && !Object.hasOwn(entity.armor, this.equip_slot)) return;
     const item = weapon ? entity.weapon : entity.armor[this.equip_slot];
     if (!item) return;
     if (!entity.inventory.add(item)) {
@@ -290,6 +335,7 @@ export class UnequipAction extends Action {
  */
 export class UseItemAction extends Action {
   static TYPE = 'use_item';
+  static FIELDS = { slot_index: 'int' };
   constructor(slotIndex) {
     super();
     this.slot_index = slotIndex;
@@ -329,6 +375,7 @@ export class UseItemAction extends Action {
  */
 export class DepositAction extends Action {
   static TYPE = 'deposit';
+  static FIELDS = { slot_index: 'int', count: 'int' };
   static ALL = -1;
   constructor(slotIndex, count = -1) {
     super();
@@ -374,6 +421,7 @@ export class DepositAction extends Action {
 /** Put the whole inventory into storage. */
 export class DepositAllAction extends Action {
   static TYPE = 'deposit_all';
+  static FIELDS = {};
   slot() { return 'deposit_all'; }
   apply(world, entity) {
     if (!entity.storage || !world.storageInReach(entity.tile)) return;
@@ -387,6 +435,7 @@ export class DepositAllAction extends Action {
 /** Take [count] of a stored item out (ALL for as many as fit). */
 export class WithdrawAction extends Action {
   static TYPE = 'withdraw';
+  static FIELDS = { item_id: 'id', count: 'int' };
   static ALL = -1;
   constructor(itemId, count = 1) {
     super();
@@ -421,6 +470,7 @@ export class WithdrawAction extends Action {
 /** Debug only: grant XP in a skill. */
 export class DebugGrantXpAction extends Action {
   static TYPE = 'debug_grant_xp';
+  static FIELDS = { skill: 'id', amount: 'int' };
   constructor(skill, amount) {
     super();
     this.skill = skill;

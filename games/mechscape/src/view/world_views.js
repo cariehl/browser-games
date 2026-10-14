@@ -21,6 +21,11 @@ const PLAYER_WALK_CYCLE = 1.5;
 const PLAYER_RUN_CYCLE = 2.3;
 const GROUND_BLOCK = [0.26, 0.14, 0.26];
 const TICK_SECONDS = 0.6;
+/** Each player's own colour, by id, so friends can tell each other apart. Player 1 keeps the original orange. */
+export const PLAYER_COLOURS = [
+  [0.85, 0.55, 0.25], [0.25, 0.55, 0.85], [0.35, 0.75, 0.35], [0.8, 0.3, 0.35],
+  [0.65, 0.4, 0.8], [0.9, 0.8, 0.3], [0.3, 0.75, 0.75], [0.85, 0.45, 0.65],
+];
 
 /** Every model file the world's content refers to, to preload. */
 export function modelFiles(content) {
@@ -64,7 +69,24 @@ export class WorldViews {
   update(delta) {
     const world = ClientState.world;
     for (const state of world.entities.values()) if (!this.entities.has(state.id)) this._addEntity(state);
-    for (const view of this.entities.values()) view.update(delta);
+    // Players who logged out (online only: NPCs never leave the world).
+    for (const [id, view] of this.entities) {
+      if (world.entities.get(id) === view.state) continue;
+      view.dispose();
+      if (view.nameLabel) view.nameLabel.dispose();
+      this.root.remove(view);
+      this.entities.delete(id);
+    }
+    for (const view of this.entities.values()) {
+      view.update(delta);
+      // Other players' names float over them.
+      if (!view.nameLabel && !view.state.isNpc() && view.state.id !== ClientState.localPlayerId) view.nameLabel = new WorldLabel('player-label');
+      if (view.nameLabel) {
+        view.nameLabel.text = view.state.display_name;
+        view.nameLabel.point.copy(view.position).y += view.headHeight + 0.2;
+        view.nameLabel.update();
+      }
+    }
     this._syncNodes();
     for (const view of this._nodes.values()) view.update(delta);
     this._syncGround();
@@ -195,6 +217,7 @@ function makePlayerView(state) {
     view.lunges = false;
   }
   view.appearance = new PlayerAppearance(model, state);
+  view.appearance.primary = PLAYER_COLOURS[(Math.max(state.id, 1) - 1) % PLAYER_COLOURS.length];
   view.headHeight = Models.bounds(model).max.y + 0.15;
   return view;
 }

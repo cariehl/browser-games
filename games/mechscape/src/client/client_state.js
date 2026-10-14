@@ -3,10 +3,11 @@
 // Views only read. They never call a World method that changes state; what
 // the player does goes through the link as Actions.
 //
-// Today [world] is the live single-player world, run in this page by a
-// GameLoop. In the alpha it becomes the client's mirror, which applies each
-// server snapshot in place onto objects with the same ids, so views keep
-// their references and keep working without knowing the difference.
+// Offline, [world] is the live single-player world, run in this page by a
+// GameLoop. Online it's the client's mirror of the server's world, kept by a
+// NetLoop, which applies each server snapshot in place onto objects with the
+// same ids, so views keep their references and work without knowing the
+// difference.
 
 import { GameLoop } from '../sim/game_loop.js';
 import { TICK_SECONDS } from '../sim/constants.js';
@@ -17,8 +18,10 @@ export { TICK_SECONDS };
 export const SPEEDS = [0.25, 0.5, 1, 2, 4, 8];
 
 export const ClientState = {
-  /** @type {GameLoop} */
+  /** A GameLoop offline, a NetLoop online. @type {GameLoop} */
   loop: null,
+  /** Playing on a server. */
+  online: false,
   /** The player this page controls. */
   localPlayerId: -1,
   /**
@@ -36,8 +39,9 @@ export const ClientState = {
   /** 0..1 progress through the current tick, for interpolating. */
   get tickAlpha() { return this.loop.alpha; },
 
-  start(world) {
-    this.loop = new GameLoop(world);
+  /** Starts with [world], run by [loop] (default: a GameLoop in this page). */
+  start(world, loop = new GameLoop(world)) {
+    this.loop = loop;
     this.loop.onTick((tick) => {
       for (const fn of this._tickListeners) fn(tick);
     });
@@ -51,10 +55,10 @@ export const ClientState = {
     };
   },
 
-  /** The player this page controls: the world's first player, or a new one. */
+  /** The player this page controls: offline, the world's first player, or a new one. */
   localPlayer() {
     let player = this.world.entities.get(this.localPlayerId);
-    if (!player) {
+    if (!player && !this.online) {
       const players = this.world.players();
       player = players.length ? players[0] : this.world.spawnPlayer('Player');
       this.localPlayerId = player.id;
