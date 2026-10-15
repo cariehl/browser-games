@@ -66,6 +66,17 @@ export const InspectInfo = {
     return { title: def.display_name, subtitle: `${Skills.displayName(def.skill)} node`, rows };
   },
 
+  /** People, pets and mechs: who they are (hostiles show their stats instead, see npc()). */
+  person(world, npc) {
+    if (!npc || !world.entities.has(npc.id)) return null;
+    return { title: npc.def.display_name, subtitle: npc.def.description || '', rows: [] };
+  },
+
+  /** Scenery (decor props, rocks): a name and a line about it. */
+  scenery(def) {
+    return { title: def.display_name, subtitle: def.description || '', rows: [] };
+  },
+
   station(world, station) {
     if (!station || !world.stations.has(station.id)) return null;
     const def = station.def;

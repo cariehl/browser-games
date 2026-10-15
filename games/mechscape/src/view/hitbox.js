@@ -9,7 +9,7 @@
 
 import * as THREE from 'three';
 
-export const HitboxKind = { NPC: 'npc', PLAYER: 'player', OBJECT: 'object', ITEM: 'item' };
+export const HitboxKind = { NPC: 'npc', PLAYER: 'player', OBJECT: 'object', ITEM: 'item', SCENERY: 'scenery' };
 
 const all = new Set();
 const DEBUG_COLOR = 0xffd933;
@@ -76,5 +76,23 @@ export class Hitbox extends THREE.Object3D {
   static setDebugVisible(on) {
     Hitbox.debugVisible = on;
     for (const hitbox of all) hitbox._wire.visible = on;
+  }
+}
+
+/**
+ * A clickable box on scenery (decor props, rocks): [target] is
+ * { def, tile, terrain }. Scenery never moves, so it sits at the origin of
+ * a group at the world's origin and its box is already in world space:
+ * picking skips the matrix work, which matters with hundreds of them.
+ */
+export class SceneryHitbox extends Hitbox {
+  constructor(target, size, center) {
+    super(HitboxKind.SCENERY, target, size, center);
+  }
+
+  rayDistance(ray) {
+    if (!this._shown()) return -1;
+    if (!ray.intersectBox(this.box, _hit)) return -1;
+    return _hit.distanceTo(ray.origin);
   }
 }

@@ -32,7 +32,12 @@ canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: b
 .join-form .join-error:empty { display: none; }
 .join-form .server-info:empty { display: none; }
 .look-editor { display: flex; gap: 12px; align-items: center; }
-.look-preview { width: 180px; height: 220px; background: rgba(255, 255, 255, 0.04); border-radius: 6px; }
+.look-stage { position: relative; }
+.look-preview { width: 180px; height: 220px; background: rgba(255, 255, 255, 0.04); border-radius: 6px; cursor: grab; touch-action: none; display: block; }
+.look-preview.dragging { cursor: grabbing; }
+.look-turn { position: absolute; left: 6px; right: 6px; bottom: 6px; display: flex; justify-content: space-between; pointer-events: none; }
+.look-turn button { pointer-events: auto; width: 30px; height: 26px; padding: 0; font-size: 12px; opacity: 0.8; touch-action: none; }
+.look-turn button:hover { opacity: 1; }
 .look-fields { display: flex; flex-direction: column; gap: 6px; min-width: 170px; }
 .look-fields label { flex-direction: row !important; align-items: center; justify-content: space-between; display: flex; gap: 8px; font-size: 14px; }
 .look-fields input[type=color] { width: 48px; height: 24px; padding: 0; border: none; background: none; }

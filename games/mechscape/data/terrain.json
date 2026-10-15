@@ -14,7 +14,7 @@
  },
  "rock": {
   "id": "rock",
-  "display_name": "Rock",
+  "display_name": "TODO",
   "blocks_movement": true,
   "blocks_sight": true,
   "color": [
@@ -23,7 +23,9 @@
    0.33,
    1.0
   ],
-  "height": 0.9
+  "height": 0.9,
+  "description": "TODO",
+  "inspect": true
  },
  "wall": {
   "id": "wall",
@@ -92,7 +94,7 @@
  },
  "ruin_wall": {
   "id": "ruin_wall",
-  "display_name": "Ruined wall",
+  "display_name": "TODO",
   "blocks_movement": true,
   "blocks_sight": true,
   "color": [
@@ -101,7 +103,9 @@
    0.48,
    1.0
   ],
-  "height": 1.4
+  "height": 1.4,
+  "description": "TODO",
+  "inspect": true
  },
  "hedge": {
   "id": "hedge",

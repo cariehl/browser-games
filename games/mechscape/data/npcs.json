@@ -102,7 +102,18 @@
    0.2,
    1
   ],
-  "size": 1.0
+  "size": 1.0,
+  "look": {
+   "head": "crest",
+   "chassis": "heavy",
+   "visor": "#ffb040",
+   "primary": "#e8b030",
+   "secondary": "#4a5058"
+  },
+  "cosmetics": {
+   "hat": "traffic_cone"
+  },
+  "description": "TODO"
  },
  "scrap_artist": {
   "id": "scrap_artist",
@@ -120,7 +131,18 @@
    0.65,
    1
   ],
-  "size": 1.0
+  "size": 1.0,
+  "look": {
+   "head": "mono",
+   "chassis": "sleek",
+   "visor": "#ffe066",
+   "primary": "#d9579e",
+   "secondary": "#2f2a3a"
+  },
+  "cosmetics": {
+   "decal": "flame_decal"
+  },
+  "description": "TODO"
  },
  "surveyor": {
   "id": "surveyor",
@@ -138,7 +160,18 @@
    0.6,
    1
   ],
-  "size": 1.0
+  "size": 1.0,
+  "look": {
+   "head": "dome",
+   "chassis": "standard",
+   "visor": "#8cf4ff",
+   "primary": "#3fae95",
+   "secondary": "#e4dcc4"
+  },
+  "cosmetics": {
+   "hat": "surveyor_hat"
+  },
+  "description": "TODO"
  },
  "scrap_crawler": {
   "id": "scrap_crawler",
@@ -391,7 +424,8 @@
    0.6,
    1.0
   ],
-  "size": 0.5
+  "size": 0.5,
+  "description": "TODO"
  },
  "pet_loader_pup": {
   "hitpoints": 10,
@@ -421,7 +455,8 @@
    0.25,
    1.0
   ],
-  "size": 0.5
+  "size": 0.5,
+  "description": "TODO"
  },
  "pet_mini_press": {
   "hitpoints": 10,
@@ -451,7 +486,8 @@
    0.7,
    1.0
   ],
-  "size": 0.5
+  "size": 0.5,
+  "description": "TODO"
  },
  "pet_survey_drone": {
   "hitpoints": 10,
@@ -490,7 +526,8 @@
    "landmark_lander": "This is where the first pilots landed. Technically, this is where you were born. Happy birthday?",
    "specimen": "Ooh, a specimen. Into the jar it goes.",
    "puzzle": "You fixed it! I was going to suggest that. Eventually."
-  }
+  },
+  "description": "TODO"
  },
  "walker_mech": {
   "id": "walker_mech",
@@ -518,7 +555,8 @@
    1
   ],
   "size": 2.4,
-  "shape": "walker"
+  "shape": "walker",
+  "description": "TODO"
  },
  "press_drone": {
   "id": "press_drone",

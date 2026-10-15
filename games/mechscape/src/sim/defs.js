@@ -183,6 +183,10 @@ export class NpcDef {
       model: null, model_scale: 1, walk_cycle_distance: 2, attack_windup_frames: 0,
       /** A procedural model instead of an imported one (see view/mech_view.js), or ''. */
       shape: '',
+      /** People drawn as pilots: parts and colours (see sim/appearance.js), and cosmetics worn (part -> item id). */
+      look: null, cosmetics: {},
+      /** What Inspect says about it (people, pets and mechs; hostiles show their stats). */
+      description: '',
       color: [0.5, 0.3, 0.28, 1], size: 1,
     }, raw);
   }
@@ -252,8 +256,10 @@ export class StationDef {
       kind: StationKind.CRAFT,
       blocks_movement: true, blocks_sight: false,
       model: null, model_scale: 1, color: [0.45, 0.38, 0.3, 1],
-      /** Procedural model when there's no model file (see view/shapes.js). */
-      shape: '',
+      /** Procedural model when there's no model file (see view/shapes.js), and its accent colour (null: amber). */
+      shape: '', accent: null,
+      /** Lifts: the way their cable runs out, [dx, dy] on the map, or null for none. */
+      cable: null,
       // Puzzles (survey): what it takes ({item, count}) or a scan, and the terrain it clears.
       needs: null, scan: false, opens: '', done_text: '',
       /** Landmarks: the survey log entry. */
@@ -279,6 +285,8 @@ export class TerrainDef {
       shimmer: false,
       /** What a puzzle that opens this terrain leaves in its place ('' for nothing). */
       opens_to: '',
+      /** Clickable (rocks), with an Inspect option showing its name and description. */
+      inspect: false, description: '',
     }, raw);
   }
 
@@ -371,6 +379,8 @@ export class DecorDef {
       color: [0.4, 0.38, 0.36, 1], accent: [1, 0.6, 0.2, 1], scale: 1,
       /** A light it gives off: { color, intensity, distance }, or null. */
       light: null,
+      /** Clickable, with an Inspect option showing its name and description. Flat things (grass, puddles) aren't. */
+      inspect: true, description: '',
     }, raw);
   }
 

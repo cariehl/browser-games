@@ -6,7 +6,7 @@ import * as THREE from 'three';
 import { tileToWorld, color } from './tile_math.js';
 import { Models } from './models.js';
 import { Hitbox, HitboxKind } from './hitbox.js';
-import { hasShape, buildShape } from './station_shapes.js';
+import { hasShape, buildShape, buildCable } from './station_shapes.js';
 
 export class StationView extends THREE.Group {
   constructor(station) {
@@ -26,6 +26,8 @@ export class StationView extends THREE.Group {
       this.add(model);
       const box = new THREE.Box3().setFromObject(model);
       this.add(new Hitbox(HitboxKind.OBJECT, station.id, box.getSize(new THREE.Vector3()), box.getCenter(new THREE.Vector3())));
+      // Added after the hitbox, so the cable out over the void isn't clickable.
+      if (def.cable) this.add(buildCable(def, def.cable));
       return;
     }
     this.scale.setScalar(1.35);

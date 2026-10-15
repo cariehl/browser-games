@@ -23,6 +23,7 @@ import { TalkAction } from '../sim/quests.js';
 import { BoardAction, LeaveMechAction } from '../sim/mech.js';
 import { HabPiece, EditPieceAction } from '../sim/hab.js';
 import { bedStage } from '../view/piece_view.js';
+import { DismissPetAction } from '../sim/appearance.js';
 import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 
@@ -111,10 +112,17 @@ export class PlayerController {
       const npc = world.entities.get(hitbox.targetId);
       if (!npc || npc.isDead()) return [];
       const name = npc.def.display_name;
-      if (npc.def.brain === 'mech') return this._mechOptions(npc);
+      const inspectPerson = { verb: 'Inspect', target: name, color: NPC_COLOR, action: () => this._inspect(() => InspectInfo.person(ClientState.world, npc), x, y) };
+      if (npc.def.brain === 'mech') return [...this._mechOptions(npc), inspectPerson];
       if (!npc.def.attackable) {
-        if (!npc.def.talk) return [];
-        return [{ verb: 'Talk-to', target: name, color: NPC_COLOR, action: () => this._talk(npc.id) }];
+        const options = [];
+        if (npc.def.talk) options.push({ verb: 'Talk-to', target: name, color: NPC_COLOR, action: () => this._talk(npc.id) });
+        // Your own pet can go back in your pack.
+        const me = ClientState.me();
+        if (me && me.pet && me.pet_npc_id === npc.id) options.push({ verb: 'Pick up', target: name, color: NPC_COLOR, action: () => this._pickUpPet(npc) });
+        // Nothing else to do with it: a left click still walks.
+        options.push({ ...inspectPerson, rightOnly: options.length === 0 });
+        return options;
       }
       return [
         { verb: 'Attack', target: name, color: NPC_COLOR, action: () => this._attack(npc.id) },
@@ -150,6 +158,13 @@ export class PlayerController {
         { verb, target: name, color: OBJECT_COLOR, action: () => this._interact(object.id) },
         { verb: 'Inspect', target: name, color: OBJECT_COLOR, action: () => this._inspect(inspect, x, y) },
       ];
+    }
+    if (hitbox.kind === HitboxKind.SCENERY) {
+      const { def, tile, terrain } = hitbox.targetId;
+      // Terrain a puzzle has cleared since is gone.
+      if (terrain && world.terrainAt(tile) !== def) return [];
+      // Scenery only has Inspect: a left click still walks.
+      return [{ verb: 'Inspect', target: def.display_name, color: OBJECT_COLOR, rightOnly: true, action: () => this.inspector.open(() => InspectInfo.scenery(def), x, y, false) }];
     }
     if (hitbox.kind === HitboxKind.ITEM) {
       const picked = world.ground_items.get(hitbox.targetId);
@@ -211,6 +226,12 @@ export class PlayerController {
     if (!npc) return;
     this.marker.showAt(npc.tile, false);
     this.link.send(ClientState.localPlayerId, new TalkAction(npcId));
+  }
+
+  /** Put your pet back in your pack (it's never far: it follows you). */
+  _pickUpPet(npc) {
+    this.marker.showAt(npc.tile, false);
+    this.link.send(ClientState.localPlayerId, new DismissPetAction());
   }
 
   _trade(playerId) {

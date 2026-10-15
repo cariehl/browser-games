@@ -175,7 +175,11 @@
    0.55,
    1
   ],
-  "shape": "lift"
+  "shape": "lift",
+  "cable": [
+   -1,
+   0
+  ]
  },
  "reach_return": {
   "id": "reach_return",
@@ -189,7 +193,11 @@
    0.55,
    1
   ],
-  "shape": "lift"
+  "shape": "lift",
+  "cable": [
+   -1,
+   0
+  ]
  },
  "deadfields_gate": {
   "id": "deadfields_gate",
@@ -536,12 +544,18 @@
   "kind": "landmark",
   "recipes": [],
   "color": [
-   0.4,
-   0.5,
-   0.55,
-   1.0
+   0.6,
+   0.58,
+   0.54,
+   1
   ],
-  "shape": "pylon",
-  "lore": "The lander that brought the first pilots down. The manufactory inside it is the one that printed you."
+  "shape": "lander",
+  "lore": "The lander that brought the first pilots down. The manufactory inside it is the one that printed you.",
+  "accent": [
+   1,
+   0.65,
+   0.25,
+   1
+  ]
  }
 }

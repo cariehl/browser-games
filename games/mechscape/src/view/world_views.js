@@ -18,6 +18,7 @@ import { buildGrid, rebuildTerrain } from './grid_view.js';
 import { WorldLabel } from '../ui/screen.js';
 import { buildWalker, showInstalled, WalkerAnimator } from './mech_view.js';
 import { Mechs } from '../sim/mech.js';
+import { Content } from '../sim/defs.js';
 import { HazardViews } from './hazard_view.js';
 import { PieceView, PieceGhost } from './piece_view.js';
 
@@ -377,10 +378,40 @@ function makeMechView(state) {
   return view;
 }
 
+/**
+ * A person drawn as a pilot (the foreman, the surveyor...): the player model
+ * dressed in their def's look and cosmetics, so each has their own parts and colours.
+ */
+function makePilotNpcView(state) {
+  const def = state.def;
+  const view = new EntityView(state);
+  const { model, animations } = Models.instance(PLAYER_MODEL, def.model_scale);
+  view.add(model);
+  const animator = ModelAnimator.attach(model, animations, state, def.model_scale);
+  if (animator) {
+    animator.walkCycleDistance = PLAYER_WALK_CYCLE;
+    animator.runCycleDistance = PLAYER_RUN_CYCLE;
+    view.animator = animator;
+    view.lunges = false;
+  }
+  const cosmetics = {};
+  for (const [part, id] of Object.entries(def.cosmetics || {})) {
+    const item = Content.item(id);
+    if (item) cosmetics[part] = item;
+  }
+  const dressing = { look: def.look, cosmetics, armor: {}, weapon: null, get paint() { return state.paint; } };
+  view.appearance = new PlayerAppearance(model, dressing);
+  const box = Models.bounds(model);
+  view.headHeight = box.max.y + 0.15;
+  view.add(new Hitbox(HitboxKind.NPC, state.id, box.getSize(new THREE.Vector3()).multiply(new THREE.Vector3(0.8, 1, 0.8)), box.getCenter(new THREE.Vector3())));
+  return view;
+}
+
 /** An NPC: its imported model when its def has one, otherwise a gray box with one red eye. */
 function makeNpcView(state) {
   const def = state.def;
   if (def.shape === 'walker') return makeMechView(state);
+  if (def.look && Models.has(PLAYER_MODEL)) return makePilotNpcView(state);
   const view = new EntityView(state);
   if (def.model && Models.has(def.model)) {
     const { model, animations } = Models.instance(def.model, def.model_scale);

@@ -33,6 +33,14 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 - **The specimens sit behind the puzzles,** one kind behind each: skyfern past the bridge, glowcap in the cavern, ruin orchid on the overlook. Sampling has a 60% chance of a seed for the hab's grow beds.
 - **The survey log is a line in the quest journal**, not its own window.
 
+## After the first look (Cooper's feedback)
+
+- **Every mech component needs level 15**, and refined sub-parts: refined metal (10 scrap at the metal press, Engineering 12), control boards (3 relic circuitry and a refined metal at the weapons bench, 13) and servo assemblies (a servo actuator and 2 refined metal at the metal press, 14). The hab workbench can make all three. A full walker takes about 34 refined metal, so roughly 340 scrap.
+- **The new areas sit far off in the void** (Undercroft at 0,220, Deadfields at 260,0, Quiet Reach at 260,220), past the fog, so none can be seen from the Scrapyard. A save with a player or the mech in an area's old place puts them back at spawn or on the pad.
+- **Scenery is clickable but not solid.** Most decor props and the rocks have a hitbox with a right-click Inspect; they still don't block movement. Their names and descriptions (in `data/decor.json` and `data/terrain.json`), and the descriptions of the people, pets and the walker (`data/npcs.json`), are "TODO" for Cooper to write. Flat things (grass, puddles, flowers, cables, creepers) have no hitbox (`"inspect": false`).
+- **People are dressed as pilots.** The foreman, the scrap artist and the surveyor have a `look` and `cosmetics` in `data/npcs.json`, drawn with the player model's parts.
+- **The survey lift runs out on a cable**, level from the tower and off the edge of the map, fading out (`"cable"` on the lift stations).
+
 ## Known rough edges
 
 - **The browser asks for `/favicon.ico` and gets a 404.** It's harmless.

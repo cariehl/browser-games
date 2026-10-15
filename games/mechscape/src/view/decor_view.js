@@ -12,6 +12,7 @@
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
 import { tileToWorld, color, darkened, seeded } from './tile_math.js';
+import { SceneryHitbox } from './hitbox.js';
 
 /** Point lights shared by every glowing prop: the nearest this many are lit. */
 const LIGHTS = 8;
@@ -164,10 +165,13 @@ export function buildDecor(world) {
     variants.forEach((parts, v) => {
       const mine = tiles.filter((t) => (t.x * 3 + t.y * 5) % 3 === v);
       if (mine.length === 0) return;
+      const bounds = new THREE.Box3();
       for (const [key, geometries] of Object.entries(parts)) {
         if (!geometries.length) continue;
         const geometry = mergeGeometries(geometries);
         geometry.computeVertexNormals();
+        geometry.computeBoundingBox();
+        bounds.union(geometry.boundingBox);
         const mesh = new THREE.InstancedMesh(geometry, materials[key], mine.length);
         mine.forEach((tile, i) => {
           const r = seeded(tile.x * 4271 + tile.y * 7349);
@@ -183,10 +187,22 @@ export function buildDecor(world) {
         mesh.receiveShadow = true;
         group.add(mesh);
       }
+      if (def.inspect) for (const tile of mine) group.add(sceneryHitbox(def, tile, bounds, def.scale));
     });
     if (def.light) for (const tile of tiles) glowSpots.push({ at: tileToWorld(tile, def.shape === 'lamp' ? 1.5 : 0.6), light: def.light });
   }
   return { group, lights: new LightPool(group, glowSpots) };
+}
+
+/**
+ * A clickable box over a prop on [tile], from its model's [bounds]: square
+ * (props are turned at random), at most a tile across, never too small to hit.
+ */
+export function sceneryHitbox(def, tile, bounds, scale = 1, terrain = false) {
+  const across = THREE.MathUtils.clamp(Math.max(bounds.max.x - bounds.min.x, bounds.max.z - bounds.min.z) * scale, 0.45, 1);
+  const height = Math.max(bounds.max.y * scale, 0.3);
+  const center = tileToWorld(tile, height / 2);
+  return new SceneryHitbox({ def, tile, terrain }, new THREE.Vector3(across, height, across), center);
 }
 
 /** A few point lights, moved each frame onto the glowing props nearest the camera. */

@@ -1,5 +1,6 @@
 // Picking how your pilot looks: head, chassis and three colours, with a
-// turntable preview. Used on the connect screen (before you join) and in the
+// turntable preview. The turntable spins slowly by itself until the player
+// turns it: by dragging the preview, or holding the arrows under it. Used on the connect screen (before you join) and in the
 // manufactory's Reconfigure window (which sends a SetLookAction).
 //
 // The last look picked is remembered in this browser and sent when joining.
@@ -32,6 +33,11 @@ export function rememberLook(look) {
 }
 
 const LABELS = { head: 'Head', chassis: 'Chassis', primary: 'Plating', secondary: 'Trim', visor: 'Visor' };
+/** Turntable speeds, radians per second: by itself, and while an arrow is held. */
+const AUTO_SPIN = 0.29;
+const ARROW_SPIN = 2.6;
+/** Radians per pixel dragged. */
+const DRAG_SPIN = 0.012;
 
 /**
  * The picker. [look] is the starting look; read editor.look for the current
@@ -41,9 +47,16 @@ export class LookEditor {
   constructor(parent, look) {
     this.look = cleanLook(look);
     this.el = el('div', 'look-editor', '', parent);
-    this._canvas = el('canvas', 'look-preview', '', this.el);
+    const stage = el('div', 'look-stage', '', this.el);
+    this._canvas = el('canvas', 'look-preview', '', stage);
     this._canvas.width = 180;
     this._canvas.height = 220;
+    this._canvas.title = 'Drag to turn';
+    /** Spins by itself until the player turns it once. */
+    this._autoSpin = true;
+    /** -1 or 1 while an arrow is held, else 0. */
+    this._arrow = 0;
+    this._turnControls(stage);
     const fields = el('div', 'look-fields', '', this.el);
     this._choice(fields, 'head', HEADS);
     this._choice(fields, 'chassis', CHASSIS);
@@ -76,6 +89,41 @@ export class LookEditor {
     show();
   }
 
+  /** Drag the preview, or hold the arrows under it, to turn the pilot round. */
+  _turnControls(stage) {
+    let dragX = null;
+    this._canvas.addEventListener('pointerdown', (e) => {
+      dragX = e.clientX;
+      this._canvas.setPointerCapture(e.pointerId);
+      this._canvas.classList.add('dragging');
+    });
+    this._canvas.addEventListener('pointermove', (e) => {
+      if (dragX === null || !this._turntable) return;
+      this._turntable.rotation.y += (e.clientX - dragX) * DRAG_SPIN;
+      if (e.clientX !== dragX) this._autoSpin = false;
+      dragX = e.clientX;
+    });
+    const endDrag = () => {
+      dragX = null;
+      this._canvas.classList.remove('dragging');
+    };
+    this._canvas.addEventListener('pointerup', endDrag);
+    this._canvas.addEventListener('pointercancel', endDrag);
+    const arrows = el('div', 'look-turn', '', stage);
+    for (const [text, dir, title] of [['\u25C0', -1, 'Turn left'], ['\u25B6', 1, 'Turn right']]) {
+      const button = el('button', '', text, arrows);
+      button.type = 'button';
+      button.title = title;
+      button.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        this._arrow = dir;
+        this._autoSpin = false;
+        button.setPointerCapture(e.pointerId);
+      });
+      for (const ev of ['pointerup', 'pointercancel', 'lostpointercapture']) button.addEventListener(ev, () => { if (this._arrow === dir) this._arrow = 0; });
+    }
+  }
+
   _set(key, value) {
     this.look = cleanLook({ ...this.look, [key]: value });
     this._state.look = this.look;
@@ -99,15 +147,21 @@ export class LookEditor {
     const turntable = new THREE.Group();
     turntable.add(model);
     scene.add(turntable);
+    this._turntable = turntable;
     this._appearance = new PlayerAppearance(model, this._state);
     const box = Models.bounds(model);
     const height = box.max.y - box.min.y;
     const camera = new THREE.PerspectiveCamera(30, this._canvas.width / this._canvas.height, 0.1, 50);
     camera.position.set(0, box.min.y + height * 0.55, height * 2.6);
     camera.lookAt(0, box.min.y + height * 0.5, 0);
+    let last = performance.now();
     const frame = () => {
       if (!this._renderer) return;
-      turntable.rotation.y += 0.012;
+      const now = performance.now();
+      const dt = Math.min((now - last) / 1000, 0.1);
+      last = now;
+      if (this._arrow) turntable.rotation.y += this._arrow * ARROW_SPIN * dt;
+      else if (this._autoSpin) turntable.rotation.y += AUTO_SPIN * dt;
       this._appearance.update();
       this._renderer.render(scene, camera);
       this._raf = requestAnimationFrame(frame);

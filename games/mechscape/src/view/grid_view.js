@@ -9,6 +9,7 @@
 import * as THREE from 'three';
 import { TILE_SIZE, LEVEL_HEIGHT, tileToWorld, color, seeded } from './tile_math.js';
 import { fromKey } from '../sim/grid.js';
+import { sceneryHitbox } from './decor_view.js';
 
 const DEFAULT_GROUND = [0.36, 0.40, 0.33];
 const CLIFF = [0.33, 0.3, 0.27];
@@ -29,7 +30,19 @@ export function buildGrid(world) {
   const terrain = new THREE.Group();
   group.add(terrain);
   rebuildTerrain(terrain, world);
+  group.add(buildTerrainHitboxes(world));
   return { group, ground: mesh, terrain };
+}
+
+/** Clickable boxes on the terrain you can inspect (rocks). Built once: puzzles never clear those. */
+function buildTerrainHitboxes(world) {
+  const group = new THREE.Group();
+  for (const [key, def] of world.terrainTiles()) {
+    if (!def.inspect) continue;
+    const bounds = new THREE.Box3(new THREE.Vector3(-0.5, 0, -0.5), new THREE.Vector3(0.5, def.height, 0.5));
+    group.add(sceneryHitbox(def, fromKey(key), bounds, 1, true));
+  }
+  return group;
 }
 
 /** Redraws [group] from the world's terrain (after a puzzle opens some). */

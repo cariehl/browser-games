@@ -89,6 +89,50 @@ const SHAPES = {
     dark: [box(0.26, 0.2, 0.3, 0, 1.25, 0)],
     glow: [cyl(0.07, 0.07, 0.04, 0, 1.25, 0.16, Math.PI / 2, 0, 0, 10)],
   }),
+  // The crashed lander the first pilots came down in: a scorched capsule
+  // leaning over, half sunk, one leg buckled, the hatch blown off and the
+  // manufactory still glowing inside.
+  lander: () => {
+    const hull = [
+      cyl(0.62, 0.85, 0.7, 0, 0.35, 0, 0, 0, 0, 8),
+      cyl(0.34, 0.62, 0.6, 0, 1.0, 0, 0, 0, 0, 8),
+    ];
+    const dark = [
+      cyl(0.87, 0.87, 0.1, 0, 0.06, 0, 0, 0, 0, 8),
+      cyl(0.2, 0.34, 0.18, 0, 1.39, 0, 0, 0, 0, 8),
+      cyl(0.3, 0.42, 0.25, 0, -0.1, 0, 0, 0, 0, 8),
+      // Landing legs: two still braced, one buckled under.
+      box(0.08, 0.08, 0.75, 0.62, 0.22, 0.42, -0.5, -0.9, 0),
+      box(0.08, 0.08, 0.75, -0.62, 0.22, 0.42, -0.5, 0.9, 0),
+      box(0.08, 0.08, 0.5, 0, 0.08, -0.85, 0.2, 0, 0),
+    ];
+    const accent = [
+      box(0.44, 0.06, 0.06, 0, 0.78, 0.74),
+      box(0.06, 0.5, 0.06, -0.22, 0.52, 0.76),
+      box(0.06, 0.5, 0.06, 0.22, 0.52, 0.76),
+      cyl(0.015, 0.015, 0.7, 0.1, 1.7, 0, 0, 0, 0.55, 5),
+    ];
+    const glow = [
+      box(0.34, 0.46, 0.03, 0, 0.52, 0.74),
+      box(0.3, 0.07, 0.04, 0, 1.02, 0.46, -0.46, 0, 0),
+      ball(0.04, -0.2, 1.98, 0),
+    ];
+    // The whole capsule leans over and sits sunk in the ground.
+    for (const g of [...hull, ...dark, ...accent, ...glow]) {
+      g.rotateZ(0.3);
+      g.rotateX(0.12);
+      g.translate(0.15, -0.12, 0);
+    }
+    const debris = [
+      // The hatch, blown off and lying in the dirt, and bits of the hull.
+      box(0.4, 0.05, 0.5, 0.75, 0.04, 1.2, 0, 0.5, 0.1),
+      box(0.22, 0.14, 0.18, -0.85, 0.07, 0.75, 0, 0.7, 0),
+      box(0.3, 0.1, 0.12, 1.05, 0.05, -0.3, 0, -0.4, 0.2),
+    ];
+    // Big enough to read as a ship from across the Reach.
+    for (const g of [...hull, ...dark, ...accent, ...glow, ...debris]) g.scale(1.45, 1.45, 1.45);
+    return { base: hull, dark: [...dark, ...debris], accent, glow };
+  },
   pylon: () => ({
     base: [box(0.5, 0.15, 0.5, 0, 0.07, 0), cyl(0.06, 0.1, 1.8, 0, 0.9, 0, 0, 0, 0, 6)],
     accent: [torus(0.22, 0.03, 0, 1.4, 0, -Math.PI / 2)],
@@ -173,5 +217,50 @@ export function buildShape(def) {
     mesh.receiveShadow = true;
     group.add(mesh);
   }
+  return group;
+}
+
+/** How far the lift cable runs (tiles), and over how many of the last it fades out. */
+const CABLE_TILES = 9;
+const CABLE_FADE = 4;
+
+/**
+ * The cable a lift rides out on: from an arm on top of the lift tower,
+ * level and away across [dir] ([dx, dy] on the map), out over the edge
+ * into nothing, fading as it goes. It reads as "out there", not "up".
+ */
+export function buildCable(def, dir) {
+  const group = new THREE.Group();
+  const steel = new THREE.MeshStandardMaterial({ color: color(darkened(def.color, 0.5)), roughness: 0.6, metalness: 0.5 });
+  const arm = mergeGeometries([
+    box(1.2, 0.1, 0.1, -0.35, 3.15, -0.48),
+    box(0.1, 0.1, 0.9, -0.85, 3.15, -0.1),
+    cyl(0.14, 0.14, 0.06, -0.85, 3.05, -0.4, Math.PI / 2, 0, 0, 12),
+    cyl(0.14, 0.14, 0.06, -0.85, 3.05, 0.2, Math.PI / 2, 0, 0, 12),
+  ]);
+  arm.computeVertexNormals();
+  const armMesh = new THREE.Mesh(arm, steel);
+  armMesh.castShadow = true;
+  group.add(armMesh);
+  // Two strands, in pieces a tile long, the last few each fainter than the one before.
+  const strand = new THREE.CylinderGeometry(0.022, 0.022, 1, 5).rotateZ(Math.PI / 2);
+  for (let i = 0; i < CABLE_TILES; i++) {
+    const left = CABLE_TILES - i;
+    const fade = left <= CABLE_FADE ? (left - 0.5) / (CABLE_FADE + 0.5) : 1;
+    const material = new THREE.MeshStandardMaterial({ color: color([0.1, 0.1, 0.11]), roughness: 0.5, metalness: 0.4 });
+    if (fade < 1) {
+      material.transparent = true;
+      material.opacity = fade;
+      material.depthWrite = false;
+    }
+    for (const z of [-0.4, 0.2]) {
+      const piece = new THREE.Mesh(strand, material);
+      piece.position.set(-1.35 - i, 2.97 - 0.015 * i, z);
+      piece.castShadow = fade === 1;
+      group.add(piece);
+    }
+  }
+  // Built running along -x; turn it to face [dir].
+  group.rotation.y = Math.atan2(dir[1], -dir[0]);
   return group;
 }
