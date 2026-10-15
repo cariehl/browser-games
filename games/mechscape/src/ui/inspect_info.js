@@ -113,6 +113,9 @@ export const InspectInfo = {
         rows.push(['Leaves', `${'aeiou'.includes(name[0]) ? 'an' : 'a'} ${name}`]);
       }
     }
+    const KIND = { junk: 'Junk (recycle it at a metal press)', trinket: 'Trinket', lore: 'Lore', cosmetic: 'Cosmetic', pet: 'Pet', trophy: 'Trophy (mount it on the hab\'s trophy wall)', quest: 'Quest item', component: 'Mech component', piece: 'Hab piece', seed: 'Seed' };
+    if (item.kind && KIND[item.kind]) subtitle = KIND[item.kind];
+    if (item.description) rows.unshift(['', item.description]);
     if (item.container) rows.push(['Carried in', `a ${item.container.display_name.toLowerCase()}, ${item.capacity} per canister`]);
     else if (item.stackable) rows.push(['Stacks', 'yes']);
     if (item.craft_xp > 0) rows.push(['Crafting XP', `${item.craft_xp.toFixed(1)} per one used`]);
@@ -120,6 +123,11 @@ export const InspectInfo = {
       if (recipe.output === item) rows.push(['Made with', `${Skills.displayName(recipe.skill)} ${recipe.level_required}`]);
     }
     return { title: item.display_name, subtitle, rows };
+  },
+
+  /** A lore item's text. */
+  lore(item) {
+    return { title: item.display_name, subtitle: 'Lore', rows: [['', item.lore]] };
   },
 };
 

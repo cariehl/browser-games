@@ -598,5 +598,449 @@
   ],
   "abbreviation": "Vb",
   "craft_xp": 10.0
+ },
+ "bent_bolt": {
+  "id": "bent_bolt",
+  "display_name": "Bent bolt",
+  "stackable": true,
+  "color": [
+   0.55,
+   0.55,
+   0.58,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "Bent past saving. The metal press can still use it.",
+  "craft_xp": 2
+ },
+ "dead_battery": {
+  "id": "dead_battery",
+  "display_name": "Dead battery",
+  "stackable": true,
+  "color": [
+   0.35,
+   0.4,
+   0.3,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "Flat. It rattles when you shake it.",
+  "craft_xp": 2
+ },
+ "burnt_chip": {
+  "id": "burnt_chip",
+  "display_name": "Burnt chip",
+  "stackable": true,
+  "color": [
+   0.25,
+   0.22,
+   0.2,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "A circuit board that smells of smoke. Some of the traces are still good.",
+  "craft_xp": 2
+ },
+ "frayed_wire": {
+  "id": "frayed_wire",
+  "display_name": "Frayed wire",
+  "stackable": true,
+  "color": [
+   0.65,
+   0.45,
+   0.3,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "A tangle of copper. Good for nothing but the press.",
+  "craft_xp": 2
+ },
+ "cracked_lens": {
+  "id": "cracked_lens",
+  "display_name": "Cracked lens",
+  "stackable": true,
+  "color": [
+   0.55,
+   0.7,
+   0.8,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "A sensor lens with a crack right across it.",
+  "craft_xp": 2
+ },
+ "tin_pilot": {
+  "id": "tin_pilot",
+  "display_name": "Tin pilot",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.6,
+   0.35,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "A little tin figure of a pilot in an old flight suit. Human, by the look of it."
+ },
+ "rubber_duck": {
+  "id": "rubber_duck",
+  "display_name": "Rubber duck",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.8,
+   0.2,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "Somebody carried this a very long way."
+ },
+ "lucky_cog": {
+  "id": "lucky_cog",
+  "display_name": "Lucky cog",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.6,
+   0.3,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "Polished smooth by a thumb that isn't yours."
+ },
+ "snow_globe": {
+  "id": "snow_globe",
+  "display_name": "Snow globe",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.85,
+   0.95,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "A tiny city under glass. Nobody here has seen a city."
+ },
+ "cracked_photo": {
+  "id": "cracked_photo",
+  "display_name": "Cracked photo",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.55,
+   0.5,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "A crew of five in front of a gantry, grinning. One of them is a loader."
+ },
+ "music_chip": {
+  "id": "music_chip",
+  "display_name": "Music chip",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.6,
+   0.5,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "Plays the first four notes of a song, then stops."
+ },
+ "lore_shard_1": {
+  "id": "lore_shard_1",
+  "display_name": "Data shard: the yard",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A cracked data shard. You can still read it.",
+  "lore": "LOG 1. The Scrapyard was a shipbreaking yard for the orbital fleet. Hulls came down on the long wall's rails and the loaders took them apart. When the fleet stopped coming home, the loaders kept working."
+ },
+ "lore_shard_2": {
+  "id": "lore_shard_2",
+  "display_name": "Data shard: the pilots",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A cracked data shard. You can still read it.",
+  "lore": "LOG 2. Pilots are printed, not born. The manufactory keeps a pattern of every pilot it ever made. If you are reading this, it still keeps yours."
+ },
+ "lore_shard_3": {
+  "id": "lore_shard_3",
+  "display_name": "Data shard: Hold",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A cracked data shard. You can still read it.",
+  "lore": "LOG 3. Final order from the relay mast: HOLD. Every machine in the yard took it literally. The sentries are still holding."
+ },
+ "lore_shard_4": {
+  "id": "lore_shard_4",
+  "display_name": "Data shard: the Undercroft",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A cracked data shard. You can still read it.",
+  "lore": "LOG 4. Below the yard is the foundry that built the mechs. The warden was set to guard the last blueprint until a crew came back for it."
+ },
+ "lore_shard_5": {
+  "id": "lore_shard_5",
+  "display_name": "Data shard: the press",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A cracked data shard. You can still read it.",
+  "lore": "LOG 5. The paint press in the Undercroft has been painting the same nothing for forty years. Do not let it see you holding still."
+ },
+ "lore_shard_6": {
+  "id": "lore_shard_6",
+  "display_name": "Data shard: the colossus",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A cracked data shard. You can still read it.",
+  "lore": "LOG 6. Something big walks the Deadfields. Small arms do nothing to it. That is what the mechs were for."
+ },
+ "traffic_cone": {
+  "id": "traffic_cone",
+  "display_name": "Traffic cone",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.45,
+   0.1,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "cone",
+  "description": "It fits your head perfectly. Suspiciously perfectly."
+ },
+ "antenna_hat": {
+  "id": "antenna_hat",
+  "display_name": "Antenna rig",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.55,
+   0.6,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "antenna",
+  "description": "Picks up nothing, but looks like it should."
+ },
+ "crown_of_bolts": {
+  "id": "crown_of_bolts",
+  "display_name": "Crown of bolts",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.7,
+   0.25,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "crown",
+  "description": "Bolted together by someone with time on their hands."
+ },
+ "flame_decal": {
+  "id": "flame_decal",
+  "display_name": "Flame visor decal",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.4,
+   0.15,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "decal",
+  "cosmetic_look": "flames",
+  "description": "Makes you faster. It does not make you faster."
+ },
+ "hazard_paint": {
+  "id": "hazard_paint",
+  "display_name": "Hazard paint job",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.8,
+   0.1,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "paint",
+  "cosmetic_look": "hazard",
+  "description": "Yellow and black stripes. Stand back."
+ },
+ "chrome_paint": {
+  "id": "chrome_paint",
+  "display_name": "Chrome paint job",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.87,
+   0.9,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "paint",
+  "cosmetic_look": "chrome",
+  "description": "You can see yourself in it. You look great."
+ },
+ "rust_paint": {
+  "id": "rust_paint",
+  "display_name": "Rust paint job",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.32,
+   0.18,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "paint",
+  "cosmetic_look": "rust",
+  "description": "Distressed, deliberately."
+ },
+ "scuttle_drone_pet": {
+  "id": "scuttle_drone_pet",
+  "display_name": "Scuttle drone",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.55,
+   0.6,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_scuttle_drone",
+  "description": "A tiny drone that has decided you are its home."
+ },
+ "loader_pup_pet": {
+  "id": "loader_pup_pet",
+  "display_name": "Loader pup",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.55,
+   0.25,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_loader_pup",
+  "description": "A loader barely bigger than a crate. It wants to carry things for you."
+ },
+ "mini_press_pet": {
+  "id": "mini_press_pet",
+  "display_name": "Mini press",
+  "stackable": false,
+  "color": [
+   0.8,
+   0.35,
+   0.65,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_mini_press",
+  "description": "A pocket Splatterpress. It only paints the floor."
+ },
+ "sentry_eye": {
+  "id": "sentry_eye",
+  "display_name": "Sentry eye",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.25,
+   0.2,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "A relic sentry's eye, still in one piece. It's still looking at you."
+ },
+ "loader_horn": {
+  "id": "loader_horn",
+  "display_name": "Loader horn",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.6,
+   0.3,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "The warning horn off a loader mech. HONK."
+ },
+ "warden_core": {
+  "id": "warden_core",
+  "display_name": "Warden core",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.5,
+   0.9,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "The Undercroft warden's heart, humming quietly."
+ },
+ "press_core": {
+  "id": "press_core",
+  "display_name": "Press core",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.35,
+   0.7,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "The Splatterpress's control core, still dripping."
+ },
+ "colossus_heart": {
+  "id": "colossus_heart",
+  "display_name": "Colossus heart",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.5,
+   0.2,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "Warm, heavy, and much bigger than a heart should be."
  }
 }

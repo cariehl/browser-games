@@ -113,6 +113,7 @@ export class GatherTask extends Task {
     }
     world.message(entity.id, `You ${def.verb} some ${got.display_name.toLowerCase()}.`);
     world.grantXp(entity, def.skill, def.xp);
+    if (def.bonus_table && world.rng.randf() < def.bonus_chance) findBonus(world, entity, def.bonus_table);
 
     node.successes++;
     const capped = def.max_successes > 0 && node.successes >= def.max_successes;
@@ -316,6 +317,23 @@ export class WreckTask extends Task {
     }
     return false;
   }
+}
+
+/** A roll on a bonus loot table: into the pack if it fits, otherwise onto the ground at your feet. */
+export function findBonus(world, entity, table) {
+  const found = table.roll(world.rng);
+  if (!found || !found.item) return;
+  const { item, count } = found;
+  const what = count > 1 ? `${count} ${plural(item.display_name)}` : a(item.display_name);
+  if (entity.inventory.add(item, count)) {
+    world.message(entity.id, `You also find ${what}.`);
+  } else {
+    world.dropItem(item, count, entity.tile);
+    world.message(entity.id, `You also find ${what}, but it falls to the ground.`);
+  }
+  const rare = ['cosmetic', 'pet'].includes(item.kind);
+  world.emitEvent(entity.id, 'found', { item: item.id, count, rare });
+  if (rare) world.announce(`${entity.display_name} found ${a(item.display_name)}!`);
 }
 
 /** "a scrap blade" / "an alloy blade" */

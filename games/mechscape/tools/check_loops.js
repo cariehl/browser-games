@@ -33,7 +33,7 @@ export function checkLoops() {
 
   for (const def of Object.values(Content.nodes)) {
     if (Skills.COMBAT.includes(def.skill) || !def.loot) continue;
-    for (const item of def.possibleLoot()) {
+    for (const item of [...def.possibleLoot(), ...def.bonusItems()]) {
       addItem(item);
       producers.get(item.id).add(def.skill);
     }

@@ -66,6 +66,10 @@ export class InspectWindow {
     this._separator.style.display = info.rows.length ? '' : 'none';
     this._grid.innerHTML = '';
     for (const [label, value, warn] of info.rows) {
+      if (label === '') {
+        el('div', 'wide', value, this._grid);
+        continue;
+      }
       el('div', 'muted', label, this._grid);
       el('div', warn ? 'warn' : '', value, this._grid);
     }

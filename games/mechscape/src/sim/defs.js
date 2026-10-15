@@ -49,6 +49,16 @@ export class ItemDef {
       boost_skill: '', boost_base: 0, boost_percent: 0, boost_ticks: 500,
       // Container: gas carried in canisters.
       container: null, capacity: 0,
+      /** What sort of thing it is, for the UI: '' (materials, gear), junk, trinket, lore, cosmetic, pet, trophy, quest, component, piece, seed. */
+      kind: '',
+      /** Flavour text, shown when inspected. */
+      description: '',
+      /** Lore items: what "Read" shows. */
+      lore: '',
+      /** Cosmetics: which part of your look it changes (hat, decal, paint) and to what. */
+      cosmetic_part: '', cosmetic_look: '',
+      /** Pets: the NPC def id that follows you when it's out. */
+      pet_npc: '',
     }, raw);
   }
 
@@ -91,6 +101,8 @@ export class GatherNodeDef {
       blocks_movement: true, blocks_sight: false,
       /** Big salvage only a mech's crew can work, from the cockpit. */
       requires_mech: false,
+      /** A loot table (data/loot_tables.json) rolled after a success, with this chance: junk, trinkets, lore, rare cosmetics. */
+      bonus_table: null, bonus_chance: 0,
       model: null, depleted_model: null, model_scale: 1,
       look: 'wreck', color: [0.5, 0.5, 0.5, 1], size: 1,
     }, raw);
@@ -99,6 +111,12 @@ export class GatherNodeDef {
   resolve(content) {
     this.loot = content.ref('items', this.loot);
     this.rare_loot = content.ref('items', this.rare_loot);
+    this.bonus_table = content.ref('lootTables', this.bonus_table);
+  }
+
+  /** Every item the bonus table can give. */
+  bonusItems() {
+    return this.bonus_table && this.bonus_chance > 0 ? this.bonus_table.items() : [];
   }
 
   /** Everything a success can give, common first. */
@@ -241,6 +259,50 @@ export class TerrainDef {
   resolve() {}
 }
 
+/**
+ * A weighted loot table: each entry is an item (with a count range) or
+ * another table to roll on. roll() picks one entry by weight.
+ */
+export class LootTableDef {
+  constructor(raw) {
+    assign(this, { id: '', entries: [] }, raw);
+  }
+
+  resolve(content) {
+    this.entries = this.entries.map((e) => ({
+      weight: 1, min_count: 1, max_count: 1, ...e,
+      item: e.item ? content.ref('items', e.item) : null,
+      table: e.table ? content.ref('lootTables', e.table) : null,
+    }));
+    this.total = this.entries.reduce((sum, e) => sum + e.weight, 0);
+  }
+
+  /** { item, count } from [rng] (a world's), following nested tables. */
+  roll(rng) {
+    let pick = rng.randf() * this.total;
+    for (const e of this.entries) {
+      pick -= e.weight;
+      if (pick < 0 || e === this.entries[this.entries.length - 1]) {
+        if (e.table) return e.table.roll(rng);
+        return { item: e.item, count: e.max_count > e.min_count ? rng.randiRange(e.min_count, e.max_count) : e.min_count };
+      }
+    }
+    return null;
+  }
+
+  /** Every item it can give, nested tables included. */
+  items(seen = new Set()) {
+    if (seen.has(this)) return [];
+    seen.add(this);
+    const out = [];
+    for (const e of this.entries) {
+      if (e.item && !out.includes(e.item)) out.push(e.item);
+      if (e.table) for (const item of e.table.items(seen)) if (!out.includes(item)) out.push(item);
+    }
+    return out;
+  }
+}
+
 /** A prop drawn on the map that blocks nothing and isn't part of the sim: scrap piles, lamps, cables. */
 export class DecorDef {
   constructor(raw) {
@@ -284,12 +346,14 @@ const KINDS = {
   terrain: TerrainDef,
   decor: DecorDef,
   ground: GroundDef,
+  lootTables: LootTableDef,
 };
 
 /** The data file each kind lives in (data/<file>.json). */
 export const CONTENT_FILES = {
   weaponTypes: 'weapon_types', items: 'items', nodes: 'nodes', npcs: 'npcs',
   recipes: 'recipes', stations: 'stations', terrain: 'terrain', decor: 'decor', ground: 'ground',
+  lootTables: 'loot_tables',
 };
 
 /** Items whose id changed: old id -> new id, so old saves still find them. */

@@ -177,3 +177,4 @@ input.number { width: 110px; }
 .trade-window button.accept:disabled { opacity: 0.5; }
 .message-log .line.request { color: rgb(255, 140, 220); cursor: pointer; }
 .message-log .line.request:hover { text-decoration: underline; }
+.inspect-grid .wide { grid-column: 1 / -1; font-style: italic; line-height: 1.4; margin-bottom: 4px; }

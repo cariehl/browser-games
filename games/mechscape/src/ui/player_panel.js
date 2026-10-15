@@ -340,6 +340,7 @@ export class PlayerPanel {
     if (item.isConsumable()) options.push({ verb: item.use_verb, target: item.display_name, color: ITEM_COLOR, action: () => this._use(index) });
     else if (item.isWeapon) options.push({ verb: 'Wield', target: item.display_name, color: ITEM_COLOR, action: () => this._equip(index) });
     else if (item.isArmor()) options.push({ verb: 'Wear', target: item.display_name, color: ITEM_COLOR, action: () => this._equip(index) });
+    else if (item.lore) options.push({ verb: 'Read', target: item.display_name, color: ITEM_COLOR, action: () => this.inspector.open(() => InspectInfo.lore(item), x, y, false) });
     options.push({ verb: 'Drop', target: item.display_name, color: ITEM_COLOR, action: () => this._drop(index) });
     options.push({
       verb: 'Inspect', target: item.display_name, color: ITEM_COLOR,

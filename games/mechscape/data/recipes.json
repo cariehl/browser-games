@@ -483,5 +483,70 @@
   "output": "surge_injector",
   "output_count": 1,
   "action_ticks": 4
+ },
+ "recycle_bolts": {
+  "id": "recycle_bolts",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "bent_bolt",
+    "count": 3
+   }
+  ],
+  "output": "scrap_metal",
+  "action_ticks": 2
+ },
+ "recycle_batteries": {
+  "id": "recycle_batteries",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "dead_battery",
+    "count": 3
+   }
+  ],
+  "output": "scrap_metal",
+  "action_ticks": 2
+ },
+ "recycle_wire": {
+  "id": "recycle_wire",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "frayed_wire",
+    "count": 3
+   }
+  ],
+  "output": "scrap_metal",
+  "action_ticks": 2
+ },
+ "recycle_lenses": {
+  "id": "recycle_lenses",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "cracked_lens",
+    "count": 2
+   }
+  ],
+  "output": "scrap_metal",
+  "action_ticks": 2
+ },
+ "recycle_chips": {
+  "id": "recycle_chips",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "burnt_chip",
+    "count": 4
+   }
+  ],
+  "output": "relic_circuitry",
+  "action_ticks": 2
  }
 }

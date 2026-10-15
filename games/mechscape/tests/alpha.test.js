@@ -129,3 +129,32 @@ test('trade: walking off, dropping, declining or logging out calls it off', () =
   assert.equal(takeSnapshot(t.world, cy.id).entities.find((e) => e.id === t.ann.id).trade, undefined);
   assert.equal(takeSnapshot(t.world, t.ann.id).entities.find((e) => e.id === t.ann.id).trade.partner_name, 'Bo');
 });
+
+test('husks roll their bonus tables: junk, trinkets, lore and rare finds', async () => {
+  const { makeWorld, runUntil } = await import('./helpers.js');
+  const { InteractAction } = await import('../src/sim/actions.js');
+  const { Content } = await import('../src/sim/defs.js');
+  const { Skills } = await import('../src/sim/skills.js');
+  // Every table resolves and only gives real items.
+  for (const table of Object.values(Content.lootTables)) {
+    assert.ok(table.items().length > 0, table.id);
+    for (let i = 0; i < 50; i++) assert.ok(table.roll({ randf: Math.random, randiRange: (a, b) => a + Math.floor(Math.random() * (b - a + 1)) }).item);
+  }
+  const { world, player } = makeWorld(5, { x: 5, y: 5 });
+  player.xp.salvaging = Skills.xpForLevel(30);
+  const found = new Set();
+  for (let n = 0; n < 40; n++) {
+    const husk = world.addNode(Content.nodeDef('warden_husk'), { x: 6, y: 5 });
+    world.runTick(new Map([[player.id, new Map([['interact', new InteractAction(husk.id)]])]]));
+    runUntil(world, () => {
+      for (const e of world.events) if (e.type === 'found') found.add(e.data.item);
+      return !world.nodes.has(husk.id);
+    }, 200);
+    player.inventory.slots.fill(null);
+  }
+  assert.ok(found.size >= 3, `found ${[...found]}`);
+  // Junk recycles at the metal press for a little XP.
+  const recipe = Content.recipes.recycle_bolts;
+  assert.ok(Content.stations.metal_press.recipes.includes(recipe));
+  assert.ok(recipe.xp > 0);
+});
