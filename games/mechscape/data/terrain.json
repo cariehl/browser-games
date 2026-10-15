@@ -25,7 +25,8 @@
   ],
   "height": 0.9,
   "description": "TODO",
-  "inspect": true
+  "inspect": true,
+  "vary": true
  },
  "wall": {
   "id": "wall",

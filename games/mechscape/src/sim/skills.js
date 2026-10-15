@@ -1,5 +1,8 @@
 // Skill ids and the experience curve. Uses RuneScape's curve: level 2 at 83
-// XP, level 92 at about half of level 99, and 99 at 13,034,431 XP.
+// XP, level 92 at about half of level 99, and 99 at 13,034,431 XP. Names,
+// guide text and starting levels are in data/skills.json.
+
+import { Content } from './defs.js';
 
 export const SALVAGING = 'salvaging';
 export const SIPHONING = 'siphoning';
@@ -20,8 +23,6 @@ export const Skills = {
   SALVAGING, SIPHONING, XENOBIOLOGY, ENGINEERING, SPLICING, MELEE, FIREARMS, TOUGHNESS, ENDURANCE,
   /** Skills the prototype actually implements. */
   ALL: [MELEE, FIREARMS, TOUGHNESS, ENDURANCE, SALVAGING, SIPHONING, XENOBIOLOGY, ENGINEERING, SPLICING],
-  /** Every new character starts with this much XP in these skills. */
-  STARTING_LEVELS: { [TOUGHNESS]: 10 },
   /** Combat and combat-support skills. The economy's loop rule ignores these. */
   COMBAT: ['melee', 'unarmed', 'firearms', 'explosives', 'toughness', 'endurance', 'hunting'],
   MAX_LEVEL: 99,
@@ -37,9 +38,16 @@ export const Skills = {
     return level;
   },
 
-  /** "xenobiology" -> "Xenobiology", "some_skill" -> "Some Skill". */
+  /** Its name from data/skills.json, or "some_skill" -> "Some Skill". */
   displayName(skill) {
-    return capitalize(skill);
+    const def = Content.skills && Content.skills[skill];
+    return def && def.display_name ? def.display_name : capitalize(skill);
+  },
+
+  /** The level every new character starts at (data/skills.json). */
+  startingLevel(skill) {
+    const def = Content.skills && Content.skills[skill];
+    return def ? def.starting_level : 1;
   },
 
   /** "a Salvaging", "an Engineering", for messages. */

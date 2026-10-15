@@ -1,10 +1,10 @@
 {
  "name": "Scrapyard",
  "areas": [
-  { "id": "scrapyard", "map": "data/maps/scrapyard.map", "at": [0, 0] },
-  { "id": "undercroft", "map": "data/maps/undercroft.map", "at": [0, 220], "dark": true },
-  { "id": "deadfields", "map": "data/maps/deadfields.map", "at": [260, 0] },
-  { "id": "quiet_reach", "map": "data/maps/quiet_reach.map", "at": [260, 220] }
+  { "id": "scrapyard", "name": "Scrapyard", "map": "data/maps/scrapyard.map", "at": [0, 0] },
+  { "id": "undercroft", "name": "Undercroft", "map": "data/maps/undercroft.map", "at": [0, 220], "dark": true },
+  { "id": "deadfields", "name": "Deadfields", "map": "data/maps/deadfields.map", "at": [260, 0] },
+  { "id": "quiet_reach", "name": "Quiet Reach", "map": "data/maps/quiet_reach.map", "at": [260, 220] }
  ],
  "links": [
   { "from": ["scrapyard", 56, 26], "to": ["undercroft", 5, 4], "text": "You climb down the hatch into the dark." },

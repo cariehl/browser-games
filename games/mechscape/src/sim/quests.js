@@ -30,8 +30,6 @@ import { Task, StationHandlers, a } from './tasks.js';
 import { Content, StationKind } from './defs.js';
 import { chebyshev } from './grid.js';
 
-/** Dialogue closes when you're further than this from who you're talking to. */
-const TALK_RANGE = 2;
 
 export const Quests = {
   /** 'none', a stage id, or 'done'. */
@@ -125,7 +123,7 @@ export const Quests = {
     const open = player.dialogue;
     if (!open) return;
     const npc = world.entities.get(open.npc_id);
-    if (!npc || chebyshev(npc.tile, player.tile) > TALK_RANGE) {
+    if (!npc || chebyshev(npc.tile, player.tile) > Content.rules.world.talk_range) {
       player.dialogue = null;
       return;
     }
@@ -355,7 +353,7 @@ Features.register({
       for (const questId of Object.keys(player.quests)) Quests._advance(world, player, questId);
       if (player.dialogue) {
         const npc = world.entities.get(player.dialogue.npc_id);
-        if (!npc || npc.isDead() || chebyshev(npc.tile, player.tile) > TALK_RANGE) player.dialogue = null;
+        if (!npc || npc.isDead() || chebyshev(npc.tile, player.tile) > Content.rules.world.talk_range) player.dialogue = null;
       }
     }
   },

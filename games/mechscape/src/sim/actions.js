@@ -8,7 +8,7 @@ import { Skills } from './skills.js';
 import { AttackTask, CraftTask, GatherTask, StationTask, TakeTask, WreckTask } from './tasks.js';
 import { GatherNode, Station, Wreck } from './objects.js';
 import { TICK_SECONDS } from './constants.js';
-import { Trading, TRADE_RANGE, REQUEST_TICKS } from './trade.js';
+import { Trading } from './trade.js';
 import { chebyshev } from './grid.js';
 import { Content } from './defs.js';
 
@@ -553,7 +553,7 @@ export class TradeRequestAction extends Action {
     const target = world.entities.get(this.target_id);
     if (!target || target === entity || !target.isPlayer() || !entity.isPlayer()) return;
     if (Trading.of(world, entity)) return;
-    if (chebyshev(target.tile, entity.tile) > TRADE_RANGE || world.areaIdAt(target.tile) !== world.areaIdAt(entity.tile)) {
+    if (chebyshev(target.tile, entity.tile) > Content.rules.trade.range || world.areaIdAt(target.tile) !== world.areaIdAt(entity.tile)) {
       world.message(entity.id, `${target.display_name} is too far away to trade with.`);
       return;
     }
@@ -566,7 +566,7 @@ export class TradeRequestAction extends Action {
       Trading.open(world, target, entity);
       return;
     }
-    entity.trade_request = { target: target.id, until: world.tick + REQUEST_TICKS };
+    entity.trade_request = { target: target.id, until: world.tick + Content.rules.trade.request_ticks };
     world.message(entity.id, `Sending a trade offer to ${target.display_name}...`);
     world.emitEvent(target.id, 'trade_request', { from: entity.id, name: entity.display_name });
   }

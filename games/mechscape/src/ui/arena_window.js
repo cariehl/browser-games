@@ -1,9 +1,11 @@
-// The press hall door (open_arena event): go in or out between fights, and
-// from inside, wake the Splatterpress, easy or Overclocked. And the boss's
+// A boss's arena door (open_arena event): go in or out between fights, and
+// from inside, wake the boss, easy or Overclocked. Its text is the boss's
+// script's "text" in data/npcs.json. And the boss's
 // HP bar across the top of the screen while you're fighting it.
 
 import { ClientState } from '../client/client_state.js';
-import { ArenaAction, Arena } from '../sim/boss.js';
+import { ArenaAction, Arena, bossText } from '../sim/boss.js';
+import { Content } from '../sim/defs.js';
 import { chebyshev } from '../sim/grid.js';
 import { el } from './screen.js';
 import { onEscape } from './common.js';
@@ -13,7 +15,7 @@ export class ArenaWindow {
     this.link = link;
     this.el = el('div', 'arena-window panel centered', '', parent);
     this.el.style.display = 'none';
-    this._title = el('div', 'title', 'Press hall door', this.el);
+    this._title = el('div', 'title', '', this.el);
     this._text = el('div', 'muted', '', this.el);
     this._buttons = el('div', 'arena-buttons', '', this.el);
     this._door = null;
@@ -38,6 +40,7 @@ export class ArenaWindow {
     if (!boss || !me) return;
     const inside = world.inZone(me.tile, boss.def.boss.zone);
     const fighting = (world.boss_fights || []).some((f) => f.id === boss.id);
+    this._title.textContent = door.def.display_name;
     this._buttons.innerHTML = '';
     const button = (label, command, enabled = true) => {
       const b = el('button', '', label, this._buttons);
@@ -48,20 +51,21 @@ export class ArenaWindow {
       });
     };
     if (fighting) {
-      this._text.textContent = inside ? "Sealed until the fight's over." : 'Sealed. Someone is fighting the press in there.';
+      this._text.textContent = bossText(boss, inside ? 'door_fight_inside' : 'door_fight_outside');
     } else if (!inside) {
-      this._text.textContent = 'The old paint press hall. Something big and pink is idling inside.';
-      button('Enter the hall', 'enter');
+      this._text.textContent = bossText(boss, 'door_outside');
+      button(bossText(boss, 'enter_button'), 'enter');
     } else {
       const unlocked = !!(me.unlocks && me.unlocks.overclocked);
+      const unlockedBy = Object.values(Content.quests).find((q) => q.rewards && q.rewards.unlock === 'overclocked');
       this._text.textContent = boss.isDead()
-        ? 'The press lies in pieces. It will rebuild itself soon.'
-        : `Everyone inside when it wakes is in the fight; the door seals until it's over.${unlocked ? '' : ' Finish Found Art to learn how to overclock it.'}`;
+        ? bossText(boss, 'rebuilding')
+        : `${bossText(boss, 'door_inside')}${unlocked || !unlockedBy ? '' : ` Finish ${unlockedBy.display_name} to learn how to overclock it.`}`;
       if (!boss.isDead()) {
-        button('Wake the Splatterpress', 'easy');
+        button(`Wake the ${boss.def.display_name}`, 'easy');
         button('Wake it Overclocked', 'overclocked', unlocked);
       }
-      button('Leave the hall', 'leave');
+      button(bossText(boss, 'leave_button'), 'leave');
     }
     el('button', '', 'Close', this._buttons).addEventListener('click', () => this.close());
     this.el.style.display = '';

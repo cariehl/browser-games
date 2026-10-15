@@ -30,6 +30,7 @@ import { NpcState } from './entity.js';
 import { Content, StationKind } from './defs.js';
 import { AttackTask, StationHandlers } from './tasks.js';
 import { eq, key, chebyshev, add, UP, DOWN } from './grid.js';
+import { Text } from './text.js';
 
 /** A boss: an NPC whose max HP is set per fight, with a shield. */
 export class BossState extends NpcState {
@@ -59,6 +60,12 @@ export class BossState extends NpcState {
 NpcState.kinds.boss = BossState;
 
 let nextHazardId = 1;
+
+/** [boss]'s line [key] from its script's "text" (npcs.json), filled in; {boss} is the mode's name. */
+export function bossText(boss, key, vars = {}) {
+  const template = (boss.def.boss.text || {})[key];
+  return template == null ? key : Text.fill(template, { boss: (boss.mode || boss.def).display_name, ...vars });
+}
 
 export const Arena = {
   /** Every tile of [zone] in [area] (cached per world). */
@@ -135,8 +142,8 @@ export const Arena = {
       adds: [],
     };
     const names = players.map((p) => p.display_name).join(', ');
-    for (const p of players) world.message(p.id, `The hall door slams shut behind you. The ${mode.display_name.toLowerCase()} grinds awake!`);
-    world.announce(`${names} ${players.length === 1 ? 'takes' : 'take'} on the ${mode.display_name}.`);
+    for (const p of players) world.message(p.id, bossText(boss, 'start'));
+    world.announce(bossText(boss, 'start_announce', { players: names, take: players.length === 1 ? 'takes' : 'take' }));
     world.emitEvent(boss.id, 'boss_start', { boss: boss.id, mode: modeId, by: starter ? starter.id : -1 });
     return true;
   },
@@ -154,7 +161,7 @@ export const Arena = {
     boss.mode_id = '';
     boss.shield = false;
     if (won) {
-      world.announce(`The ${mode.display_name} is down! The hall door grinds open.`);
+      world.announce(bossText(boss, 'won', { boss: mode.display_name }));
       // Overclocked pays every survivor a roll on the boss's table, on top of its husk.
       const table = Content.lootTables[boss.def.boss.loot];
       if (modeId === 'overclocked' && table) {
@@ -165,8 +172,9 @@ export const Arena = {
           const found = table.roll(world.rng);
           if (found && found.item) {
             if (!p.inventory.add(found.item, found.count)) world.dropItem(found.item, found.count, p.tile);
-            world.message(p.id, `Overclocked kill! You pry loose ${found.count > 1 ? `${found.count} × ` : 'a '}${found.item.display_name.toLowerCase()}.`);
-            if (['cosmetic', 'pet'].includes(found.item.kind)) world.announce(`${p.display_name} found a ${found.item.display_name.toLowerCase()} in the Overclocked press!`);
+            const loot = `${found.count > 1 ? `${found.count} × ` : 'a '}${found.item.display_name.toLowerCase()}`;
+            world.message(p.id, bossText(boss, 'loot', { boss: mode.display_name, loot }));
+            if (['cosmetic', 'pet'].includes(found.item.kind)) world.announce(bossText(boss, 'rare_loot', { boss: mode.display_name, player: p.display_name, loot }));
           }
         }
       }
@@ -177,7 +185,7 @@ export const Arena = {
       boss.clearTask();
       boss.teleport(boss.spawn_tile);
       world.emitEvent(boss.id, 'heal', { entity: boss.id });
-      world.announce(`The ${mode.display_name} has no one left to fight. The hall door grinds open.`);
+      world.announce(bossText(boss, 'reset', { boss: mode.display_name }));
     }
     world.emitEvent(boss.id, 'boss_end', { boss: boss.id, won });
   },
@@ -230,13 +238,13 @@ export const Arena = {
         add.owner_id = boss.id;
         fight.adds.push(add.id);
       }
-      for (const p of inside) world.message(p.id, 'Patch drones skitter out of the vents toward the press. Stop them!');
+      for (const p of inside) world.message(p.id, bossText(boss, 'adds'));
     }
     // The shield: up for the whole phase, dropped for a while by a finished panel run.
     if (mechanics.includes('shield')) {
       if (fight.shield_until > now) boss.shield = false;
       else {
-        if (!boss.shield) for (const p of inside) world.message(p.id, 'The press raises a crackling shield. Step on the glowing panels in order to vent it!');
+        if (!boss.shield) for (const p of inside) world.message(p.id, bossText(boss, 'shield_up'));
         boss.shield = true;
         Arena.runPanels(world, boss, inside, tiles);
       }
@@ -325,7 +333,7 @@ export const Arena = {
           } else {
             for (const p of inside) {
               if (p.isDead()) continue;
-              world.message(p.id, 'Nobody soaked the mark! Paint sprays across the whole hall.');
+              world.message(p.id, bossText(boss, 'soak_missed'));
               Arena.hurt(world, boss, p, boss.mode.wipe_damage);
             }
           }
@@ -342,7 +350,7 @@ export const Arena = {
     let run = fight.run && world.hazards.find((h) => h.id === fight.run);
     if (run && now > run.resolve) {
       world.hazards = world.hazards.filter((h) => h !== run);
-      for (const p of inside) world.message(p.id, 'Too slow! The panels flicker and rearrange.');
+      for (const p of inside) world.message(p.id, bossText(boss, 'run_too_slow'));
       run = null;
     }
     if (!run) {
@@ -366,12 +374,12 @@ export const Arena = {
           fight.run = null;
           fight.shield_until = now + mode.shield_down_ticks;
           boss.shield = false;
-          for (const q of inside) world.message(q.id, 'The shield vents in a cloud of paint. Hit it now!');
+          for (const q of inside) world.message(q.id, bossText(boss, 'shield_down'));
           world.emitEvent(boss.id, 'shield_down', { boss: boss.id });
           return;
         }
       } else {
-        world.message(p.id, 'Wrong panel! A jolt runs up your legs and the sequence resets.');
+        world.message(p.id, bossText(boss, 'wrong_panel'));
         Arena.hurt(world, boss, p, run.damage);
         run.progress = 0;
       }
@@ -399,7 +407,7 @@ export class ArenaAction extends Action {
     const isInside = world.inZone(player.tile, boss.def.boss.zone);
     if (this.command === 'enter' || this.command === 'leave') {
       if (boss.fight) {
-        world.message(player.id, isInside ? "The door's sealed until the fight is over." : 'The door is sealed. Someone is fighting in there; wait for them to finish.');
+        world.message(player.id, bossText(boss, isInside ? 'sealed_inside' : 'sealed_outside'));
         return;
       }
       const to = this.command === 'enter' ? inside : outside;
@@ -410,15 +418,15 @@ export class ArenaAction extends Action {
     }
     if (this.command === 'easy' || this.command === 'overclocked') {
       if (!isInside) {
-        world.message(player.id, 'Go into the hall first.');
+        world.message(player.id, bossText(boss, 'enter_first'));
         return;
       }
       if (boss.isDead()) {
-        world.message(player.id, 'The press lies in pieces. It will rebuild itself soon.');
+        world.message(player.id, bossText(boss, 'rebuilding'));
         return;
       }
       if (this.command === 'overclocked' && !player.unlocks.overclocked) {
-        world.message(player.id, "You don't know how to overclock it. The scrap artist might.");
+        world.message(player.id, bossText(boss, 'locked'));
         return;
       }
       Arena.start(world, boss, this.command, player);

@@ -13,11 +13,7 @@
 
 import { Inventory, ItemStack } from './inventory.js';
 import { chebyshev } from './grid.js';
-
-/** Players further apart than this (tiles) can't open a trade, and an open one is called off. */
-export const TRADE_RANGE = 15;
-/** A request lasts this many ticks. */
-export const REQUEST_TICKS = 100;
+import { Content } from './defs.js';
 
 export const TradeStage = { OFFER: 1, CONFIRM: 2 };
 
@@ -210,7 +206,7 @@ export const Trading = {
       const [a, b] = trade.players.map((id) => world.entities.get(id));
       if (!a || !b || a.isDead() || b.isDead() || a.trade_id !== trade.id || b.trade_id !== trade.id) {
         Trading.cancel(world, trade, 'The trade was called off.');
-      } else if (chebyshev(a.tile, b.tile) > TRADE_RANGE) {
+      } else if (chebyshev(a.tile, b.tile) > Content.rules.trade.range) {
         Trading.cancel(world, trade, "You're too far apart to trade.");
       }
     }
