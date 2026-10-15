@@ -301,7 +301,7 @@ export class PlacePieceAction extends Action {
   }
 }
 
-/** Move, turn or recolour a piece you placed; or pick it back up. */
+/** Move (turning and recolouring it too), turn or recolour a piece you placed; or pick it back up. */
 export class EditPieceAction extends Action {
   static TYPE = 'edit_piece';
   static FIELDS = { piece_id: 'int', command: 'id', tile: 'tile', rotation: 'int', color: 'color' };
@@ -332,6 +332,7 @@ export class EditPieceAction extends Action {
         world._refreshTile(piece.tile);
         piece.tile = { ...this.tile };
         piece.rotation = ((this.rotation % 4) + 4) % 4;
+        if (piece.def.colors && piece.def.colors.includes(this.color)) piece.color = this.color;
         world._objectTiles.set(key(piece.tile), piece);
         world._refreshTile(piece.tile);
         return;

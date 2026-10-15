@@ -229,3 +229,14 @@ input.number { width: 110px; }
 .boss-fill { height: 100%; background: linear-gradient(#e94a8f, #b8226a); transition: width 0.25s; }
 .boss-fill.shielded { background: linear-gradient(#7fd3ff, #3a8fd0); }
 .boss-tag { font-size: 13px; color: #cfe8ff; margin-top: 2px; min-height: 16px; }
+
+/* The hab: build mode's hint bar and the commission board. */
+.build-hint { position: absolute; top: 12px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 2px; align-items: center; pointer-events: none; z-index: 25; }
+.board-window { min-width: 380px; max-width: 480px; display: flex; flex-direction: column; gap: 8px; z-index: 30; }
+.board-list { display: flex; flex-direction: column; gap: 3px; max-height: 260px; overflow-y: auto; }
+.board-row { font-size: 14px; min-height: 26px; gap: 8px; }
+.board-row.done span:first-child { color: #7fdc7f; }
+.board-form { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.board-form input, .board-form select { min-width: 0; flex: 1 1 120px; }
+.board-form input.count { flex: 0 0 56px; }
+.board-form input.bad { outline: 1px solid #e05a5a; }

@@ -21,18 +21,22 @@ import { isTyping } from '../view/camera_rig.js';
 import { Screen } from '../ui/screen.js';
 import { TalkAction } from '../sim/quests.js';
 import { BoardAction, LeaveMechAction } from '../sim/mech.js';
+import { HabPiece, EditPieceAction } from '../sim/hab.js';
+import { bedStage } from '../view/piece_view.js';
 import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 
 
 export class PlayerController {
-  constructor(canvas, { link, marker, hover, menu, inspector }) {
+  constructor(canvas, { link, marker, hover, menu, inspector, build }) {
     this.canvas = canvas;
     this.link = link;
     this.marker = marker;
     this.hover = hover;
     this.menu = menu;
     this.inspector = inspector;
+    /** Build mode (ui/build_mode.js): while it's on, clicks place a hab piece. */
+    this.build = build;
     this._mouse = null;
     this._overUi = false;
 
@@ -46,6 +50,7 @@ export class PlayerController {
     canvas.addEventListener('pointerdown', (e) => {
       // Clicking the world takes focus away from any text box, so keys (arrows, R) go back to the game.
       if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+      if (this.build && this.build.click(e.button)) return;
       if (e.button === 0) {
         const first = this.allOptions(e.clientX, e.clientY).find((o) => !o.rightOnly);
         if (first.action) first.action();
@@ -65,6 +70,11 @@ export class PlayerController {
   update() {
     if (!this._mouse) return;
     const [x, y] = this._mouse;
+    if (this.build && this.build.active) {
+      this.build.update(this._overUi ? null : x, y);
+      this.hover.hide();
+      return;
+    }
     if (this.menu.isOpen()) {
       this.hover.hide();
       return;
@@ -135,6 +145,7 @@ export class PlayerController {
       } else if (object instanceof Station) {
         inspect = () => InspectInfo.station(ClientState.world, object);
       }
+      if (object instanceof HabPiece) return this._pieceOptions(object);
       return [
         { verb, target: name, color: OBJECT_COLOR, action: () => this._interact(object.id) },
         { verb: 'Inspect', target: name, color: OBJECT_COLOR, action: () => this._inspect(inspect, x, y) },
@@ -150,6 +161,27 @@ export class PlayerController {
       return options;
     }
     return [];
+  }
+
+  /** A hab piece: use it (tend a grow bed), and if you placed it, move, turn, recolour or pick it up. */
+  _pieceOptions(piece) {
+    const name = piece.displayName();
+    const send = (action) => () => this.link.send(ClientState.localPlayerId, action);
+    let verb = 'Admire';
+    if (piece.bed) verb = ['Plant', 'Water', 'Check', 'Harvest'][bedStage(piece.bed, ClientState.world.tick)];
+    const options = [{ verb, target: name, color: OBJECT_COLOR, action: () => this._interact(piece.id) }];
+    const me = ClientState.me();
+    if (me && piece.owner === me.display_name) {
+      const colors = piece.def.colors || [];
+      const next = colors[(colors.indexOf(piece.color) + 1) % colors.length];
+      options.push(
+        { verb: 'Move', target: name, color: OBJECT_COLOR, action: () => this.build.move(piece) },
+        { verb: 'Turn', target: name, color: OBJECT_COLOR, action: send(new EditPieceAction(piece.id, 'turn')) },
+      );
+      if (colors.length > 1) options.push({ verb: 'Recolour', target: name, color: OBJECT_COLOR, action: send(new EditPieceAction(piece.id, 'color', { color: next })) });
+      options.push({ verb: 'Pick up', target: name, color: OBJECT_COLOR, action: send(new EditPieceAction(piece.id, 'pick_up')) });
+    }
+    return options;
   }
 
   /** Climb in (either seat), swap seats, or climb out. */

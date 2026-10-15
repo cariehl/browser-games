@@ -38,12 +38,13 @@ const DRAG_THRESHOLD = 6;
 const PREDICTION_MS = 5000;
 
 export class PlayerPanel {
-  constructor(parent, { link, menu, inspector, hover, guide, extraTabs = [] }) {
+  constructor(parent, { link, menu, inspector, hover, guide, build, extraTabs = [] }) {
     this.link = link;
     this.menu = menu;
     this.inspector = inspector;
     this.hover = hover;
     this.guide = guide;
+    this.build = build;
     this.el = el('div', 'player-panel panel', '', parent);
 
     const tabs = el('div', 'tabs', '', this.el);
@@ -133,7 +134,7 @@ export class PlayerPanel {
       });
       this._slots.push({ slot, icon, name });
     }
-    el('div', 'hint muted', 'Click to equip or inject · drag to move\nRight-click for options, shift-click to drop', page);
+    el('div', 'hint muted', 'Click to equip, inject or place · drag to move\nRight-click for options, shift-click to drop', page);
 
     // Follows the mouse while dragging an item.
     this._dragIcon = el('div', 'drag-icon', '', document.body);
@@ -185,8 +186,8 @@ export class PlayerPanel {
       this.hover.setUiOption(drop, options.length - 2, itemDetail(stack));
       return;
     }
-    if (item.isWeapon || item.isArmor() || item.isConsumable()) {
-      // Left click injects, wields or wears; the rest (minus Cancel) are "more".
+    if (item.isWeapon || item.isArmor() || item.isConsumable() || item.kind === 'piece') {
+      // Left click injects, wields, wears or places; the rest (minus Cancel) are "more".
       this.hover.setUiOption(options[0], options.length - 2, itemDetail(stack));
     } else {
       // Nothing happens on a left click, so just name it.
@@ -289,6 +290,7 @@ export class PlayerPanel {
   _clickItem(index) {
     const stack = this._shown[index];
     if (stack && stack.item.isConsumable()) this._use(index);
+    else if (stack && stack.item.kind === 'piece' && this.build) this.build.place(index);
     else this._equip(index);
   }
 
@@ -345,6 +347,7 @@ export class PlayerPanel {
     else if (item.isWeapon) options.push({ verb: 'Wield', target: item.display_name, color: ITEM_COLOR, action: () => this._equip(index) });
     else if (item.isArmor()) options.push({ verb: 'Wear', target: item.display_name, color: ITEM_COLOR, action: () => this._equip(index) });
     else if (item.kind === 'cosmetic') options.push({ verb: 'Wear', target: item.display_name, color: ITEM_COLOR, action: () => this.link.send(ClientState.localPlayerId, new EquipAction(index)) });
+    else if (item.kind === 'piece' && this.build) options.push({ verb: 'Place', target: item.display_name, color: ITEM_COLOR, action: () => this.build.place(index) });
     else if (item.kind === 'pet') options.push({ verb: 'Call', target: item.display_name, color: ITEM_COLOR, action: () => this.link.send(ClientState.localPlayerId, new CallPetAction(index)) });
     else if (item.lore) options.push({ verb: 'Read', target: item.display_name, color: ITEM_COLOR, action: () => this.inspector.open(() => InspectInfo.lore(item), x, y, false) });
     options.push({ verb: 'Drop', target: item.display_name, color: ITEM_COLOR, action: () => this._drop(index) });

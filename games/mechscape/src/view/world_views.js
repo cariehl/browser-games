@@ -19,6 +19,7 @@ import { WorldLabel } from '../ui/screen.js';
 import { buildWalker, showInstalled, WalkerAnimator } from './mech_view.js';
 import { Mechs } from '../sim/mech.js';
 import { HazardViews } from './hazard_view.js';
+import { PieceView, PieceGhost } from './piece_view.js';
 
 export const PLAYER_MODEL = 'player.glb';
 /** Ground one Walk and one Run cycle of the player model cover, in metres. */
@@ -68,6 +69,12 @@ export class WorldViews {
     }
     for (const state of world.entities.values()) this._addEntity(state);
     this._syncNodes();
+    /** hab piece id -> PieceView */
+    this._pieces = new Map();
+    this._syncPieces();
+    /** Build mode's ghost (see ui/build_mode.js). */
+    this.ghost = new PieceGhost();
+    this.root.add(this.ghost);
     this.bursts = new Bursts(this.root);
     this.hazards = new HazardViews(this.root);
     ClientState.onTick(() => {
@@ -163,6 +170,7 @@ export class WorldViews {
       }
     }
     this._syncMechBuild();
+    this._syncPieces();
     this._syncNodes();
     for (const view of this._nodes.values()) view.update(delta);
     this._syncGround();
@@ -192,6 +200,27 @@ export class WorldViews {
     if (key !== this._mechBuildKey) {
       this._mechBuildKey = key;
       showInstalled(this._mechBuild, build ? build.installed : {});
+    }
+  }
+
+  /** Hab pieces come, go, move, turn and change colour. */
+  _syncPieces() {
+    const pieces = ClientState.world.pieces;
+    if (!pieces) return;
+    for (const [id, view] of this._pieces) {
+      if (pieces.get(id) === view.piece) continue;
+      view.dispose();
+      this.root.remove(view);
+      this._pieces.delete(id);
+    }
+    for (const [id, piece] of pieces) {
+      let view = this._pieces.get(id);
+      if (!view) {
+        view = new PieceView(piece);
+        this.root.add(view);
+        this._pieces.set(id, view);
+      }
+      view.update();
     }
   }
 

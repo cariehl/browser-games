@@ -40,6 +40,8 @@ import { ReconfigureWindow } from './ui/reconfigure_window.js';
 import { MechWindow, MechHud } from './ui/mech_window.js';
 import { ArenaWindow, BossBar } from './ui/arena_window.js';
 import { DebugHud } from './ui/debug_hud.js';
+import { BuildMode } from './ui/build_mode.js';
+import { BoardWindow } from './ui/board_window.js';
 import { DialogueBox } from './ui/dialogue_box.js';
 import { QuestJournal } from './ui/quest_journal.js';
 import { TradeWindow } from './ui/trade_window.js';
@@ -224,7 +226,8 @@ async function main() {
   const menu = new ContextMenu(ui);
   const inspector = new InspectWindow(ui);
   const guide = new SkillGuide(ui);
-  const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide, extraTabs: [new QuestJournal()] });
+  const build = new BuildMode(ui, link, views.ghost);
+  const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide, build, extraTabs: [new QuestJournal()] });
   const dialogue = new DialogueBox(ui, link);
   const craft = new CraftMenu(ui, link);
   const storage = new StorageMenu(ui, link, menu);
@@ -232,10 +235,11 @@ async function main() {
   new MechWindow(ui, link);
   const mechHud = new MechHud(ui, link);
   new ArenaWindow(ui, link);
+  new BoardWindow(ui, link);
   const bossBar = new BossBar(ui);
   const trade = new TradeWindow(ui, link, menu);
   const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
-  const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector });
+  const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector, build });
 
   // Through a hatch or a lift: the camera jumps with you instead of sweeping across the map.
   ClientState.onTick(() => {
@@ -290,7 +294,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // For poking at the game from the browser console.
-  window.mechscape = { ClientState, actions, Content, views, link, saves, rig, renderer, scene, room: net && net.room };
+  window.mechscape = { ClientState, actions, Content, views, link, saves, rig, renderer, scene, build, room: net && net.room };
 }
 
 main().catch((error) => {
