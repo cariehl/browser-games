@@ -1,20 +1,23 @@
 # Starts a MechScape session on this machine:
 #   1. pulls the latest code (git pull --ff-only, when this folder has a git upstream)
-#   2. builds: installs npm packages (the game itself has no build step)
-#   3. opens a Cloudflare quick tunnel to port 2567 and prints the public URL for friends
+#   2. builds: installs npm packages
+#   3. with -HostOnline, opens a Cloudflare quick tunnel to port 2567 and prints the
+#      public URL for friends
 #   4. hosts the server in this window (the tunnel goes first so the URL isn't buried
 #      under the server's output)
 #
-#   .\start-server.ps1                     carry on from saves/world.json
+#   .\start-server.ps1                     carry on from saves/world.json, this PC/LAN only
+#   .\start-server.ps1 -HostOnline         the same, plus a public URL for friends
 #   .\start-server.ps1 --new               a fresh world (the old save becomes the .bak)
 #   .\start-server.ps1 --xp-rate 1.5 --port 8080
-#   start-server.cmd --new                 the same, from cmd or a double-click
+#   start-server.cmd -HostOnline --new     from cmd or a shortcut (a double-click hosts locally)
 #
 # Anything the script doesn't know is passed to the server (see server/index.js).
 # The script's own options:
 #   -SkipPull           don't update the code first
 #   -SkipInstall        don't run npm install
-#   -NoTunnel           host on this machine/LAN only, no Cloudflare tunnel
+#   -HostOnline         open a Cloudflare tunnel so friends can join over the internet
+#                       (--host-online works too)
 #   -Cloudflared PATH   where cloudflared.exe is. Otherwise: $env:CLOUDFLARED, then
 #                       PATH, then ..\cloudflared\cloudflared.exe next to this folder.
 #
@@ -25,14 +28,15 @@ $ErrorActionPreference = 'Stop'
 $Root = $PSScriptRoot
 Set-Location $Root
 
-$skipPull = $false; $skipInstall = $false; $noTunnel = $false; $cloudflared = $env:CLOUDFLARED
+$skipPull = $false; $skipInstall = $false; $hostOnline = $false; $cloudflared = $env:CLOUDFLARED
 $serverArgs = @()
 for ($i = 0; $i -lt $args.Count; $i++) {
   $a = [string]$args[$i]
   switch ($a) {
     '-SkipPull'    { $skipPull = $true }
     '-SkipInstall' { $skipInstall = $true }
-    '-NoTunnel'    { $noTunnel = $true }
+    '-HostOnline'  { $hostOnline = $true }
+    '--host-online' { $hostOnline = $true }
     '-Cloudflared' { $i++; $cloudflared = [string]$args[$i] }
     default        { $serverArgs += $a }
   }
@@ -79,7 +83,7 @@ if ($skipPull) {
 }
 
 # 2. Build
-Step '2/4 Installing packages (the game has no build step)'
+Step '2/4 Installing packages'
 if ($skipInstall) {
   Write-Host 'Skipped (-SkipInstall).'
 } else {
@@ -92,8 +96,8 @@ $logs = Join-Path $Root 'logs'
 New-Item -ItemType Directory -Force -Path $logs | Out-Null
 $tunnel = $null
 $url = $null
-if ($noTunnel) {
-  Step '3/4 No tunnel (-NoTunnel)'
+if (-not $hostOnline) {
+  Step '3/4 No tunnel (pass -HostOnline for a public URL)'
 } else {
   Step '3/4 Opening a Cloudflare tunnel'
   if (-not $cloudflared) {
@@ -101,7 +105,7 @@ if ($noTunnel) {
     if ($onPath) { $cloudflared = $onPath.Source }
     else { $cloudflared = Join-Path (Join-Path (Split-Path $Root -Parent) 'cloudflared') 'cloudflared.exe' }
   }
-  if (-not (Test-Path $cloudflared)) { Fail "cloudflared not found at $cloudflared. Pass -Cloudflared <path>, set CLOUDFLARED, or use -NoTunnel." }
+  if (-not (Test-Path $cloudflared)) { Fail "cloudflared not found at $cloudflared. Pass -Cloudflared <path>, set CLOUDFLARED, or leave out -HostOnline." }
 
   # Close a tunnel an earlier run left behind (only ever the one it recorded).
   $pidFile = Join-Path $logs 'tunnel.pid'
@@ -136,7 +140,7 @@ if ($noTunnel) {
   }
   if (-not $url) {
     if (-not $tunnel.HasExited) { Stop-Process -Id $tunnel.Id -Force }
-    Fail "The tunnel didn't give a URL. See $log, or run with -NoTunnel."
+    Fail "The tunnel didn't give a URL. See $log, or leave out -HostOnline."
   }
   Set-Content -Path (Join-Path $logs 'tunnel-url.txt') -Value $url
   try { Set-Clipboard -Value $url } catch { }
