@@ -3,15 +3,16 @@
 // without touching code. Text.get('mech.deployed', { mech }) fills one in.
 //
 // Tokens in a template:
-//   {name}                    a value the code passes in (each key's comment
-//                             in the editor lists them)
+//   {name}                    a value the code passes in (the editor lists
+//                             the ones each message has)
 //   {npcs:foreman}            a def's display_name, by data file and id
 //   {npcs:foreman.talk}       any field of it
 //   {area:deadfields}         an area's name (data/maps/world.json)
 //   {rules:hab.rested_comfort}  a number from data/rules.json
 //   {...|lower}               lower-cased ("The {mech|lower} is complete!")
 //
-// Dialogue, journals and descriptions can use the same tokens.
+// Dialogue lines and choices, quest journals and skill guide text can use
+// the same tokens.
 
 import { Content, CONTENT_FILES } from './defs.js';
 

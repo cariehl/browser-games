@@ -29,6 +29,12 @@ import { Action, registerActions } from './actions.js';
 import { Task, StationHandlers, a } from './tasks.js';
 import { Content, StationKind } from './defs.js';
 import { chebyshev } from './grid.js';
+import { Text } from './text.js';
+
+/** Dialogue lines with their text tokens ({npcs:foreman}) filled in. */
+function fillLines(lines) {
+  return lines.map((line) => ({ ...line, text: Text.fill(line.text) }));
+}
 
 
 export const Quests = {
@@ -55,7 +61,7 @@ export const Quests = {
     if (!stage) return;
     player.quests[questId] = { stage: stageId, counts: {} };
     world.emitEvent(player.id, 'quest', { quest: questId, stage: stageId });
-    world.message(player.id, `Quest journal (${quest.display_name}): ${stage.journal}`);
+    world.message(player.id, `Quest journal (${quest.display_name}): ${Text.fill(stage.journal)}`);
     Quests._advance(world, player, questId);
   },
 
@@ -113,7 +119,7 @@ export const Quests = {
       return;
     }
     const entry = Content.dialogue[npc.def.talk].entries[index];
-    player.dialogue = { npc_id: npc.id, talk: npc.def.talk, entry: index, lines: entry.lines, choices: (entry.choices || []).map((c) => c.text), serial: ++player.dialogue_serial };
+    player.dialogue = { npc_id: npc.id, talk: npc.def.talk, entry: index, lines: fillLines(entry.lines), choices: (entry.choices || []).map((c) => Text.fill(c.text)), serial: ++player.dialogue_serial };
     npc.path = [];
     npc.face_target = { ...player.tile };
   },
@@ -157,7 +163,7 @@ export const Quests = {
       if (e.say) say = e.say;
     }
     if (say) {
-      player.dialogue = { npc_id: npc.id, talk: open.talk, entry: -1, lines: [{ who: 'npc', text: say }], choices: [], serial: ++player.dialogue_serial };
+      player.dialogue = { npc_id: npc.id, talk: open.talk, entry: -1, lines: fillLines([{ who: 'npc', text: say }]), choices: [], serial: ++player.dialogue_serial };
     }
   },
 };

@@ -41,6 +41,12 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 - **People are dressed as pilots.** The foreman, the scrap artist and the surveyor have a `look` and `cosmetics` in `data/npcs.json`, drawn with the player model's parts.
 - **The survey lift runs out on a cable**, level from the tower and off the edge of the map, fading out (`"cable"` on the lift stations).
 
+## Content editor
+
+- **`npm run editor` edits the data** (see README, Editing content). It saves into `data/`, so changes reach the game on its next start; nothing hot-reloads.
+- **Hardcoded content moved into data.** Tuning numbers (wreck time, regen, trade range, hab comfort and resting, puzzle XP, rig range, paint) are in `data/rules.json`; skill names, guide text and starting levels in `data/skills.json`; messages that name people and places in `data/text.json`; the Splatterpress's lines in its script in `data/npcs.json`. Hab sets now come from each piece's `"set"`; the specimen case lost its `"set": "greenhouse"`, which the old code ignored, so the greenhouse still needs the same three pieces.
+- **Area names** are in `data/maps/world.json` ("Deadfields", not "The Deadfields") so messages can say "in the {area:deadfields}".
+
 ## Known rough edges
 
 - **The browser asks for `/favicon.ico` and gets a 404.** It's harmless.

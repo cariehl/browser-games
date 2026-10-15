@@ -119,9 +119,23 @@ To check the simulation without a browser:
 ```
 npm test              # node --test tests/*.test.js
 npm run check-loops   # node tools/check_loops.js
+npm run check-reach   # node tools/check_reach.js
+npm run check-text    # node tools/check_text.js
 ```
 
 `npm test` starts a real server on a spare port for one of its tests, so run `npm install` first. The tests cover the tick, pathing, gathering, crafting, combat (commit and land, overkill, ammo, line of sight), injectors and boosts, gear, dropping and taking, storage, death and wrecks, the action JSON round trip, and a save that carries on exactly as the original world would have over 300 ticks. For multiplayer they cover malformed actions being turned away, a browser mirror fed snapshots ending up identical to the server's world, what's kept private, joining, leaving and coming back, the server save across a restart, and two Colyseus clients on a real server. `check_loops` is the economy rule: with combat skills removed, the production graph must have no cycles, so every loop goes through combat.
+
+## Editing content
+
+`npm run editor` opens the content editor at <http://localhost:8090>: a page for editing everything in `data/` without touching JSON or code. It runs on your computer only and saves straight into `data/`, so restart the game server to play with the changes, and commit them with git like any other edit.
+
+- **Maps**: paint the things layer (terrain, nodes, stations, NPCs, decor, the spawn), heights and ground with a brush, rectangle or flood fill; drag out zones; add legend entries; resize. Right-click picks up what's under the cursor, and the bar shows each tile's world coordinates and links.
+- **Quests** as stages (journal, goal, next), **dialogue** as a conversation (when it's said, the lines, the choices and what each does), and **messages** (`data/text.json`).
+- **Items, NPCs, gather nodes, recipes, stations, loot tables, mechs, skills, weapon types, terrain, decor, ground**, and the **game rules** (`data/rules.json`): every field the game reads, with its default and the note from `src/sim/defs.js`. Ids that name other content are checked as you type.
+- **Rename id** updates everything that uses it (other data, map legends, text tokens). Every page lists what uses the entry.
+- **Save** (Ctrl+S) writes only what changed, keeping the rest of each file byte for byte, then runs every check (content loads, maps parse, messages and tokens resolve, economy loops, reachability) and lists any problems.
+
+What's content and what's code: names, descriptions, numbers, level requirements, recipes, loot, dialogue and the messages that name people and places are all data. Text can name content with tokens, `{npcs:foreman}`, `{area:deadfields}`, `{stations:manufactory|lower}`, `{rules:hab.rested_comfort}`, so renaming something renames it everywhere. What things *do* (a station's kind, a goal type, an effect like `craft_speed`) is code.
 
 ## How it's organised
 
@@ -132,13 +146,13 @@ npm run check-loops   # node tools/check_loops.js
 | `src/client/` | `ClientState` (the one place views read the game from), the links that send actions (`SimulatedLink` offline, `NetLink` online), `NetLoop` (the online mirror), the player controller, offline saving | Only talks to the sim by sending actions through the link. |
 | `src/view/` | three.js: the map, models, animation, camera, hitboxes, debug overlay | Reads sim state through `ClientState`, never writes it. |
 | `src/ui/` | DOM overlays: panels, menus, hover text, hitsplats, XP drops, the message log | Same rule as the views. |
-| `data/` | Items, gather nodes, recipes, stations, NPCs, terrain and weapon types as JSON keyed by id, and maps as `.map` text | Content, not code. |
+| `data/` | Items, gather nodes, recipes, stations, NPCs, terrain, weapon types, skills, quests and dialogue as JSON keyed by id; `rules.json` (tuning numbers) and `text.json` (messages); maps as `.map` text | Content, not code. Edit with `npm run editor`. |
 | `assets/models/` | The `.glb` models, copied from the Godot project | Set as a def's `model`. |
-| `tools/` | `serve.js` (static server for offline play), `check_loops.js`, `vendor_sdk.js` and `convert_godot_data.py` | |
+| `tools/` | `editor/` (the content editor), `serve.js` (static server for offline play), the checks (`check_loops.js`, `check_reach.js`, `check_text.js`), `vendor_sdk.js` and `convert_godot_data.py` | |
 | `tests/` | Node tests of the sim (on their own small map) and of the server | |
 | `vendor/` | three.js 0.170.0 and the Colyseus browser client 0.18 (both MIT) | |
 
-The JSON in `data/` was generated from the Godot `.tres` files by `tools/convert_godot_data.py` (`python3 tools/convert_godot_data.py <godot project> .`). Field names are the Godot ones, references are ids, colours are `[r, g, b, a]` in sRGB, and models are file names in `assets/models/`. Now that this is its own project, edit the JSON directly.
+The JSON in `data/` was generated from the Godot `.tres` files by `tools/convert_godot_data.py` (`python3 tools/convert_godot_data.py <godot project> .`). Field names are the Godot ones, references are ids, colours are `[r, g, b, a]` in sRGB, and models are file names in `assets/models/`. Now that this is its own project, edit it with the content editor (or the JSON directly).
 
 ### Models and animation
 
