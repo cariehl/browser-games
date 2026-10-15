@@ -83,6 +83,7 @@ export class World {
     this.zoneIds = [];
 
     this._terrain = new Map(); // tile key -> TerrainDef
+    this._solidDecor = new Set(); // tile keys of props nobody walks through (trees, rocks)
     this._objects = new Map(); // id -> WorldObject
     this._objectTiles = new Map(); // tile key -> WorldObject
     this._nextObjectId = 1000;
@@ -161,7 +162,14 @@ export class World {
     for (const zone of entry.zones || []) this._markZone(zone, offset, { x: offset.x + size.x - 1, y: offset.y + size.y - 1 });
     if (map) {
       for (const zone of map.zones) this._markZone(zone.id, add(offset, zone.from), add(offset, zone.to));
-      for (const d of map.decor) this.decor.push({ def: d.def, tile: add(offset, d.tile) });
+      for (const d of map.decor) {
+        const tile = add(offset, d.tile);
+        this.decor.push({ def: d.def, tile });
+        if (d.def.blocks_movement) {
+          this._solidDecor.add(key(tile));
+          this._refreshTile(tile);
+        }
+      }
     }
   }
 
@@ -763,7 +771,8 @@ export class World {
     const terrain = this._terrain.get(key(tile));
     const object = this._objectTiles.get(key(tile));
     const outside = this._areaOf[tile.y * this.size.x + tile.x] === 255;
-    this._grid.setSolid(tile, outside || (terrain != null && terrain.blocks_movement) || (object != null && object.blocksMovement()));
+    const solid = outside || this._solidDecor.has(key(tile)) || (terrain != null && terrain.blocks_movement) || (object != null && object.blocksMovement());
+    this._grid.setSolid(tile, solid);
   }
 
   /** How [entity] may path: NPCs keep out of safe zones; mechs are big and stay in mech zones. */

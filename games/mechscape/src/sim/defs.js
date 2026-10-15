@@ -369,7 +369,7 @@ export class DialogueDef {
   resolve() {}
 }
 
-/** A prop drawn on the map that blocks nothing and isn't part of the sim: scrap piles, lamps, cables. */
+/** A prop drawn on the map: scrap piles, lamps, cables. Only the solid ones (trees, rocks) matter to the sim. */
 export class DecorDef {
   constructor(raw) {
     assign(this, {
@@ -381,6 +381,8 @@ export class DecorDef {
       light: null,
       /** Clickable, with an Inspect option showing its name and description. Flat things (grass, puddles) aren't. */
       inspect: true, description: '',
+      /** Solid: nobody walks through it (trees, rocks). It never blocks shots. */
+      blocks_movement: false,
     }, raw);
   }
 

@@ -85,3 +85,13 @@ test('NPCs keep out of safe zones and leave players in them alone', () => {
   runUntil(world, () => player.tile.y === 20, 30);
   assert.equal(world.nearestPlayer({ x: 9, y: 22 }, 5), player);
 });
+
+test('trees and rocks are solid, and nothing a player needs is walled off by them', async () => {
+  const { checkReach } = await import('../tools/check_reach.js');
+  assert.deepEqual(checkReach(), []);
+  const world = new World(DEFAULT_MAP);
+  const tree = world.decor.find((d) => d.def.id === 'dead_tree');
+  assert.ok(!world.isWalkable(tree.tile), 'a dead tree blocks the way');
+  const tuft = world.decor.find((d) => d.def.id === 'grass_tuft');
+  assert.ok(world.isWalkable(tuft.tile), 'grass does not');
+});

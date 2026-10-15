@@ -7,7 +7,7 @@
  "puddle": { "id": "puddle", "display_name": "Oil puddle", "shape": "puddle", "color": [0.1, 0.12, 0.14, 1], "inspect": false },
  "coolant_puddle": { "id": "coolant_puddle", "display_name": "Coolant pool", "shape": "puddle", "color": [0.25, 0.65, 0.85, 1], "accent": [0.35, 0.75, 0.95, 1], "inspect": false },
  "sign": { "id": "sign", "display_name": "TODO", "shape": "sign", "color": [0.3, 0.3, 0.3, 1], "accent": [0.95, 0.75, 0.15, 1], "description": "TODO" },
- "dead_tree": { "id": "dead_tree", "display_name": "TODO", "shape": "dead_tree", "color": [0.3, 0.25, 0.2, 1], "description": "TODO" },
+ "dead_tree": { "id": "dead_tree", "display_name": "TODO", "shape": "dead_tree", "color": [0.3, 0.25, 0.2, 1], "description": "TODO", "blocks_movement": true },
  "crate": { "id": "crate", "display_name": "TODO", "shape": "crate", "color": [0.48, 0.4, 0.28, 1], "description": "TODO" },
  "barrel": { "id": "barrel", "display_name": "TODO", "shape": "barrel", "color": [0.55, 0.25, 0.18, 1], "accent": [0.9, 0.75, 0.2, 1], "description": "TODO" },
  "girder": { "id": "girder", "display_name": "TODO", "shape": "girder", "color": [0.4, 0.33, 0.28, 1], "description": "TODO" },
@@ -23,7 +23,7 @@
  "conveyor": { "id": "conveyor", "display_name": "TODO", "shape": "conveyor", "color": [0.2, 0.2, 0.22, 1], "accent": [0.6, 0.5, 0.2, 1], "description": "TODO" },
  "furnace_glow": { "id": "furnace_glow", "display_name": "Cooling slag", "shape": "puddle", "color": [1, 0.45, 0.1, 1], "accent": [1, 0.45, 0.1, 1], "light": { "color": [1, 0.5, 0.2], "intensity": 4, "distance": 7 }, "inspect": false },
  "skull": { "id": "skull", "display_name": "TODO", "shape": "skull", "color": [0.55, 0.5, 0.42, 1], "accent": [0.9, 0.2, 0.1, 1], "scale": 1.3, "description": "TODO" },
- "rock_small": { "id": "rock_small", "display_name": "TODO", "shape": "stones", "color": [0.4, 0.38, 0.35, 1], "description": "TODO" },
+ "rock_small": { "id": "rock_small", "display_name": "TODO", "shape": "stones", "color": [0.4, 0.38, 0.35, 1], "description": "TODO", "blocks_movement": true },
  "flower": { "id": "flower", "display_name": "Bloomstalk", "shape": "flower", "color": [0.3, 0.5, 0.3, 1], "accent": [0.95, 0.5, 0.7, 1], "inspect": false },
  "antenna": { "id": "antenna", "display_name": "TODO", "shape": "antenna", "color": [0.45, 0.45, 0.48, 1], "accent": [1, 0.2, 0.15, 1], "scale": 1.3, "description": "TODO" }
  }
