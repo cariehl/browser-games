@@ -43,6 +43,7 @@ import { DebugHud } from './ui/debug_hud.js';
 import { BuildMode } from './ui/build_mode.js';
 import { BoardWindow } from './ui/board_window.js';
 import { DialogueBox } from './ui/dialogue_box.js';
+import { ScreenFade } from './ui/screen_fade.js';
 import { QuestJournal } from './ui/quest_journal.js';
 import { TradeWindow } from './ui/trade_window.js';
 
@@ -201,6 +202,7 @@ async function main() {
   rig.snap();
   Screen.camera = rig.camera;
   Screen.layer = el('div', 'labels', '', ui);
+  new ScreenFade(ui);
 
   const marker = new ClickMarker();
   scene.add(marker);

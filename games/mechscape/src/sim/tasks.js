@@ -276,6 +276,12 @@ export class StationTask extends Task {
           world.message(entity.id, "It doesn't lead anywhere yet.");
           break;
         }
+        // One tick to step through, so the screen can fade to black before you arrive.
+        if (!this._stepping && entity.isPlayer()) {
+          this._stepping = true;
+          world.emitEvent(entity.id, 'transition', { station: station.id });
+          return true;
+        }
         world.travel(entity, link.to);
         world.message(entity.id, link.text || `You go through the ${station.def.display_name.toLowerCase()}.`);
         break;
