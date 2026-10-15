@@ -15,6 +15,7 @@
 //       before it's applied (a seated mech crew's clicks drive the mech)
 //   dropOnDeath(world, player) -> [ItemStack]  more things a dying player drops
 //       into their wreck (cosmetics, a pet)
+//   wreckTile(tile, world, player) -> tile  where a dying player's wreck goes
 //   hitDamage(damage, world, attacker, target) -> damage  changes a landing hit
 //       (shields, mech-only bosses); return { damage, blocked: true } style via
 //       world.emitEvent if it needs to tell anyone

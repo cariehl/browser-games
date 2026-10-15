@@ -415,7 +415,7 @@ export class World {
   }
 
   spawnNpc(def, tile) {
-    const npc = new NpcState(this._nextNpcId++, def, tile);
+    const npc = NpcState.create(this._nextNpcId++, def, tile);
     this.entities.set(npc.id, npc);
     return npc;
   }
@@ -547,7 +547,9 @@ export class World {
     player.armor = {};
     for (const f of Features.list) if (f.dropOnDeath) items.push(...f.dropOnDeath(this, player));
     if (items.length === 0) return null;
-    return this.addWreck(player.id, this.wreckTileNear(player.tile), items, this.tick + World.WRECK_TICKS);
+    // Somewhere a feature says is safer (outside a boss arena's door), or where they fell.
+    const at = Features.reduce('wreckTile', player.tile, this, player);
+    return this.addWreck(player.id, this.wreckTileNear(at), items, this.tick + World.WRECK_TICKS);
   }
 
   /** The tile itself or the nearest free one; a wreck must never be lost. */

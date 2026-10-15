@@ -175,6 +175,8 @@ export class NpcDef {
       aggressive: false, aggro_radius: 3, wander_radius: 3, leash_radius: 8, respawn_ticks: 30,
       /** Only a mech (or its gunner) can hurt it; anything else does nothing. */
       mech_only_damage: false,
+      /** A boss fight's script (see boss.js): { zone, door, add, loot, modes }, or null. */
+      boss: null,
       husk: null,
       /** Dropped on the ground on death, each line rolled separately: [{item, min_count, max_count, chance}] */
       drops: [],

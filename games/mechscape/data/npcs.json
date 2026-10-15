@@ -242,7 +242,7 @@
   "aggro_radius": 0,
   "wander_radius": 0,
   "leash_radius": 0,
-  "respawn_ticks": 20,
+  "respawn_ticks": 30,
   "husk": "splatterpress_husk",
   "model": "scrap_walker.glb",
   "model_scale": 1.3,
@@ -255,7 +255,82 @@
    1.0
   ],
   "size": 2.4,
-  "brain": "boss"
+  "brain": "boss",
+  "boss": {
+   "zone": "arena",
+   "door": "arena_door",
+   "add": "press_drone",
+   "loot": "press",
+   "modes": {
+    "easy": {
+     "display_name": "Splatterpress",
+     "hp": 80,
+     "hp_per_player": 40,
+     "max_hit": 2,
+     "dodge_every": 10,
+     "dodge_warn": 5,
+     "dodge_damage": 3,
+     "dodge_patterns": [
+      "ring",
+      "cross"
+     ],
+     "adds_every": 24,
+     "adds": 2,
+     "adds_per_player": 1,
+     "add_heal": 8
+    },
+    "overclocked": {
+     "display_name": "Overclocked Splatterpress",
+     "hp": 240,
+     "hp_per_player": 120,
+     "max_hit": 4,
+     "dodge_every": 7,
+     "dodge_warn": 3,
+     "dodge_damage": 6,
+     "dodge_patterns": [
+      "ring",
+      "cross",
+      "rows",
+      "checker"
+     ],
+     "adds_every": 18,
+     "adds": 2,
+     "adds_per_player": 1,
+     "add_heal": 20,
+     "soak_every": 16,
+     "soak_warn": 6,
+     "soak_damage": 8,
+     "wipe_damage": 5,
+     "run_length": 5,
+     "run_per_player": 1,
+     "run_ticks": 26,
+     "shield_down_ticks": 16,
+     "shock_damage": 2,
+     "phases": [
+      {
+       "above": 0.66,
+       "mechanics": [
+        "dodge"
+       ]
+      },
+      {
+       "above": 0.33,
+       "mechanics": [
+        "adds",
+        "soak"
+       ]
+      },
+      {
+       "above": 0,
+       "mechanics": [
+        "shield",
+        "dodge"
+       ]
+      }
+     ]
+    }
+   }
+  }
  },
  "scrap_colossus": {
   "id": "scrap_colossus",
@@ -444,5 +519,29 @@
   ],
   "size": 2.4,
   "shape": "walker"
+ },
+ "press_drone": {
+  "id": "press_drone",
+  "display_name": "Patch drone",
+  "hitpoints": 4,
+  "attack_level": 1,
+  "accuracy": 0,
+  "max_hit": 1,
+  "attack_speed": 5,
+  "attack_range": 1,
+  "defence_level": 1,
+  "defence_bonus": 0,
+  "brain": "press_add",
+  "aggressive": false,
+  "wander_radius": 0,
+  "leash_radius": 30,
+  "respawn_ticks": 0,
+  "color": [
+   0.7,
+   0.45,
+   0.6,
+   1.0
+  ],
+  "size": 0.55
  }
 }
