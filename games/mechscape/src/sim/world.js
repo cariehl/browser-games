@@ -56,6 +56,8 @@ export class World {
     /** Everything that happened during the latest tick, for views: { entity, type, data } */
     this.events = [];
     this.rng = new Rng();
+    /** Lines for everyone, shown at the start of the next tick (see announce()). */
+    this._announcements = [];
 
     this._terrain = new Map(); // tile key -> TerrainDef
     this._objects = new Map(); // id -> WorldObject
@@ -98,6 +100,8 @@ export class World {
   runTick(actions = new Map()) {
     this.tick++;
     this.events = [];
+    for (const text of this._announcements) this.emitEvent(-1, 'broadcast', { text });
+    this._announcements = [];
 
     // 1. Consume queued input, in the order the client sent it.
     for (const [id, bySlot] of actions) {
@@ -192,6 +196,11 @@ export class World {
 
   message(entityId, text) {
     this.emitEvent(entityId, 'message', { text });
+  }
+
+  /** A line everyone online sees in their chatbox (someone joined, a quest done). Sent with the next tick. */
+  announce(text) {
+    this._announcements.push(text);
   }
 
   grantXp(entity, skill, amount) {

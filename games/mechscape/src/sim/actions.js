@@ -75,6 +75,8 @@ export class Action {
 }
 
 const MAX_INT = 1 << 30;
+/** Longest chat line, in characters. */
+export const MAX_CHAT = 120;
 
 /** Checks one field against its kind. Returns the value to use, or undefined if it's bad. */
 function readField(kind, value) {
@@ -87,8 +89,16 @@ function readField(kind, value) {
       const { x, y } = value;
       return Number.isSafeInteger(x) && Number.isSafeInteger(y) && Math.abs(x) <= 100000 && Math.abs(y) <= 100000 ? { x, y } : undefined;
     }
+    case 'text': return cleanText(value);
     default: throw new Error(`unknown field kind ${kind}`);
   }
+}
+
+/** A line of text a player typed, tidied: control characters out, runs of spaces squashed. Undefined if blank or too long. */
+export function cleanText(value, max = MAX_CHAT) {
+  if (typeof value !== 'string') return undefined;
+  const text = value.replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]/g, ' ').replace(/\s+/g, ' ').trim();
+  return text.length > 0 && text.length <= max ? text : undefined;
 }
 
 /** Walk (or run) to a tile. */
@@ -467,6 +477,37 @@ export class WithdrawAction extends Action {
   }
 }
 
+/**
+ * Say something in public chat. Everyone online sees it in their chatbox,
+ * and players nearby see it over your head for a few seconds.
+ */
+export class ChatAction extends Action {
+  static TYPE = 'chat';
+  static FIELDS = { text: 'text' };
+  /** At most this many lines... */
+  static BURST = 5;
+  /** ...in this many ticks. */
+  static BURST_TICKS = 10;
+  constructor(text) {
+    super();
+    this.text = text;
+  }
+  slot() { return `chat_${this._unique}`; }
+  apply(world, entity) {
+    const text = cleanText(this.text);
+    if (entity.isNpc() || !text) return;
+    const recent = (entity._chatTicks || []).filter((t) => world.tick - t < ChatAction.BURST_TICKS);
+    if (recent.length >= ChatAction.BURST) {
+      world.message(entity.id, "You're talking too fast. Wait a moment.");
+      entity._chatTicks = recent;
+      return;
+    }
+    recent.push(world.tick);
+    entity._chatTicks = recent;
+    world.emitEvent(entity.id, 'chat', { entity: entity.id, name: entity.display_name, text });
+  }
+}
+
 /** Debug only: grant XP in a skill. */
 export class DebugGrantXpAction extends Action {
   static TYPE = 'debug_grant_xp';
@@ -486,5 +527,5 @@ export class DebugGrantXpAction extends Action {
 export const ACTION_TYPES = Object.fromEntries([
   MoveAction, AttackAction, InteractAction, CraftAction, TakeAction, SetRunAction, SetCombatStyleAction,
   SwapItemsAction, DropAction, EquipAction, UnequipAction, UseItemAction, DepositAction, DepositAllAction,
-  WithdrawAction, DebugGrantXpAction,
+  WithdrawAction, ChatAction, DebugGrantXpAction,
 ].map((cls) => [cls.TYPE, cls]));

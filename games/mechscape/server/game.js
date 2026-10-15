@@ -98,6 +98,7 @@ export class Game {
     // The client numbers its actions from 1 again.
     player.last_action_seq = 0;
     this.online.add(player.id);
+    world.announce(`${name} has joined.`);
     return player;
   }
 
@@ -112,7 +113,9 @@ export class Game {
   leave(id) {
     if (!this.online.delete(id)) return;
     const player = this.world.entities.get(id);
-    if (player) this._logOut(this.world, player);
+    if (!player) return;
+    this.world.announce(`${player.display_name} has left.`);
+    this._logOut(this.world, player);
   }
 
   _logOut(world, player) {

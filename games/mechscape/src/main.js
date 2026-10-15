@@ -171,7 +171,7 @@ async function main() {
   const link = net ? new NetLink(net.room) : new SimulatedLink();
   const combat = new CombatOverlay(ui, views.entities);
   const xpDrops = new XpDrops(views.playerView);
-  const messageLog = new MessageLog(ui);
+  const messageLog = new MessageLog(ui, link);
   const saves = net ? null : new SaveManager(messageLog);
   if (net) {
     watchConnection(net.room, ui);

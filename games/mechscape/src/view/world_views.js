@@ -21,6 +21,8 @@ const PLAYER_WALK_CYCLE = 1.5;
 const PLAYER_RUN_CYCLE = 2.3;
 const GROUND_BLOCK = [0.26, 0.14, 0.26];
 const TICK_SECONDS = 0.6;
+/** How long a chat line floats over whoever said it. */
+const CHAT_SECONDS = 5;
 /** Each player's own colour, by id, so friends can tell each other apart. Player 1 keeps the original orange. */
 export const PLAYER_COLOURS = [
   [0.85, 0.55, 0.25], [0.25, 0.55, 0.85], [0.35, 0.75, 0.35], [0.8, 0.3, 0.35],
@@ -59,6 +61,16 @@ export class WorldViews {
     }
     for (const state of world.entities.values()) this._addEntity(state);
     this._syncNodes();
+    ClientState.onTick(() => {
+      for (const event of ClientState.world.events) {
+        if (event.type !== 'chat') continue;
+        const view = this.entities.get(event.entity);
+        if (!view) continue;
+        if (!view.chatLabel) view.chatLabel = new WorldLabel('chat-label');
+        view.chatLabel.text = event.data.text;
+        view.chatSeconds = CHAT_SECONDS;
+      }
+    });
   }
 
   /** The local player's view. */
@@ -74,6 +86,7 @@ export class WorldViews {
       if (world.entities.get(id) === view.state) continue;
       view.dispose();
       if (view.nameLabel) view.nameLabel.dispose();
+      if (view.chatLabel) view.chatLabel.dispose();
       this.root.remove(view);
       this.entities.delete(id);
     }
@@ -85,6 +98,17 @@ export class WorldViews {
         view.nameLabel.text = view.state.display_name;
         view.nameLabel.point.copy(view.position).y += view.headHeight + 0.2;
         view.nameLabel.update();
+      }
+      if (view.chatLabel) {
+        view.chatSeconds -= delta;
+        if (view.chatSeconds <= 0) {
+          view.chatLabel.dispose();
+          view.chatLabel = null;
+        } else {
+          view.chatLabel.visible = view.visible;
+          view.chatLabel.point.copy(view.position).y += view.headHeight + (view.nameLabel ? 0.55 : 0.3);
+          view.chatLabel.update();
+        }
       }
     }
     this._syncNodes();
