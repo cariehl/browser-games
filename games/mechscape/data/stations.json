@@ -108,15 +108,17 @@
  "gantry": {
   "id": "gantry",
   "display_name": "Mech gantry",
-  "description": "Where the group builds the mech",
+  "description": "The console for the mech build on the pad beside it",
   "skill": "",
   "kind": "gantry",
+  "recipes": [],
   "color": [
    0.45,
-   0.5,
-   0.55,
-   1
-  ]
+   0.45,
+   0.4,
+   1.0
+  ],
+  "shape": "gantry"
  },
  "undercroft_hatch": {
   "id": "undercroft_hatch",
@@ -129,7 +131,8 @@
    0.33,
    0.3,
    1
-  ]
+  ],
+  "shape": "hatch"
  },
  "undercroft_ladder": {
   "id": "undercroft_ladder",
@@ -142,7 +145,8 @@
    0.4,
    0.42,
    1
-  ]
+  ],
+  "shape": "ladder"
  },
  "reach_lift": {
   "id": "reach_lift",
@@ -155,7 +159,8 @@
    0.6,
    0.55,
    1
-  ]
+  ],
+  "shape": "lift"
  },
  "reach_return": {
   "id": "reach_return",
@@ -168,7 +173,8 @@
    0.6,
    0.55,
    1
-  ]
+  ],
+  "shape": "lift"
  },
  "deadfields_gate": {
   "id": "deadfields_gate",
@@ -181,7 +187,8 @@
    0.35,
    0.25,
    1
-  ]
+  ],
+  "shape": "gate"
  },
  "deadfields_return": {
   "id": "deadfields_return",
@@ -194,6 +201,298 @@
    0.35,
    0.25,
    1
-  ]
+  ],
+  "shape": "gate"
+ },
+ "fabricator": {
+  "id": "fabricator",
+  "display_name": "Fabricator",
+  "description": "Prints fittings and furniture for the hab",
+  "skill": "engineering",
+  "kind": "craft",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.48,
+   0.55,
+   1.0
+  ],
+  "shape": "fabricator"
+ },
+ "hab_workbench": {
+  "id": "hab_workbench",
+  "display_name": "Hab workbench",
+  "description": "A tidy bench. Fittings in the hab make work here faster",
+  "skill": "engineering",
+  "kind": "craft",
+  "recipes": [
+   "scrap_blade",
+   "gas_cartridges",
+   "empty_injector",
+   "pipe_pistol",
+   "relic_blade",
+   "relic_pistol",
+   "alloy_blade",
+   "alloy_pistol",
+   "servo_blade",
+   "servo_pistol",
+   "canister",
+   "scrap_helmet",
+   "scrap_gauntlets",
+   "scrap_greaves",
+   "scrap_chestplate",
+   "relic_helmet",
+   "relic_gauntlets",
+   "relic_greaves",
+   "relic_chestplate",
+   "alloy_helmet",
+   "alloy_gauntlets",
+   "alloy_greaves",
+   "alloy_chestplate",
+   "breacher_plate"
+  ],
+  "color": [
+   0.5,
+   0.4,
+   0.3,
+   1.0
+  ],
+  "shape": "bench"
+ },
+ "bio_bench": {
+  "id": "bio_bench",
+  "display_name": "Bio-bench",
+  "description": "Splicing, with the hab's racks and coolers to hand",
+  "skill": "splicing",
+  "kind": "craft",
+  "recipes": [
+   "healing_injector",
+   "edge_injector",
+   "surge_injector",
+   "deadeye_injector"
+  ],
+  "color": [
+   0.35,
+   0.5,
+   0.4,
+   1.0
+  ],
+  "shape": "bench"
+ },
+ "commission_board": {
+  "id": "commission_board",
+  "display_name": "Commission board",
+  "description": "Post a request, or fill someone else's",
+  "skill": "",
+  "kind": "board",
+  "recipes": [],
+  "color": [
+   0.5,
+   0.42,
+   0.3,
+   1.0
+  ],
+  "shape": "board"
+ },
+ "trophy_wall": {
+  "id": "trophy_wall",
+  "display_name": "Trophy wall",
+  "description": "Mount trophies here for a bonus everyone shares",
+  "skill": "",
+  "kind": "trophy",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.32,
+   0.26,
+   1.0
+  ],
+  "shape": "trophy_wall"
+ },
+ "blueprint_cache": {
+  "id": "blueprint_cache",
+  "display_name": "Sealed vault",
+  "description": "Something important was locked away down here",
+  "skill": "",
+  "kind": "cache",
+  "recipes": [],
+  "color": [
+   0.35,
+   0.37,
+   0.42,
+   1.0
+  ],
+  "shape": "vault"
+ },
+ "arena_door": {
+  "id": "arena_door",
+  "display_name": "Press hall door",
+  "description": "A heavy door to the old paint press hall",
+  "skill": "",
+  "kind": "arena_door",
+  "recipes": [],
+  "color": [
+   0.38,
+   0.36,
+   0.34,
+   1.0
+  ],
+  "shape": "door",
+  "blocks_sight": true
+ },
+ "repair_rig": {
+  "id": "repair_rig",
+  "display_name": "Repair rig",
+  "description": "Feed it alloy plating to patch up the mech",
+  "skill": "",
+  "kind": "repair",
+  "recipes": [],
+  "color": [
+   0.5,
+   0.45,
+   0.3,
+   1.0
+  ],
+  "shape": "rig"
+ },
+ "bridge_winch": {
+  "id": "bridge_winch",
+  "display_name": "Bridge winch",
+  "description": "A winch for the broken bridge. It needs scrap to mend",
+  "skill": "",
+  "kind": "puzzle",
+  "recipes": [],
+  "color": [
+   0.45,
+   0.4,
+   0.32,
+   1.0
+  ],
+  "shape": "winch",
+  "needs": {
+   "item": "scrap_metal",
+   "count": 5
+  },
+  "opens": "broken_bridge",
+  "done_text": "You patch the bridge with scrap and winch it into place."
+ },
+ "gas_valve": {
+  "id": "gas_valve",
+  "display_name": "Door valve",
+  "description": "Feeds gas to the old blast door",
+  "skill": "",
+  "kind": "puzzle",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.45,
+   0.42,
+   1.0
+  ],
+  "shape": "valve",
+  "needs": {
+   "item": "vent_gas",
+   "count": 10
+  },
+  "opens": "gas_door",
+  "done_text": "The valve drinks the gas and the blast door grinds open."
+ },
+ "veil_projector": {
+  "id": "veil_projector",
+  "display_name": "Projector",
+  "description": "A flickering projector, still running after all this time",
+  "skill": "",
+  "kind": "puzzle",
+  "recipes": [],
+  "color": [
+   0.35,
+   0.42,
+   0.5,
+   1.0
+  ],
+  "shape": "projector",
+  "scan": true,
+  "opens": "holo_veil",
+  "done_text": "Your scan finds the projector's off switch. The wall of rock was only a picture."
+ },
+ "landmark_skull": {
+  "id": "landmark_skull",
+  "display_name": "Colossus skull",
+  "description": "Scan it for your survey log",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.5,
+   0.55,
+   1.0
+  ],
+  "shape": "pylon",
+  "lore": "A skull the size of a hab, from a machine nobody remembers building."
+ },
+ "landmark_antenna": {
+  "id": "landmark_antenna",
+  "display_name": "Old relay mast",
+  "description": "Scan it for your survey log",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.5,
+   0.55,
+   1.0
+  ],
+  "shape": "pylon",
+  "lore": "The mast that once talked to the orbital yards. Its last log is a single word: \"Hold.\""
+ },
+ "landmark_pool": {
+  "id": "landmark_pool",
+  "display_name": "Glow pool",
+  "description": "Scan it for your survey log",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.5,
+   0.55,
+   1.0
+  ],
+  "shape": "pylon",
+  "lore": "The fungus here feeds on coolant leaking from far below. The Undercroft is closer than it looks."
+ },
+ "landmark_overlook": {
+  "id": "landmark_overlook",
+  "display_name": "The overlook",
+  "description": "Scan it for your survey log",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.5,
+   0.55,
+   1.0
+  ],
+  "shape": "pylon",
+  "lore": "From here you can see the whole Scrapyard: the camp, the long wall, the loader yard, and the hatch in the ruins."
+ },
+ "landmark_lander": {
+  "id": "landmark_lander",
+  "display_name": "Crashed lander",
+  "description": "Scan it for your survey log",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.5,
+   0.55,
+   1.0
+  ],
+  "shape": "pylon",
+  "lore": "The lander that brought the first pilots down. The manufactory inside it is the one that printed you."
  }
 }

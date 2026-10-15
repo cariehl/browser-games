@@ -115,5 +115,45 @@
    1.0
   ],
   "height": 1.3
+ },
+ "broken_bridge": {
+  "id": "broken_bridge",
+  "display_name": "Broken bridge",
+  "blocks_movement": true,
+  "blocks_sight": false,
+  "color": [
+   0.24,
+   0.17,
+   0.12,
+   1.0
+  ],
+  "height": 0.02
+ },
+ "gas_door": {
+  "id": "gas_door",
+  "display_name": "Blast door",
+  "blocks_movement": true,
+  "blocks_sight": true,
+  "color": [
+   0.4,
+   0.38,
+   0.34,
+   1.0
+  ],
+  "height": 1.6
+ },
+ "holo_veil": {
+  "id": "holo_veil",
+  "display_name": "Rock face",
+  "blocks_movement": true,
+  "blocks_sight": true,
+  "color": [
+   0.42,
+   0.4,
+   0.38,
+   1.0
+  ],
+  "height": 1.4,
+  "shimmer": true
  }
 }

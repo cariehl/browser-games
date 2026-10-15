@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { tileToWorld, color } from './tile_math.js';
 import { Models } from './models.js';
 import { Hitbox, HitboxKind } from './hitbox.js';
+import { hasShape, buildShape } from './station_shapes.js';
 
 export class StationView extends THREE.Group {
   constructor(station) {
@@ -17,6 +18,13 @@ export class StationView extends THREE.Group {
       const model = Models.instance(def.model, def.model_scale).model;
       this.add(model);
       const box = Models.bounds(model);
+      this.add(new Hitbox(HitboxKind.OBJECT, station.id, box.getSize(new THREE.Vector3()), box.getCenter(new THREE.Vector3())));
+      return;
+    }
+    if (hasShape(def.shape)) {
+      const model = buildShape(def);
+      this.add(model);
+      const box = new THREE.Box3().setFromObject(model);
       this.add(new Hitbox(HitboxKind.OBJECT, station.id, box.getSize(new THREE.Vector3()), box.getCenter(new THREE.Vector3())));
       return;
     }

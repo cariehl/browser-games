@@ -15,12 +15,24 @@ import { Combat } from './combat.js';
 const WANDER_CHANCE = 0.08;
 
 let standard = null;
+/** Named brains (NpcDef.brain): name -> brain. */
+const named = Object.create(null);
 
 export class NpcBrain {
   /** The brain NPCs use when their def doesn't name one. */
   static standard() {
     if (!standard) standard = new NpcBrain();
     return standard;
+  }
+
+  /** Makes [brain] available to NPC defs as "brain": "[name]". */
+  static register(name, brain) {
+    named[name] = brain;
+  }
+
+  /** The brain for an NpcDef: its named one, or the standard brain. */
+  static forDef(def) {
+    return (def.brain && named[def.brain]) || NpcBrain.standard();
   }
 
   /** Once per tick, before anything moves: respawn when due, otherwise pick a fight or wander. */

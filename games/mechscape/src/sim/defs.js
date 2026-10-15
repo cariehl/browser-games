@@ -89,6 +89,8 @@ export class GatherNodeDef {
       temporary: false, lifetime_ticks: 0,
       chance_low: 64, chance_high: 200,
       blocks_movement: true, blocks_sight: false,
+      /** Big salvage only a mech's crew can work, from the cockpit. */
+      requires_mech: false,
       model: null, depleted_model: null, model_scale: 1,
       look: 'wreck', color: [0.5, 0.5, 0.5, 1], size: 1,
     }, raw);
@@ -137,6 +139,8 @@ export class NpcDef {
       /** Dialogue id when you can talk to it (see data/dialogue.json), or ''. */
       talk: '',
       aggressive: false, aggro_radius: 3, wander_radius: 3, leash_radius: 8, respawn_ticks: 30,
+      /** Only a mech (or its gunner) can hurt it; anything else does nothing. */
+      mech_only_damage: false,
       husk: null,
       /** Dropped on the ground on death, each line rolled separately: [{item, min_count, max_count, chance}] */
       drops: [],
@@ -197,7 +201,11 @@ export class RecipeDef {
   }
 }
 
-export const StationKind = { CRAFT: 'craft', STORAGE: 'storage', RESPAWN: 'respawn', PORTAL: 'portal' };
+export const StationKind = {
+  CRAFT: 'craft', STORAGE: 'storage', RESPAWN: 'respawn', PORTAL: 'portal',
+  GANTRY: 'gantry', BOARD: 'board', TROPHY: 'trophy', CACHE: 'cache', ARENA_DOOR: 'arena_door',
+  REPAIR: 'repair', PUZZLE: 'puzzle', LANDMARK: 'landmark',
+};
 
 export class StationDef {
   constructor(raw) {
@@ -206,6 +214,12 @@ export class StationDef {
       kind: StationKind.CRAFT,
       blocks_movement: true, blocks_sight: false,
       model: null, model_scale: 1, color: [0.45, 0.38, 0.3, 1],
+      /** Procedural model when there's no model file (see view/shapes.js). */
+      shape: '',
+      // Puzzles (survey): what it takes ({item, count}) or a scan, and the terrain it clears.
+      needs: null, scan: false, opens: '', done_text: '',
+      /** Landmarks: the survey log entry. */
+      lore: '',
     }, raw);
   }
 
@@ -219,6 +233,8 @@ export class TerrainDef {
     assign(this, {
       id: '', display_name: '', blocks_movement: true, blocks_sight: true,
       color: [0.45, 0.42, 0.4, 1], height: 1.2,
+      /** Drawn see-through and flickering (holo walls). */
+      shimmer: false,
     }, raw);
   }
 

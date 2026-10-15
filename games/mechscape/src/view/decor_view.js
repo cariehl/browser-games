@@ -16,17 +16,17 @@ import { tileToWorld, color, darkened, seeded } from './tile_math.js';
 /** Point lights shared by every glowing prop: the nearest this many are lit. */
 const LIGHTS = 8;
 
-const box = (w, h, d, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => place(new THREE.BoxGeometry(w, h, d), x, y, z, rx, ry, rz);
-const cyl = (r1, r2, h, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, seg = 10) => place(new THREE.CylinderGeometry(r1, r2, h, seg), x, y, z, rx, ry, rz);
-const cone = (r, h, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, seg = 6) => place(new THREE.ConeGeometry(r, h, seg), x, y, z, rx, ry, rz);
-const ball = (r, x = 0, y = 0, z = 0, sy = 1) => {
+export const box = (w, h, d, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0) => place(new THREE.BoxGeometry(w, h, d), x, y, z, rx, ry, rz);
+export const cyl = (r1, r2, h, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, seg = 10) => place(new THREE.CylinderGeometry(r1, r2, h, seg), x, y, z, rx, ry, rz);
+export const cone = (r, h, x = 0, y = 0, z = 0, rx = 0, ry = 0, rz = 0, seg = 6) => place(new THREE.ConeGeometry(r, h, seg), x, y, z, rx, ry, rz);
+export const ball = (r, x = 0, y = 0, z = 0, sy = 1) => {
   const g = new THREE.SphereGeometry(r, 10, 7);
   g.scale(1, sy, 1);
   return place(g, x, y, z);
 };
-const torus = (r, t, x = 0, y = 0, z = 0, rx = 0) => place(new THREE.TorusGeometry(r, t, 6, 14), x, y, z, rx);
+export const torus = (r, t, x = 0, y = 0, z = 0, rx = 0) => place(new THREE.TorusGeometry(r, t, 6, 14), x, y, z, rx);
 
-function place(geometry, x, y, z, rx = 0, ry = 0, rz = 0) {
+export function place(geometry, x, y, z, rx = 0, ry = 0, rz = 0) {
   geometry.rotateX(rx);
   geometry.rotateY(ry);
   geometry.rotateZ(rz);

@@ -1,7 +1,17 @@
 {
  "name": "Scrapyard",
  "areas": [
-  { "id": "scrapyard", "map": "data/maps/scrapyard.map", "at": [0, 0] }
+  { "id": "scrapyard", "map": "data/maps/scrapyard.map", "at": [0, 0] },
+  { "id": "undercroft", "map": "data/maps/undercroft.map", "at": [0, 60], "dark": true },
+  { "id": "deadfields", "map": "data/maps/deadfields.map", "at": [60, 60] },
+  { "id": "quiet_reach", "map": "data/maps/quiet_reach.map", "at": [0, 110] }
  ],
- "links": []
+ "links": [
+  { "from": ["scrapyard", 56, 26], "to": ["undercroft", 5, 4], "text": "You climb down the hatch into the dark." },
+  { "from": ["undercroft", 5, 2], "to": ["scrapyard", 56, 27], "text": "You climb back up into the daylight." },
+  { "from": ["scrapyard", 17, 30], "to": ["deadfields", 3, 16], "text": "You pass through the gate onto the Deadfields." },
+  { "from": ["deadfields", 1, 16], "to": ["scrapyard", 17, 31], "text": "You head back through the gate to the Commons." },
+  { "from": ["scrapyard", 4, 38], "to": ["quiet_reach", 4, 22], "text": "The lift rattles up the cliff to the Quiet Reach." },
+  { "from": ["quiet_reach", 3, 22], "to": ["scrapyard", 4, 39], "text": "The lift carries you back down to the Commons." }
+ ]
 }

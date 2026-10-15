@@ -10,6 +10,7 @@ import { GatherNode, Station, Wreck } from './objects.js';
 import { TICK_SECONDS } from './constants.js';
 import { Trading, TRADE_RANGE, REQUEST_TICKS } from './trade.js';
 import { chebyshev } from './grid.js';
+import { Content } from './defs.js';
 
 let nextUnique = 1;
 
@@ -630,9 +631,46 @@ export class DebugGrantXpAction extends Action {
   }
 }
 
+/** Debug: jump to a tile (walkable ones only). */
+export class DebugTeleportAction extends Action {
+  static TYPE = 'debug_teleport';
+  static FIELDS = { target: 'tile' };
+  constructor(target) {
+    super();
+    this.target = target;
+  }
+  slot() { return 'move'; }
+  isDebug() { return true; }
+  apply(world, entity) {
+    if (world.isWalkable(this.target)) world.travel(entity, this.target);
+  }
+}
+
+/** Debug: conjure items. */
+export class DebugGiveAction extends Action {
+  static TYPE = 'debug_give';
+  static FIELDS = { item_id: 'id', count: 'int' };
+  constructor(itemId, count = 1) {
+    super();
+    this.item_id = itemId;
+    this.count = count;
+  }
+  slot() { return `debug_give_${this._unique}`; }
+  isDebug() { return true; }
+  apply(world, entity) {
+    const item = Content.item(this.item_id);
+    if (item) entity.inventory.add(item, Math.max(1, Math.min(this.count, 1000)));
+  }
+}
+
 export const ACTION_TYPES = Object.fromEntries([
   MoveAction, AttackAction, InteractAction, CraftAction, TakeAction, SetRunAction, SetCombatStyleAction,
   SwapItemsAction, DropAction, EquipAction, UnequipAction, UseItemAction, DepositAction, DepositAllAction,
   WithdrawAction, ChatAction, TradeRequestAction, TradeOfferAction, TradeRemoveAction, TradeAcceptAction,
-  TradeCancelAction, DebugGrantXpAction,
+  TradeCancelAction, DebugGrantXpAction, DebugTeleportAction, DebugGiveAction,
 ].map((cls) => [cls.TYPE, cls]));
+
+/** Lets a feature module (quests, the mech, the hab...) add its own actions. */
+export function registerActions(...classes) {
+  for (const cls of classes) ACTION_TYPES[cls.TYPE] = cls;
+}

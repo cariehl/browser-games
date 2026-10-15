@@ -159,15 +159,23 @@ function buildObstacles(world) {
   const turn = new THREE.Quaternion();
   for (const [def, tiles] of byDef) {
     // Things you can see over are drawn a little thinner, like a fence.
-    const width = def.blocks_sight ? TILE_SIZE : TILE_SIZE * 0.82;
+    // Flat terrain (chasms, a broken bridge) is a dark patch on the ground.
+    const flat = def.height < 0.1;
+    const width = def.blocks_sight || flat ? TILE_SIZE : TILE_SIZE * 0.82;
     // Taller boxes, sunk a little, so blocks on a slope don't float.
-    const geometry = new THREE.BoxGeometry(width, def.height + 0.5, width);
+    const geometry = new THREE.BoxGeometry(width, flat ? 0.08 : def.height + 0.5, width);
     const material = new THREE.MeshStandardMaterial({ color: color(def.color), roughness: 1, metalness: 0 });
+    if (def.shimmer) {
+      // A projected wall: almost convincing.
+      material.transparent = true;
+      material.opacity = 0.82;
+      material.emissive = color([0.15, 0.3, 0.4]);
+    }
     const mesh = new THREE.InstancedMesh(geometry, material, tiles.length);
     const rock = def.id === 'rock';
     tiles.forEach((tile, i) => {
       const rng = seeded(tile.x * 31 + tile.y * 977);
-      tileToWorld(tile, def.height / 2 - 0.25, at);
+      tileToWorld(tile, flat ? 0.0 : def.height / 2 - 0.25, at);
       // Rocks vary a little in size and turn, so a ridge isn't a row of crates.
       const k = rock ? rng.range(0.85, 1.15) : 1;
       scale.set(rock ? rng.range(0.9, 1.08) : 1, k, rock ? rng.range(0.9, 1.08) : 1);

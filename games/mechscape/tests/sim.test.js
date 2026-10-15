@@ -57,18 +57,50 @@ test('bad maps fail with errors that name the line', () => {
   assert.ok(map.errors.some((e) => e.includes('spawn')));
 });
 
-test('everything on the game map can be reached from spawn', () => {
+test('everything in the game world can be reached from spawn', () => {
   const world = new World(DEFAULT_MAP);
   assert.equal(world.map_name, 'Scrapyard');
+  // Walk the world from spawn: through hatches, lifts and gates, through
+  // the arena door, and past the survey puzzles as if they were solved.
+  const PUZZLES = new Set(['broken_bridge', 'gas_door', 'holo_veil']);
+  const open = (t) => world.isWalkable(t) || (world.terrainAt(t) && PUZZLES.has(world.terrainAt(t).id));
+  const seen = new Set();
+  const queue = [world.spawn_point];
+  const k = (t) => `${t.x},${t.y}`;
+  seen.add(k(world.spawn_point));
+  const visit = (t) => {
+    if (!seen.has(k(t))) {
+      seen.add(k(t));
+      queue.push(t);
+    }
+  };
+  while (queue.length) {
+    const t = queue.shift();
+    for (const [dx, dy] of [[1, 0], [-1, 0], [0, 1], [0, -1]]) {
+      const n = { x: t.x + dx, y: t.y + dy };
+      if (open(n) && world.edgeOk(t, n)) visit(n);
+      const station = world.stationAt(n);
+      if (!station) continue;
+      const link = world.linkAt(n);
+      if (link) visit(world.freeTileNear(link.to, 3));
+      if (station.def.kind === 'arena_door') visit({ x: n.x + dx, y: n.y + dy });
+    }
+  }
   const unreachable = [];
   for (const object of [...world.nodes.values(), ...world.stations.values()]) {
-    const ok = object.interactionTiles().some((t) => world.isWalkable(t) && (t.x === world.spawn_point.x && t.y === world.spawn_point.y || world.findPath(world.spawn_point, t).length));
+    const ok = object.interactionTiles().some((t) => seen.has(k(t)) && world.edgeOk(t, object.tile));
     if (!ok) unreachable.push(`${object.displayName()} at ${object.tile.x},${object.tile.y}`);
   }
   for (const npc of world.entities.values()) {
-    if (!world.findPath(world.spawn_point, npc.tile).length) unreachable.push(`${npc.displayName()} at ${npc.tile.x},${npc.tile.y}`);
+    if (!seen.has(k(npc.tile))) unreachable.push(`${npc.displayName()} at ${npc.tile.x},${npc.tile.y}`);
   }
   assert.deepEqual(unreachable, []);
+  // Every link starts on a station and lands on open ground.
+  for (const [at, link] of world.links) {
+    const [x, y] = at.split(',').map(Number);
+    assert.ok(world.stationAt({ x, y }), `a station at ${at}`);
+    assert.ok(world.isWalkable(link.to), `link from ${at} lands on open ground`);
+  }
 });
 
 test('salvaging a drone gives scrap and XP until it is stripped', () => {

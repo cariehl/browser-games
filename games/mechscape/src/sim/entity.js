@@ -170,7 +170,7 @@ export class NpcState extends EntityState {
   }
 
   brain() {
-    return this.def.brain || NpcBrain.standard();
+    return NpcBrain.forDef(this.def);
   }
 
   maxHp() {
