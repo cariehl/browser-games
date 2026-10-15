@@ -14,7 +14,7 @@ import { PlayerAppearance, PaintTint } from './player_appearance.js';
 import { Bursts } from './bursts.js';
 import { GatherNodeView } from './gather_node_view.js';
 import { StationView } from './station_view.js';
-import { buildGrid } from './grid_view.js';
+import { buildGrid, rebuildTerrain } from './grid_view.js';
 import { WorldLabel } from '../ui/screen.js';
 import { buildWalker, showInstalled, WalkerAnimator } from './mech_view.js';
 import { Mechs } from '../sim/mech.js';
@@ -48,6 +48,8 @@ export class WorldViews {
     setGroundSource(world);
     const grid = buildGrid(world);
     this.root.add(grid.group);
+    this._terrain = grid.terrain;
+    this._openedKey = JSON.stringify(world.opened || []);
     /** The ground mesh, to find the tile under the mouse. */
     this.groundMesh = grid.ground;
     const decor = buildDecor(world);
@@ -171,6 +173,12 @@ export class WorldViews {
     }
     this._syncMechBuild();
     this._syncPieces();
+    // A puzzle in the Quiet Reach opened some terrain: redraw it.
+    const opened = JSON.stringify(world.opened || []);
+    if (opened !== this._openedKey) {
+      this._openedKey = opened;
+      rebuildTerrain(this._terrain, world);
+    }
     this._syncNodes();
     for (const view of this._nodes.values()) view.update(delta);
     this._syncGround();

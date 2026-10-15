@@ -127,7 +127,8 @@
    0.12,
    1.0
   ],
-  "height": 0.02
+  "height": 0.02,
+  "opens_to": "mended_bridge"
  },
  "gas_door": {
   "id": "gas_door",
@@ -155,5 +156,18 @@
   ],
   "height": 1.4,
   "shimmer": true
+ },
+ "mended_bridge": {
+  "id": "mended_bridge",
+  "display_name": "Mended bridge",
+  "blocks_movement": false,
+  "blocks_sight": false,
+  "color": [
+   0.5,
+   0.38,
+   0.24,
+   1.0
+  ],
+  "height": 0.02
  }
 }

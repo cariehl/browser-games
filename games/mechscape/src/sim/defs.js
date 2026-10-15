@@ -277,6 +277,8 @@ export class TerrainDef {
       color: [0.45, 0.42, 0.4, 1], height: 1.2,
       /** Drawn see-through and flickering (holo walls). */
       shimmer: false,
+      /** What a puzzle that opens this terrain leaves in its place ('' for nothing). */
+      opens_to: '',
     }, raw);
   }
 

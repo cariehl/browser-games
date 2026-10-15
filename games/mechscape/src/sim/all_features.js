@@ -5,3 +5,4 @@ import './appearance.js';
 import './mech.js';
 import './boss.js';
 import './hab.js';
+import './survey.js';

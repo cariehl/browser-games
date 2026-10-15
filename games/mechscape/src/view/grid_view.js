@@ -17,14 +17,30 @@ const EDGE_DROP = 1.4;
 /** Pixels per tile in the grid-line texture. */
 const TEXELS = 32;
 
-/** Builds the ground and terrain. Returns { group, ground } (ground is the mesh to pick tiles on). */
+/**
+ * Builds the ground and terrain. Returns { group, ground, terrain } (ground is
+ * the mesh to pick tiles on; terrain the group to rebuild when puzzles open).
+ */
 export function buildGrid(world) {
   const group = new THREE.Group();
   const { mesh, glow } = buildGround(world);
   group.add(mesh);
   if (glow) group.add(glow);
+  const terrain = new THREE.Group();
+  group.add(terrain);
+  rebuildTerrain(terrain, world);
+  return { group, ground: mesh, terrain };
+}
+
+/** Redraws [group] from the world's terrain (after a puzzle opens some). */
+export function rebuildTerrain(group, world) {
+  for (const m of [...group.children]) {
+    group.remove(m);
+    m.geometry.dispose();
+    m.material.dispose();
+    m.dispose();
+  }
   for (const m of buildObstacles(world)) group.add(m);
-  return { group, ground: mesh };
 }
 
 /** A white tile with darker edges: multiplied over the ground's colours, it draws the tile grid. */
