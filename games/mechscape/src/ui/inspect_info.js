@@ -111,6 +111,14 @@ export const InspectInfo = {
     }
     const KIND = { junk: 'Junk (recycle it at a metal press)', trinket: 'Trinket', lore: 'Lore', cosmetic: 'Cosmetic', pet: 'Pet', trophy: 'Trophy (mount it on the hab\'s trophy wall)', quest: 'Quest item', component: 'Mech component', piece: 'Hab piece', seed: 'Seed' };
     if (item.kind && KIND[item.kind]) subtitle = KIND[item.kind];
+    if (item.piece) {
+      const piece = item.piece;
+      if (piece.comfort) rows.push(['Comfort', `+${piece.comfort} in the hab`]);
+      if (piece.set) rows.push(['Set', capitalize(piece.set)]);
+      const EFFECT = { craft_speed: `faster ${piece.skill ? Skills.displayName(piece.skill) : ''} crafting in the hab`, grow_bed: 'grows seeds' };
+      if (piece.effect) rows.push(['Does', EFFECT[piece.effect] || piece.effect]);
+      rows.push(['Solid', piece.blocks ? 'yes' : 'no, you can walk over it']);
+    }
     if (item.container) rows.push(['Carried in', `a ${item.container.display_name.toLowerCase()}, ${item.capacity} per canister`]);
     else if (item.stackable) rows.push(['Stacks', 'yes']);
     if (item.craft_xp > 0) rows.push(['Crafting XP', `${item.craft_xp.toFixed(1)} per one used`]);

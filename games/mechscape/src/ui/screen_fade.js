@@ -8,7 +8,7 @@ import { ClientState } from '../client/client_state.js';
 import { el } from './screen.js';
 
 /** Seconds to fade out and in. A tick is 0.6s, so the fade out is done just as you arrive. */
-const OUT_SECONDS = 0.45;
+const OUT_SECONDS = 0.35;
 const IN_SECONDS = 0.5;
 /** Fade back anyway if nothing arrives this long after a fade out (the step was interrupted). */
 const GIVE_UP_MS = 2000;
