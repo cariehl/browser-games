@@ -35,7 +35,7 @@ export const Combat = {
   /** What an attacker swings with this tick. */
   profile(entity) {
     if (entity.isNpc()) {
-      const def = entity.def;
+      const def = entity.stats();
       return {
         skill: '', speed: def.attack_speed, reach: def.attack_range,
         attack_level: def.attack_level, accuracy: def.accuracy, max_hit: def.max_hit, ammo: null,
@@ -97,6 +97,32 @@ export const Combat = {
     return true;
   },
 
+  /**
+   * Whether [attacker] can hit [target] from where they stand, measured
+   * between the nearest tiles of their footprints (mechs are 2 × 2).
+   */
+  canHitEntity(world, attacker, target, reach) {
+    const [from, to] = Combat.nearestTiles(attacker, target);
+    // Standing inside something big: close enough for anything.
+    if (from.x === to.x && from.y === to.y) return attacker.size > 1 || target.size > 1;
+    return Combat.canHit(world, from, to, reach);
+  },
+
+  /** The closest tile of [a]'s footprint to [b]'s, and of [b]'s to [a]'s. */
+  nearestTiles(a, b) {
+    const pick = (a0, a1, b0, b1) => {
+      if (a1 < b0) return [a1, b0];
+      if (b1 < a0) return [a0, b1];
+      const v = Math.max(a0, b0);
+      return [v, v];
+    };
+    const sa = a.size || 1;
+    const sb = b.size || 1;
+    const [ax, bx] = pick(a.tile.x, a.tile.x + sa - 1, b.tile.x, b.tile.x + sb - 1);
+    const [ay, by] = pick(a.tile.y, a.tile.y + sa - 1, b.tile.y, b.tile.y + sb - 1);
+    return [{ x: ax, y: ay }, { x: bx, y: by }];
+  },
+
   /** Melee (reach 1) needs a tile touching the target's side; ranged, within reach in any direction. */
   inReach(from, to, reach) {
     const dx = to.x - from.x;
@@ -108,7 +134,10 @@ export const Combat = {
 
   /** [defence level, defence bonus] */
   defence(entity) {
-    if (entity.isNpc()) return [entity.def.defence_level, entity.def.defence_bonus];
+    if (entity.isNpc()) {
+      const stats = entity.stats();
+      return [stats.defence_level, stats.defence_bonus];
+    }
     return [entity.effectiveLevel(ENDURANCE), entity.armorBonus()];
   },
 

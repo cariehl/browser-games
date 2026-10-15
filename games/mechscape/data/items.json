@@ -1212,5 +1212,103 @@
   "fun_effect": "confetti",
   "kind": "trinket",
   "description": "A party in a sword. Hits for nothing, every time, and celebrates it."
+ },
+ "mech_frame": {
+  "id": "mech_frame",
+  "display_name": "Mech frame",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.52,
+   0.56,
+   1
+  ],
+  "abbreviation": "Frame",
+  "kind": "component",
+  "description": "The walker's spine and hips: alloy girders bolted around a scrap-metal core."
+ },
+ "mech_leg": {
+  "id": "mech_leg",
+  "display_name": "Mech leg",
+  "stackable": false,
+  "color": [
+   0.46,
+   0.5,
+   0.55,
+   1
+  ],
+  "abbreviation": "Leg",
+  "kind": "component",
+  "description": "One of a walker's two legs, with a relic circuit in the knee to keep it steady."
+ },
+ "power_core": {
+  "id": "power_core",
+  "display_name": "Power core",
+  "stackable": false,
+  "color": [
+   0.36,
+   0.8,
+   0.5,
+   1
+  ],
+  "abbreviation": "Core",
+  "kind": "component",
+  "description": "A canister reactor packed with vent gas. It hums when you hold it."
+ },
+ "cockpit_shell": {
+  "id": "cockpit_shell",
+  "display_name": "Cockpit shell",
+  "stackable": false,
+  "color": [
+   0.62,
+   0.4,
+   0.5,
+   1
+  ],
+  "abbreviation": "Shell",
+  "kind": "component",
+  "description": "A sealed, coolant-jacketed pod for two pilots."
+ },
+ "cockpit_interior": {
+  "id": "cockpit_interior",
+  "display_name": "Cockpit interior",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.6,
+   0.38,
+   1
+  ],
+  "abbreviation": "Seats",
+  "kind": "component",
+  "description": "Two seats, a console and a trophy for luck. Fitted out in the hab."
+ },
+ "weapon_mount": {
+  "id": "weapon_mount",
+  "display_name": "Weapon mount",
+  "stackable": false,
+  "color": [
+   0.68,
+   0.45,
+   0.32,
+   1
+  ],
+  "abbreviation": "Gun",
+  "kind": "component",
+  "description": "A relic pistol scaled up into a walker's cannon, fed with gas cartridges."
+ },
+ "armor_plate": {
+  "id": "armor_plate",
+  "display_name": "Armor plate",
+  "stackable": false,
+  "color": [
+   0.42,
+   0.55,
+   0.68,
+   1
+  ],
+  "abbreviation": "Plate",
+  "kind": "component",
+  "description": "A thick alloy plate for a walker's hull. Each one makes it tougher."
  }
 }

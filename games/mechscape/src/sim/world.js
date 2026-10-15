@@ -241,6 +241,11 @@ export class World {
             if (trade) Trading.cancel(this, trade, 'The trade was called off.');
           }
           Features.call('beforeAction', this, entity, action);
+          // Someone aboard a mech: their clicks drive it or fire its gun instead.
+          if (Features.claim('routeAction', this, entity, action)) {
+            entity.last_action_seq = Math.max(entity.last_action_seq, action.seq);
+            continue;
+          }
           if (action.cancelsTask()) entity.clearTask();
           action.apply(this, entity);
         } catch (err) {
@@ -287,7 +292,7 @@ export class World {
     }
     if (this.tick % World.REGEN_TICKS === 0) {
       for (const entity of this.entities.values()) {
-        if (!entity.isDead() && !entity.inCombat(this.tick) && entity.hp < entity.maxHp()) entity.hp++;
+        if (!entity.isDead() && entity.regenerates() && !entity.inCombat(this.tick) && entity.hp < entity.maxHp()) entity.hp++;
       }
     }
 
@@ -422,7 +427,7 @@ export class World {
   addNpc(def, tile, id = -1) {
     if (id < 0) id = this._nextNpcId++;
     else this._nextNpcId = Math.max(this._nextNpcId, id + 1);
-    const npc = new NpcState(id, def, tile);
+    const npc = NpcState.create(id, def, tile);
     npc.dynamic = true;
     this.entities.set(id, npc);
     return npc;
@@ -756,11 +761,35 @@ export class World {
     this._grid.setSolid(tile, outside || (terrain != null && terrain.blocks_movement) || (object != null && object.blocksMovement()));
   }
 
-  /** How [entity] may path: NPCs keep out of safe zones. */
+  /** How [entity] may path: NPCs keep out of safe zones; mechs are big and stay in mech zones. */
   pathOptions(entity) {
+    if (entity && entity.size > 1) return { mask: this._mechMask, size: entity.size };
     // Hostile NPCs keep out of safe zones; pets and people you talk to go anywhere.
     if (entity && entity.isNpc() && entity.def.attackable) return { mask: this._npcMask };
     return {};
+  }
+
+  /**
+   * Shortest path for [entity] to stand beside [target] (an entity or object,
+   * either of which may be bigger than a tile): a tile of its footprint
+   * touching a side of the target's.
+   */
+  pathToReach(entity, target) {
+    const sm = entity.size || 1;
+    const st = target.size || 1;
+    if (sm === 1 && st === 1) return this.pathToAdjacentTile(entity.tile, target.tile, entity);
+    const t = target.tile;
+    const spots = [];
+    for (let i = -sm + 1; i <= st - 1; i++) {
+      spots.push({ x: t.x - sm, y: t.y + i }, { x: t.x + st, y: t.y + i }, { x: t.x + i, y: t.y - sm }, { x: t.x + i, y: t.y + st });
+    }
+    let best = [];
+    for (const spot of spots) {
+      if (eq(spot, entity.tile)) return [];
+      const path = this.findPath(entity.tile, spot, entity);
+      if (path.length && (best.length === 0 || path.length < best.length)) best = path;
+    }
+    return best;
   }
 
   /** Tiles to walk, excluding [from]. Empty if [to] can't be reached. [entity]: who's walking (NPCs keep out of safe zones). */

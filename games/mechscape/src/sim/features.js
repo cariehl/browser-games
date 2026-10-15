@@ -11,6 +11,8 @@
 //   onKill(world, victim, killer)  an entity died (NPC or player), before it's reset
 //   onGather(world, entity, node)  a gather attempt succeeded
 //   onQuestEvent(world, player, name)  a dialogue choice fired a named event
+//   routeAction(world, entity, action) -> true  takes over a player's action
+//       before it's applied (a seated mech crew's clicks drive the mech)
 //   dropOnDeath(world, player) -> [ItemStack]  more things a dying player drops
 //       into their wreck (cosmetics, a pet)
 //   hitDamage(damage, world, attacker, target) -> damage  changes a landing hit
@@ -40,6 +42,12 @@ export const Features = {
   /** Calls [hook] on every feature that has it. */
   call(hook, ...args) {
     for (const f of this.list) if (f[hook]) f[hook](...args);
+  },
+
+  /** True as soon as one feature's [hook] returns true (it handled the thing); later ones aren't asked. */
+  claim(hook, ...args) {
+    for (const f of this.list) if (f[hook] && f[hook](...args)) return true;
+    return false;
   },
 
   /** { id: result } from every feature with [hook], leaving out undefined results. */

@@ -60,6 +60,10 @@ export class EntityState {
     this.trade_request = null;
     /** Paint from a paintball: { color, until }, or null. Not saved. */
     this.paint = null;
+    /** Tiles across: its footprint is size × size with [tile] the top-left. 1 for all but mechs. */
+    this.size = 1;
+    /** Players aboard a mech: { mech, seat }, or null. Not saved (crew load dismounted). */
+    this.riding = null;
 
     for (const [skill, level] of Object.entries(Skills.STARTING_LEVELS)) this.xp[skill] = Skills.xpForLevel(level);
     this.hp = this.level(TOUGHNESS);
@@ -112,8 +116,13 @@ export class EntityState {
     return false;
   }
 
-  /** Whether NPCs may pick a fight with it. */
+  /** Whether NPCs may pick a fight with it. Not while it's sitting inside a mech. */
   canBeAttacked() {
+    return !this.riding;
+  }
+
+  /** Whether HP comes back on its own outside combat (a mech's needs repairing). */
+  regenerates() {
     return true;
   }
 
@@ -155,6 +164,23 @@ export class EntityState {
 
 /** An NPC: driven by its brain instead of player input. Stats come from its NpcDef. */
 export class NpcState extends EntityState {
+  /**
+   * Subclasses for NPCs that need more state (mechs): brain name -> class,
+   * used by World.addNpc on the server and in the mirror alike.
+   */
+  static kinds = Object.create(null);
+
+  /** A new NPC of the right class for [def]. */
+  static create(id, def, tile) {
+    const Kind = (def.brain && NpcState.kinds[def.brain]) || NpcState;
+    return new Kind(id, def, tile);
+  }
+
+  /** Combat stats: its def's, unless something (armor plates) changes them. */
+  stats() {
+    return this.def;
+  }
+
   constructor(id, def, tile) {
     super(id, tile);
     this.def = def;

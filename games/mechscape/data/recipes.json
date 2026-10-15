@@ -565,5 +565,151 @@
   ],
   "output": "coolant_bloom",
   "action_ticks": 4
+ },
+ "mech_frame": {
+  "id": "mech_frame",
+  "skill": "engineering",
+  "level_required": 8,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 4
+   },
+   {
+    "item": "scrap_metal",
+    "count": 6
+   }
+  ],
+  "output": "mech_frame",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "mech_leg": {
+  "id": "mech_leg",
+  "skill": "engineering",
+  "level_required": 6,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 2
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "mech_leg",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "power_core": {
+  "id": "power_core",
+  "skill": "engineering",
+  "level_required": 7,
+  "inputs": [
+   {
+    "item": "canister",
+    "count": 1
+   },
+   {
+    "item": "vent_gas",
+    "count": 40
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 2
+   }
+  ],
+  "output": "power_core",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "cockpit_shell": {
+  "id": "cockpit_shell",
+  "skill": "splicing",
+  "level_required": 5,
+  "inputs": [
+   {
+    "item": "ichor",
+    "count": 10
+   },
+   {
+    "item": "coolant",
+    "count": 10
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 3
+   }
+  ],
+  "output": "cockpit_shell",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "cockpit_interior": {
+  "id": "cockpit_interior",
+  "skill": "engineering",
+  "level_required": 4,
+  "inputs": [
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   },
+   {
+    "item": "ichor",
+    "count": 3
+   },
+   {
+    "item": "sentry_eye",
+    "count": 1
+   }
+  ],
+  "output": "cockpit_interior",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "weapon_mount": {
+  "id": "weapon_mount",
+  "skill": "engineering",
+  "level_required": 10,
+  "inputs": [
+   {
+    "item": "relic_pistol",
+    "count": 1
+   },
+   {
+    "item": "gas_cartridge",
+    "count": 20
+   },
+   {
+    "item": "alloy_plating",
+    "count": 1
+   }
+  ],
+  "output": "weapon_mount",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "armor_plate": {
+  "id": "armor_plate",
+  "skill": "engineering",
+  "level_required": 9,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 3
+   }
+  ],
+  "output": "armor_plate",
+  "output_count": 1,
+  "action_ticks": 5
  }
 }

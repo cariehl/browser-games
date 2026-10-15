@@ -39,7 +39,7 @@ export class AttackTask extends Task {
     const p = Combat.profile(entity);
     entity.face_target = { ...target.tile };
 
-    if (!Combat.canHit(world, entity.tile, target.tile, p.reach)) {
+    if (!Combat.canHitEntity(world, entity, target, p.reach)) {
       const brain = entity.brain();
       if (brain && brain.holdsPosition(entity, target)) {
         entity.path = [];
@@ -50,7 +50,7 @@ export class AttackTask extends Task {
       const moved = !this._chasingTile || this._chasingTile.x !== target.tile.x || this._chasingTile.y !== target.tile.y;
       if (!entity.isMoving() || moved) {
         this._chasingTile = { ...target.tile };
-        entity.path = world.pathToAdjacentTile(entity.tile, target.tile, entity);
+        entity.path = world.pathToReach(entity, target);
         if (entity.path.length === 0) {
           if (brain) brain.cannotReach(world, entity);
           else world.message(entity.id, "I can't reach that.");
@@ -143,6 +143,10 @@ export class GatherTask extends Task {
   }
 
   _start(world, entity, def) {
+    if (def.requires_mech) {
+      world.message(entity.id, "It's far too big to salvage by hand. You'd need a mech.");
+      return false;
+    }
     if (entity.level(def.skill) < def.level_required) {
       world.message(entity.id, `You need ${Skills.withArticle(def.skill)} level of ${def.level_required} to ${def.verb} this.`);
       return false;

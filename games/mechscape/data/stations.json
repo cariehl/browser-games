@@ -9,7 +9,8 @@
    "edge_injector",
    "surge_injector",
    "deadeye_injector",
-   "coolant_bloom"
+   "coolant_bloom",
+   "cockpit_shell"
   ],
   "model": "bio_still.glb",
   "model_scale": 1.0,
@@ -59,7 +60,11 @@
    "recycle_batteries",
    "recycle_wire",
    "recycle_lenses",
-   "recycle_chips"
+   "recycle_chips",
+   "mech_frame",
+   "mech_leg",
+   "power_core",
+   "armor_plate"
   ],
   "model": "metal_press.glb",
   "model_scale": 0.85,
@@ -100,7 +105,8 @@
    "alloy_blade",
    "alloy_pistol",
    "servo_blade",
-   "servo_pistol"
+   "servo_pistol",
+   "weapon_mount"
   ],
   "model": "weapons_bench.glb",
   "model_scale": 0.6,
@@ -260,7 +266,13 @@
    "recycle_batteries",
    "recycle_wire",
    "recycle_lenses",
-   "recycle_chips"
+   "recycle_chips",
+   "mech_frame",
+   "mech_leg",
+   "power_core",
+   "armor_plate",
+   "weapon_mount",
+   "cockpit_interior"
   ],
   "color": [
    0.5,
@@ -281,7 +293,8 @@
    "edge_injector",
    "surge_injector",
    "deadeye_injector",
-   "coolant_bloom"
+   "coolant_bloom",
+   "cockpit_shell"
   ],
   "color": [
    0.35,

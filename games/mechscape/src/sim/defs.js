@@ -179,6 +179,8 @@ export class NpcDef {
       /** Dropped on the ground on death, each line rolled separately: [{item, min_count, max_count, chance}] */
       drops: [],
       model: null, model_scale: 1, walk_cycle_distance: 2, attack_windup_frames: 0,
+      /** A procedural model instead of an imported one (see view/mech_view.js), or ''. */
+      shape: '',
       color: [0.5, 0.3, 0.28, 1], size: 1,
     }, raw);
   }
@@ -388,6 +390,49 @@ export class GroundDef {
   resolve() {}
 }
 
+/**
+ * A mech the group can build at the gantry (see mech.js): what it takes,
+ * what it runs on, and where it stands. Its combat stats are its NPC's.
+ */
+export class MechDef {
+  constructor(raw) {
+    assign(this, {
+      id: '', display_name: '',
+      /** The NpcDef it walks around as, and the item that unlocks the build. */
+      npc: null, blueprint: null,
+      /** [{ item, count }] to install. */
+      components: [],
+      /** Component ids still installed after it's destroyed (rebuilding is cheaper). */
+      keep_on_destroy: [],
+      /** Each of these installed adds HP and defence. */
+      plate_item: null, plate_hp: 0, plate_defence: 0,
+      /** Engineering XP per component installed. */
+      install_xp: 0,
+      /** Moving burns fuel: one unit per tiles_per_fuel tiles, from a tank of tank units. */
+      fuel_item: null, tank: 0, tiles_per_fuel: 3,
+      /** Every shot uses one ammo item, from a magazine this big. */
+      ammo_item: null, magazine: 0,
+      /** Each repair item fixes this much HP. */
+      repair_item: null, repair_hp: 0,
+      /** [area, x, y]: where it's built (its top-left tile on the gantry pad), and where it deploys. */
+      pad: null, drop: null,
+    }, raw);
+  }
+
+  resolve(content) {
+    this.npc = content.ref('npcs', this.npc);
+    this.blueprint = content.ref('items', this.blueprint);
+    this.components = this.components.map((c) => ({ count: 1, ...c, item: content.ref('items', c.item) }));
+    for (const key of ['plate_item', 'fuel_item', 'ammo_item', 'repair_item']) this[key] = content.ref('items', this[key]);
+  }
+
+  /** How many of [item] the finished mech has. */
+  needs(item) {
+    const line = this.components.find((c) => c.item === item);
+    return line ? line.count : 0;
+  }
+}
+
 const KINDS = {
   weaponTypes: WeaponTypeDef,
   items: ItemDef,
@@ -401,13 +446,14 @@ const KINDS = {
   lootTables: LootTableDef,
   quests: QuestDef,
   dialogue: DialogueDef,
+  mechs: MechDef,
 };
 
 /** The data file each kind lives in (data/<file>.json). */
 export const CONTENT_FILES = {
   weaponTypes: 'weapon_types', items: 'items', nodes: 'nodes', npcs: 'npcs',
   recipes: 'recipes', stations: 'stations', terrain: 'terrain', decor: 'decor', ground: 'ground',
-  lootTables: 'loot_tables', quests: 'quests', dialogue: 'dialogue',
+  lootTables: 'loot_tables', quests: 'quests', dialogue: 'dialogue', mechs: 'mechs',
 };
 
 /** Items whose id changed: old id -> new id, so old saves still find them. */

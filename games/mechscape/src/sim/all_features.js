@@ -2,3 +2,4 @@
 
 import './quests.js';
 import './appearance.js';
+import './mech.js';

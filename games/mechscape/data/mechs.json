@@ -1,0 +1,65 @@
+{
+ "walker": {
+  "id": "walker",
+  "display_name": "Walker mech",
+  "npc": "walker_mech",
+  "blueprint": "mech_blueprint",
+  "components": [
+   {
+    "item": "mech_frame",
+    "count": 1
+   },
+   {
+    "item": "mech_leg",
+    "count": 2
+   },
+   {
+    "item": "power_core",
+    "count": 1
+   },
+   {
+    "item": "cockpit_shell",
+    "count": 1
+   },
+   {
+    "item": "cockpit_interior",
+    "count": 1
+   },
+   {
+    "item": "weapon_mount",
+    "count": 1
+   },
+   {
+    "item": "armor_plate",
+    "count": 4
+   }
+  ],
+  "keep_on_destroy": [
+   "mech_frame",
+   "mech_leg",
+   "cockpit_shell",
+   "cockpit_interior"
+  ],
+  "plate_item": "armor_plate",
+  "plate_hp": 25,
+  "plate_defence": 5,
+  "install_xp": 60,
+  "fuel_item": "vent_gas",
+  "tank": 80,
+  "tiles_per_fuel": 3,
+  "ammo_item": "gas_cartridge",
+  "magazine": 100,
+  "repair_item": "alloy_plating",
+  "repair_hp": 20,
+  "pad": [
+   "scrapyard",
+   8,
+   21
+  ],
+  "drop": [
+   "deadfields",
+   8,
+   15
+  ]
+ }
+}

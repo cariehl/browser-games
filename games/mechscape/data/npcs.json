@@ -285,7 +285,8 @@
    1.0
   ],
   "size": 4.0,
-  "mech_only_damage": true
+  "mech_only_damage": true,
+  "brain": "colossus"
  },
  "pet_scuttle_drone": {
   "hitpoints": 10,
@@ -415,5 +416,33 @@
    "specimen": "Ooh, a specimen. Into the jar it goes.",
    "puzzle": "You fixed it! I was going to suggest that. Eventually."
   }
+ },
+ "walker_mech": {
+  "id": "walker_mech",
+  "display_name": "Walker mech",
+  "hitpoints": 150,
+  "attack_level": 20,
+  "accuracy": 40,
+  "max_hit": 14,
+  "attack_speed": 4,
+  "attack_range": 6,
+  "defence_level": 20,
+  "defence_bonus": 20,
+  "brain": "mech",
+  "attackable": false,
+  "aggressive": false,
+  "wander_radius": 0,
+  "leash_radius": 999,
+  "respawn_ticks": 0,
+  "husk": "mech_wreckage",
+  "model_scale": 1,
+  "color": [
+   0.82,
+   0.55,
+   0.25,
+   1
+  ],
+  "size": 2.4,
+  "shape": "walker"
  }
 }

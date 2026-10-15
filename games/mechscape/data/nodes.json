@@ -674,5 +674,35 @@
    1.0
   ],
   "size": 0.9
+ },
+ "mech_wreckage": {
+  "id": "mech_wreckage",
+  "display_name": "Mech wreckage",
+  "skill": "salvaging",
+  "verb": "salvage",
+  "level_required": 1,
+  "xp": 40,
+  "loot": "alloy_plating",
+  "action_ticks": 4,
+  "deplete_chance": 0.15,
+  "max_successes": 8,
+  "respawn_ticks": 0,
+  "temporary": true,
+  "lifetime_ticks": 500,
+  "chance_low": 120,
+  "chance_high": 220,
+  "blocks_movement": false,
+  "model": "sentry_husk.glb",
+  "model_scale": 1.8,
+  "look": "wreck",
+  "color": [
+   0.6,
+   0.42,
+   0.25,
+   1.0
+  ],
+  "size": 2.6,
+  "rare_loot": "relic_circuitry",
+  "rare_chance": 0.5
  }
 }
