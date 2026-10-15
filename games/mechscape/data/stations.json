@@ -104,5 +104,96 @@
    0.3,
    1.0
   ]
+ },
+ "gantry": {
+  "id": "gantry",
+  "display_name": "Mech gantry",
+  "description": "Where the group builds the mech",
+  "skill": "",
+  "kind": "gantry",
+  "color": [
+   0.45,
+   0.5,
+   0.55,
+   1
+  ]
+ },
+ "undercroft_hatch": {
+  "id": "undercroft_hatch",
+  "display_name": "Hatch",
+  "description": "A rusted hatch into the dark below",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.35,
+   0.33,
+   0.3,
+   1
+  ]
+ },
+ "undercroft_ladder": {
+  "id": "undercroft_ladder",
+  "display_name": "Ladder",
+  "description": "Back up to the Scrapyard",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.4,
+   0.4,
+   0.42,
+   1
+  ]
+ },
+ "reach_lift": {
+  "id": "reach_lift",
+  "display_name": "Survey lift",
+  "description": "Rides out to the Quiet Reach",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.5,
+   0.6,
+   0.55,
+   1
+  ]
+ },
+ "reach_return": {
+  "id": "reach_return",
+  "display_name": "Survey lift",
+  "description": "Back to the Scrapyard",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.5,
+   0.6,
+   0.55,
+   1
+  ]
+ },
+ "deadfields_gate": {
+  "id": "deadfields_gate",
+  "display_name": "Deadfields gate",
+  "description": "Through to the Deadfields, where the mech fights",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.6,
+   0.35,
+   0.25,
+   1
+  ]
+ },
+ "deadfields_return": {
+  "id": "deadfields_return",
+  "display_name": "Deadfields gate",
+  "description": "Back to the Scrapyard",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.6,
+   0.35,
+   0.25,
+   1
+  ]
  }
 }

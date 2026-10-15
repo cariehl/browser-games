@@ -1,10 +1,10 @@
 // The whole game state as plain data. No DOM, no rendering: this must run
 // unchanged inside a headless Node server.
 
-import { Grid, NO_TARGET, eq, key, UP, DOWN, LEFT, RIGHT, add } from './grid.js';
+import { Grid, NO_TARGET, eq, key, UP, DOWN, LEFT, RIGHT, add, MAX_STEP } from './grid.js';
 import { Rng } from './rng.js';
 import { Skills, TOUGHNESS } from './skills.js';
-import { MapData, MapKind } from './map_data.js';
+import { MapData, MapKind, loadLayout } from './map_data.js';
 import { EntityState, NpcState } from './entity.js';
 import { GatherNode, Station, Wreck, GroundItem } from './objects.js';
 import { Inventory, ItemStack } from './inventory.js';
@@ -14,7 +14,8 @@ import { StationKind } from './defs.js';
 import { TICK_SECONDS } from './constants.js';
 import { Trading } from './trade.js';
 
-export const DEFAULT_MAP = 'data/maps/scrapyard.map';
+/** The game world: every area's map and how they connect (see data/maps/world.json). */
+export const DEFAULT_MAP = 'data/maps/world.json';
 const USE_DEFAULT = '<default>';
 const EMPTY_SIZE = { x: 32, y: 32 };
 
@@ -35,7 +36,10 @@ export class World {
   /** What new World() builds. Tests point this at their own fixed map. */
   static defaultMap = DEFAULT_MAP;
 
-  /** [mapPath]: a registered .map path, '' for an empty field, or left out for World.defaultMap. */
+  /**
+   * [mapPath]: a registered world layout (.json) or single .map path, '' for
+   * an empty field, or left out for World.defaultMap.
+   */
   constructor(mapPath = USE_DEFAULT) {
     if (mapPath === USE_DEFAULT) mapPath = World.defaultMap;
     this.tick = 0;
@@ -62,6 +66,17 @@ export class World {
     this.rng = new Rng();
     /** Lines for everyone, shown at the start of the next tick (see announce()). */
     this._announcements = [];
+    /**
+     * The maps the world is made of, each placed at its own offset in one
+     * coordinate space: { index, id, name, offset, size, dark, ground }.
+     */
+    this.areas = [];
+    /** Props drawn on the map: { def, tile }. Static; never saved or sent. */
+    this.decor = [];
+    /** Hatches, lifts and gates: tile key of the station -> { to, text }. */
+    this.links = new Map();
+    /** Zone ids in use, each a bit in _zoneBits. */
+    this.zoneIds = [];
 
     this._terrain = new Map(); // tile key -> TerrainDef
     this._objects = new Map(); // id -> WorldObject
@@ -70,27 +85,126 @@ export class World {
     this._nextGroundId = 1;
     this._nextNpcId = World.MAX_PLAYER_ID + 1;
 
-    const map = mapPath !== '' ? MapData.loadFile(mapPath) : null;
-    if (mapPath !== '' && !map) throw new Error(`Couldn't load map ${mapPath}`);
-    this._setupGrid(map ? map.size : EMPTY_SIZE);
-    if (map) this.loadMap(map);
+    if (mapPath === '') {
+      this._setupGrid(EMPTY_SIZE);
+      this._addArea({ id: 'field', name: '' }, { x: 0, y: 0 }, EMPTY_SIZE, null);
+      this._buildMasks();
+      return;
+    }
+    const layout = mapPath.endsWith('.json') ? loadLayout(mapPath) : { areas: [{ id: 'main', map: mapPath, at: [0, 0] }] };
+    if (!layout) throw new Error(`Couldn't load world ${mapPath}`);
+    const maps = layout.areas.map((area) => {
+      const map = MapData.loadFile(area.map);
+      if (!map) throw new Error(`Couldn't load map ${area.map}`);
+      return map;
+    });
+    const size = { x: 0, y: 0 };
+    layout.areas.forEach((area, i) => {
+      size.x = Math.max(size.x, area.at[0] + maps[i].size.x);
+      size.y = Math.max(size.y, area.at[1] + maps[i].size.y);
+    });
+    this._setupGrid(size);
+    let spawns = 0;
+    layout.areas.forEach((area, i) => {
+      const offset = { x: area.at[0], y: area.at[1] };
+      this._addArea(area, offset, maps[i].size, maps[i]);
+      if (maps[i].spawn) spawns++;
+    });
+    if (spawns !== 1) throw new Error(`${mapPath}: the world needs exactly one spawn tile (found ${spawns}).`);
+    // Places things map by map, each in its fixed order.
+    layout.areas.forEach((area, i) => this.loadMap(maps[i], this.areas[i].offset));
+    this.map_name = layout.name || maps[0].name;
+    for (const link of layout.links || []) {
+      const from = this._areaTile(link.from);
+      const to = this._areaTile(link.to);
+      if (from && to) this.links.set(key(from), { to, text: link.text || '' });
+    }
+    this._buildMasks();
   }
 
   _setupGrid(size) {
     this.size = { ...size };
     this._grid = new Grid(size.x, size.y);
+    /** Area index per tile; 255 is the void between areas (solid). */
+    this._areaOf = new Uint8Array(size.x * size.y).fill(255);
+    this._zoneBits = new Uint32Array(size.x * size.y);
+    this._groundOf = new Array(size.x * size.y).fill(null);
+    this._grid.solid.fill(1);
   }
 
-  /** Places everything in a parsed map, in its fixed order. */
-  loadMap(map) {
-    this.map_name = map.name;
-    this.spawn_point = { ...map.spawn };
+  /** Marks out an area's tiles: which area they're in, their heights, ground and zones. */
+  _addArea(entry, offset, size, map) {
+    const index = this.areas.length;
+    const area = {
+      index, id: entry.id, name: entry.name || (map ? map.name : ''), offset: { ...offset }, size: { ...size },
+      dark: !!entry.dark, ground: map ? map.defaultGround : null, music: entry.music || '',
+    };
+    this.areas.push(area);
+    const w = this.size.x;
+    for (let y = 0; y < size.y; y++) {
+      for (let x = 0; x < size.x; x++) {
+        const k = (y + offset.y) * w + x + offset.x;
+        this._areaOf[k] = index;
+        this._grid.solid[k] = 0;
+        if (map) {
+          this._grid.heights[k] = map.heights[y * size.x + x];
+          this._groundOf[k] = map.ground[y * size.x + x];
+        }
+      }
+    }
+    for (const zone of entry.zones || []) this._markZone(zone, offset, { x: offset.x + size.x - 1, y: offset.y + size.y - 1 });
+    if (map) {
+      for (const zone of map.zones) this._markZone(zone.id, add(offset, zone.from), add(offset, zone.to));
+      for (const d of map.decor) this.decor.push({ def: d.def, tile: add(offset, d.tile) });
+    }
+  }
+
+  _markZone(id, from, to) {
+    let bit = this.zoneIds.indexOf(id);
+    if (bit < 0) {
+      bit = this.zoneIds.length;
+      this.zoneIds.push(id);
+    }
+    if (bit >= 32) throw new Error('Too many zone kinds (32 at most).');
+    for (let y = from.y; y <= to.y; y++) {
+      for (let x = from.x; x <= to.x; x++) this._zoneBits[y * this.size.x + x] |= 1 << bit;
+    }
+  }
+
+  /** [areaId, x, y] (tile in that area's own coordinates) as a world tile, or null. */
+  _areaTile(spec) {
+    const area = this.areas.find((a) => a.id === spec[0]);
+    if (!area) {
+      console.error(`No area "${spec[0]}" in the layout.`);
+      return null;
+    }
+    return { x: area.offset.x + spec[1], y: area.offset.y + spec[2] };
+  }
+
+  /** Path masks: NPCs keep out of safe zones; mechs stay in mech zones. */
+  _buildMasks() {
+    const n = this.size.x * this.size.y;
+    this._npcMask = new Uint8Array(n);
+    this._mechMask = new Uint8Array(n);
+    const safe = this.zoneBit('safe');
+    const mech = this.zoneBit('mech');
+    for (let i = 0; i < n; i++) {
+      if (safe && (this._zoneBits[i] & safe)) this._npcMask[i] = 1;
+      if (!mech || !(this._zoneBits[i] & mech)) this._mechMask[i] = 1;
+    }
+  }
+
+  /** Places everything in a parsed map, in its fixed order, shifted by [offset]. */
+  loadMap(map, offset = { x: 0, y: 0 }) {
+    if (!this.map_name) this.map_name = map.name;
+    if (map.spawn) this.spawn_point = add(offset, map.spawn);
     for (const p of map.placements) {
+      const tile = add(offset, p.tile);
       switch (p.kind) {
-        case MapKind.TERRAIN: this.setTerrain(p.tile, p.def); break;
-        case MapKind.NODE: this.addNode(p.def, p.tile); break;
-        case MapKind.STATION: this.addStation(p.def, p.tile); break;
-        case MapKind.NPC: this.spawnNpc(p.def, p.tile); break;
+        case MapKind.TERRAIN: this.setTerrain(tile, p.def); break;
+        case MapKind.NODE: this.addNode(p.def, tile); break;
+        case MapKind.STATION: this.addStation(p.def, tile); break;
+        case MapKind.NPC: this.spawnNpc(p.def, tile); break;
       }
     }
   }
@@ -268,8 +382,9 @@ export class World {
   nearestPlayer(tile, radius) {
     let best = null;
     let bestDistance = radius + 1;
+    const area = this.areaIdAt(tile);
     for (const player of this.players()) {
-      if (player.isDead()) continue;
+      if (player.isDead() || !player.canBeAttacked() || this.areaIdAt(player.tile) !== area || this.inZone(player.tile, 'safe')) continue;
       const d = Math.max(Math.abs(player.tile.x - tile.x), Math.abs(player.tile.y - tile.y));
       if (d < bestDistance) {
         best = player;
@@ -288,6 +403,30 @@ export class World {
     const npc = new NpcState(this._nextNpcId++, def, tile);
     this.entities.set(npc.id, npc);
     return npc;
+  }
+
+  /**
+   * An NPC that isn't part of the map (a pet, a boss's add): it comes and
+   * goes, and isn't saved. [id]: the id to use (a mirror copying the server).
+   */
+  addNpc(def, tile, id = -1) {
+    if (id < 0) id = this._nextNpcId++;
+    else this._nextNpcId = Math.max(this._nextNpcId, id + 1);
+    const npc = new NpcState(id, def, tile);
+    npc.dynamic = true;
+    this.entities.set(id, npc);
+    return npc;
+  }
+
+  /** Takes a come-and-go NPC out of the world. Hits to or from it miss, and anyone fighting it stops. */
+  removeNpc(id) {
+    const npc = this.entities.get(id);
+    if (!npc || !npc.isNpc()) return;
+    this.entities.delete(id);
+    this.pending_hits = this.pending_hits.filter((h) => h.target_id !== id && h.attacker_id !== id);
+    for (const other of this.entities.values()) {
+      if (other.task instanceof AttackTask && other.task.target_id === id) other.clearTask();
+    }
   }
 
   /** Puts an item on the ground. Ordinary stackables merge into a pile on that tile. */
@@ -428,6 +567,15 @@ export class World {
     return station;
   }
 
+  /** Moves [entity] at once to [tile] (or the nearest free tile to it): hatches, lifts and gates. */
+  travel(entity, tile) {
+    let to = this.freeTileNear(tile, 3);
+    if (eq(to, NO_TARGET)) to = { ...tile };
+    entity.clearTask();
+    entity.teleport(to);
+    this.emitEvent(entity.id, 'teleport', { entity: entity.id, tile: to });
+  }
+
   /** Whether [tile] is beside a storage locker. */
   storageInReach(tile) {
     for (const station of this.stations.values()) {
@@ -499,9 +647,61 @@ export class World {
     return NO_TARGET;
   }
 
-  /** Which area (map) a tile belongs to. One area until the world has several. */
-  areaIdAt(_tile) {
-    return 0;
+  /** The area (map) a tile is in, or null in the void between areas. */
+  areaAt(tile) {
+    if (!this.inBounds(tile)) return null;
+    const index = this._areaOf[tile.y * this.size.x + tile.x];
+    return index === 255 ? null : this.areas[index];
+  }
+
+  /** The index of the area a tile is in, or -1. */
+  areaIdAt(tile) {
+    const area = this.areaAt(tile);
+    return area ? area.index : -1;
+  }
+
+  /** The bit for zone [id] in the zone mask, or 0 if no tile has it. */
+  zoneBit(id) {
+    const bit = this.zoneIds.indexOf(id);
+    return bit < 0 ? 0 : 1 << bit;
+  }
+
+  /** Whether [tile] is in a zone of kind [id] (safe, build, mech, arena...). */
+  inZone(tile, id) {
+    if (!this.inBounds(tile)) return false;
+    const bit = this.zoneBit(id);
+    return bit !== 0 && (this._zoneBits[tile.y * this.size.x + tile.x] & bit) !== 0;
+  }
+
+  /** Every zone id [tile] is in. */
+  zonesAt(tile) {
+    if (!this.inBounds(tile)) return [];
+    const bits = this._zoneBits[tile.y * this.size.x + tile.x];
+    return this.zoneIds.filter((_, i) => bits & (1 << i));
+  }
+
+  /** Ground level of a tile (see Grid). */
+  heightAt(tile) {
+    return this._grid.heightAt(tile);
+  }
+
+  /** What the ground of a tile looks like: its GroundDef, or its area's default (null for none). */
+  groundAt(tile) {
+    if (!this.inBounds(tile)) return null;
+    const own = this._groundOf[tile.y * this.size.x + tile.x];
+    if (own) return own;
+    const area = this.areaAt(tile);
+    return area ? area.ground : null;
+  }
+
+  /** Whether stepping between two touching tiles isn't up or down a cliff. */
+  edgeOk(a, b) {
+    return Math.abs(this.heightAt(a) - this.heightAt(b)) <= MAX_STEP;
+  }
+
+  /** Where the hatch, lift or gate on [tile] leads: { to, text }, or null. */
+  linkAt(tile) {
+    return this.links.get(key(tile)) || null;
   }
 
   inBounds(tile) {
@@ -540,29 +740,36 @@ export class World {
     if (!this.inBounds(tile)) return;
     const terrain = this._terrain.get(key(tile));
     const object = this._objectTiles.get(key(tile));
-    this._grid.setSolid(tile, (terrain != null && terrain.blocks_movement) || (object != null && object.blocksMovement()));
+    const outside = this._areaOf[tile.y * this.size.x + tile.x] === 255;
+    this._grid.setSolid(tile, outside || (terrain != null && terrain.blocks_movement) || (object != null && object.blocksMovement()));
   }
 
-  /** Tiles to walk, excluding [from]. Empty if [to] can't be reached. */
-  findPath(from, to) {
+  /** How [entity] may path: NPCs keep out of safe zones. */
+  pathOptions(entity) {
+    if (entity && entity.isNpc()) return { mask: this._npcMask };
+    return {};
+  }
+
+  /** Tiles to walk, excluding [from]. Empty if [to] can't be reached. [entity]: who's walking (NPCs keep out of safe zones). */
+  findPath(from, to, entity = null) {
     if (!this.isWalkable(to) || eq(from, to)) return [];
-    const path = this._grid.findPath(from, to);
+    const path = this._grid.findPath(from, to, this.pathOptions(entity));
     path.shift();
     return path;
   }
 
   /** Shortest path to any tile an object can be used from. */
-  pathToAdjacent(from, object) {
-    return this.pathToAdjacentTile(from, object.tile);
+  pathToAdjacent(from, object, entity = null) {
+    return this.pathToAdjacentTile(from, object.tile, entity);
   }
 
-  /** Shortest path to one of the four tiles touching [target]'s sides. */
-  pathToAdjacentTile(from, target) {
+  /** Shortest path to one of the four tiles touching [target]'s sides, without a cliff between. */
+  pathToAdjacentTile(from, target, entity = null) {
     let best = [];
     for (const dir of [UP, DOWN, LEFT, RIGHT]) {
       const t = add(target, dir);
-      if (!this.isWalkable(t) || eq(t, from)) continue;
-      const path = this.findPath(from, t);
+      if (!this.isWalkable(t) || eq(t, from) || !this.edgeOk(t, target)) continue;
+      const path = this.findPath(from, t, entity);
       if (path.length && (best.length === 0 || path.length < best.length)) best = path;
     }
     return best;

@@ -132,6 +132,10 @@ export class NpcDef {
       defence_level: 1, defence_bonus: 0,
       /** What drives it; null for the standard brain. */
       brain: null,
+      /** False for people you talk to (and pets): nobody can attack them, and they never fight. */
+      attackable: true,
+      /** Dialogue id when you can talk to it (see data/dialogue.json), or ''. */
+      talk: '',
       aggressive: false, aggro_radius: 3, wander_radius: 3, leash_radius: 8, respawn_ticks: 30,
       husk: null,
       /** Dropped on the ground on death, each line rolled separately: [{item, min_count, max_count, chance}] */
@@ -193,7 +197,7 @@ export class RecipeDef {
   }
 }
 
-export const StationKind = { CRAFT: 'craft', STORAGE: 'storage', RESPAWN: 'respawn' };
+export const StationKind = { CRAFT: 'craft', STORAGE: 'storage', RESPAWN: 'respawn', PORTAL: 'portal' };
 
 export class StationDef {
   constructor(raw) {
@@ -221,6 +225,39 @@ export class TerrainDef {
   resolve() {}
 }
 
+/** A prop drawn on the map that blocks nothing and isn't part of the sim: scrap piles, lamps, cables. */
+export class DecorDef {
+  constructor(raw) {
+    assign(this, {
+      id: '', display_name: '',
+      /** Which procedural model draws it (see view/decor_view.js). */
+      shape: 'scrap_pile',
+      color: [0.4, 0.38, 0.36, 1], accent: [1, 0.6, 0.2, 1], scale: 1,
+      /** A light it gives off: { color, intensity, distance }, or null. */
+      light: null,
+    }, raw);
+  }
+
+  resolve() {}
+}
+
+/** A kind of ground: what the floor of a tile looks like. */
+export class GroundDef {
+  constructor(raw) {
+    assign(this, {
+      id: '', display_name: '', color: [0.36, 0.4, 0.33, 1],
+      /** How much each tile's colour wanders from it (0..1). */
+      variation: 0.06,
+      /** Grid lines drawn on it. */
+      lines: true,
+      /** Glows a little (fungus), 0..1. */
+      glow: 0,
+    }, raw);
+  }
+
+  resolve() {}
+}
+
 const KINDS = {
   weaponTypes: WeaponTypeDef,
   items: ItemDef,
@@ -229,12 +266,14 @@ const KINDS = {
   recipes: RecipeDef,
   stations: StationDef,
   terrain: TerrainDef,
+  decor: DecorDef,
+  ground: GroundDef,
 };
 
 /** The data file each kind lives in (data/<file>.json). */
 export const CONTENT_FILES = {
   weaponTypes: 'weapon_types', items: 'items', nodes: 'nodes', npcs: 'npcs',
-  recipes: 'recipes', stations: 'stations', terrain: 'terrain',
+  recipes: 'recipes', stations: 'stations', terrain: 'terrain', decor: 'decor', ground: 'ground',
 };
 
 /** Items whose id changed: old id -> new id, so old saves still find them. */
@@ -272,7 +311,9 @@ export const Content = {
 
   /** The definition for a map legend kind ("terrain", "node", "station", "npc"). */
   forMapKind(kind, id) {
-    const table = { terrain: this.terrain, node: this.nodes, station: this.stations, npc: this.npcs }[kind];
+    const table = {
+      terrain: this.terrain, node: this.nodes, station: this.stations, npc: this.npcs, decor: this.decor, ground: this.ground,
+    }[kind];
     return table ? table[id] || null : null;
   },
 };

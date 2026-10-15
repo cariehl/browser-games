@@ -30,6 +30,15 @@ export const Screen = {
     return caster.ray;
   },
 
+  /** Where a ray meets the ground (the ground mesh, set by main.js), or null. */
+  groundMesh: null,
+  groundPoint(ray) {
+    if (!this.groundMesh) return null;
+    const caster = new THREE.Raycaster(ray.origin, ray.direction);
+    const hit = caster.intersectObject(this.groundMesh, false)[0];
+    return hit ? hit.point : null;
+  },
+
   distanceTo(world) {
     return this.camera.getWorldPosition(_cam).distanceTo(world);
   },

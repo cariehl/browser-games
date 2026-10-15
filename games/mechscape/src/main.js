@@ -38,7 +38,6 @@ import { StorageMenu } from './ui/storage_menu.js';
 import { DebugHud } from './ui/debug_hud.js';
 import { TradeWindow } from './ui/trade_window.js';
 
-const MAPS = [DEFAULT_MAP];
 /** Longest frame fed to the game, so a hidden tab doesn't come back to a burst of ticks. */
 const MAX_FRAME_SECONDS = 0.25;
 
@@ -48,7 +47,11 @@ async function loadContent() {
     bundle[kind] = await fetchOk(`data/${file}.json`).then((r) => r.json());
   }));
   Content.load(bundle);
-  await Promise.all(MAPS.map(async (path) => MapData.register(path, await fetchOk(path).then((r) => r.text()))));
+  // The world layout, then every map it places.
+  const layoutText = await fetchOk(DEFAULT_MAP).then((r) => r.text());
+  MapData.register(DEFAULT_MAP, layoutText);
+  const maps = JSON.parse(layoutText).areas.map((area) => area.map);
+  await Promise.all(maps.map(async (path) => MapData.register(path, await fetchOk(path).then((r) => r.text()))));
 }
 
 async function fetchOk(url) {
@@ -72,9 +75,14 @@ function makeRenderer(canvas) {
  * shadows, a flat ambient, and a flat sky colour. Godot's light energy 1 is
  * three.js intensity π (three divides diffuse light by π; Godot doesn't).
  */
+const SKY = [0.55, 0.62, 0.68];
+/** Underground (dark areas): a dim, close, blue-black world lit by its lamps. */
+const DARK_SKY = [0.04, 0.045, 0.06];
+
 function addEnvironment(scene) {
-  scene.background = color([0.55, 0.62, 0.68]);
-  scene.add(new THREE.AmbientLight(color([0.6, 0.62, 0.66]), 0.6 * Math.PI));
+  scene.background = color(SKY);
+  const ambient = new THREE.AmbientLight(color([0.6, 0.62, 0.66]), 0.6 * Math.PI);
+  scene.add(ambient);
   const sun = new THREE.DirectionalLight(0xffffff, Math.PI);
   // The direction the light travels: Godot's -Z after its rotation.
   const travel = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(
@@ -93,10 +101,25 @@ function addEnvironment(scene) {
   sun.shadow.normalBias = 0.02;
   scene.add(sun);
   scene.add(sun.target);
-  /** Keeps the shadow box centred on what the camera is looking at. */
-  return (focus) => {
+  scene.fog = new THREE.Fog(color(SKY), 60, 140);
+  let dark = null;
+  /**
+   * Keeps the shadow box centred on what the camera is looking at, and sets
+   * the mood for the area the player is in.
+   */
+  return (focus, area) => {
     sun.target.position.copy(focus);
     sun.position.copy(focus).addScaledVector(travel, -50);
+    const isDark = !!(area && area.dark);
+    if (isDark === dark) return;
+    dark = isDark;
+    const sky = color(isDark ? DARK_SKY : SKY);
+    scene.background = sky;
+    scene.fog.color.copy(sky);
+    scene.fog.near = isDark ? 10 : 60;
+    scene.fog.far = isDark ? 34 : 140;
+    ambient.intensity = (isDark ? 0.16 : 0.6) * Math.PI;
+    sun.intensity = (isDark ? 0.12 : 1) * Math.PI;
   };
 }
 
@@ -159,6 +182,7 @@ async function main() {
   const followSun = addEnvironment(scene);
 
   const views = new WorldViews(scene, world);
+  Screen.groundMesh = views.groundMesh;
   const rig = new CameraRig(canvas);
   rig.target = views.playerView;
   rig.snap();
@@ -196,6 +220,11 @@ async function main() {
   const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
   const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector });
 
+  // Through a hatch or a lift: the camera jumps with you instead of sweeping across the map.
+  ClientState.onTick(() => {
+    if (world.events.some((e) => e.type === 'teleport' && e.entity === ClientState.localPlayerId)) rig.snapNextFrame = true;
+  });
+
   // The game has its own right-click menu.
   window.addEventListener('contextmenu', (e) => e.preventDefault());
 
@@ -222,7 +251,9 @@ async function main() {
     views.update(delta);
     marker.update(delta);
     rig.update(real);
-    followSun(rig.position);
+    const me = ClientState.me();
+    followSun(rig.position, me ? world.areaAt(me.tile) : null);
+    views.decorLights.update(rig.position);
     overlay.update();
     combat.update(delta);
     xpDrops.update(delta);

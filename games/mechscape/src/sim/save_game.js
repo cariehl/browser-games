@@ -30,6 +30,7 @@ export const SaveGame = {
     const players = [];
     const npcs = [];
     for (const entity of world.entities.values()) {
+      if (entity.isNpc() && entity.dynamic) continue; // Pets and adds come back from what spawned them.
       if (entity.isNpc()) {
         const npc = entityDict(entity);
         npc.def = entity.def.id;

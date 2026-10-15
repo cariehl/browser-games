@@ -37,5 +37,83 @@
    1.0
   ],
   "height": 1.2
+ },
+ "hab_wall": {
+  "id": "hab_wall",
+  "display_name": "Hab wall",
+  "blocks_movement": true,
+  "blocks_sight": true,
+  "color": [
+   0.78,
+   0.79,
+   0.76,
+   1.0
+  ],
+  "height": 1.7
+ },
+ "foundry_wall": {
+  "id": "foundry_wall",
+  "display_name": "Foundry wall",
+  "blocks_movement": true,
+  "blocks_sight": true,
+  "color": [
+   0.25,
+   0.24,
+   0.26,
+   1.0
+  ],
+  "height": 2.4
+ },
+ "railing": {
+  "id": "railing",
+  "display_name": "Railing",
+  "blocks_movement": true,
+  "blocks_sight": false,
+  "color": [
+   0.55,
+   0.5,
+   0.2,
+   1.0
+  ],
+  "height": 0.6
+ },
+ "chasm": {
+  "id": "chasm",
+  "display_name": "Chasm",
+  "blocks_movement": true,
+  "blocks_sight": false,
+  "color": [
+   0.05,
+   0.05,
+   0.07,
+   1.0
+  ],
+  "height": 0.02
+ },
+ "ruin_wall": {
+  "id": "ruin_wall",
+  "display_name": "Ruined wall",
+  "blocks_movement": true,
+  "blocks_sight": true,
+  "color": [
+   0.5,
+   0.52,
+   0.48,
+   1.0
+  ],
+  "height": 1.4
+ },
+ "hedge": {
+  "id": "hedge",
+  "display_name": "Overgrowth",
+  "blocks_movement": true,
+  "blocks_sight": true,
+  "color": [
+   0.22,
+   0.38,
+   0.24,
+   1.0
+  ],
+  "height": 1.3
  }
 }

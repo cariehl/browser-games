@@ -18,7 +18,7 @@ export function loadContentFromDisk(root = ROOT) {
   Content.load(bundle);
   for (const dir of ['data/maps', 'tests/maps']) {
     for (const file of readdirSync(join(root, dir))) {
-      if (file.endsWith('.map')) MapData.register(`${dir}/${file}`, readFileSync(join(root, dir, file), 'utf8'));
+      if (file.endsWith('.map') || file.endsWith('.json')) MapData.register(`${dir}/${file}`, readFileSync(join(root, dir, file), 'utf8'));
     }
   }
 }

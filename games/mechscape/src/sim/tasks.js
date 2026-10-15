@@ -41,7 +41,7 @@ export class AttackTask extends Task {
       const moved = !this._chasingTile || this._chasingTile.x !== target.tile.x || this._chasingTile.y !== target.tile.y;
       if (!entity.isMoving() || moved) {
         this._chasingTile = { ...target.tile };
-        entity.path = world.pathToAdjacentTile(entity.tile, target.tile);
+        entity.path = world.pathToAdjacentTile(entity.tile, target.tile, entity);
         if (entity.path.length === 0) {
           if (brain) brain.cannotReach(world, entity);
           else world.message(entity.id, "I can't reach that.");
@@ -248,6 +248,16 @@ export class StationTask extends Task {
       case StationKind.RESPAWN:
         world.message(entity.id, `The ${station.def.display_name.toLowerCase()} hums. If you die, you'll be printed here.`);
         break;
+      case StationKind.PORTAL: {
+        const link = world.linkAt(station.tile);
+        if (!link) {
+          world.message(entity.id, "It doesn't lead anywhere yet.");
+          break;
+        }
+        world.travel(entity, link.to);
+        world.message(entity.id, link.text || `You go through the ${station.def.display_name.toLowerCase()}.`);
+        break;
+      }
       default:
         world.emitEvent(entity.id, 'open_station', { station: station.id });
     }

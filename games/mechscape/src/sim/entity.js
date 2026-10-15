@@ -110,6 +110,11 @@ export class EntityState {
     return false;
   }
 
+  /** Whether NPCs may pick a fight with it. */
+  canBeAttacked() {
+    return true;
+  }
+
   /** A player (not an NPC, a pet or a mech). */
   isPlayer() {
     return !this.isNpc();
@@ -160,6 +165,8 @@ export class NpcState extends EntityState {
     this.xp = {};
     this.storage = null;
     this.hp = def.hitpoints;
+    /** Not on the map: spawned by something (a pet, an add). Not saved with the map's NPCs. */
+    this.dynamic = false;
   }
 
   brain() {

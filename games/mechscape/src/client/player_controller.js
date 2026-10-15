@@ -11,7 +11,6 @@
 // Swapping the simulated link for a real socket is the whole multiplayer
 // port on this side.
 
-import * as THREE from 'three';
 import { ClientState } from './client_state.js';
 import { MoveAction, AttackAction, InteractAction, TakeAction, SetRunAction, TradeRequestAction } from '../sim/actions.js';
 import { GatherNode, Station, Wreck } from '../sim/objects.js';
@@ -23,7 +22,6 @@ import { Screen } from '../ui/screen.js';
 import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 
-const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
 
 export class PlayerController {
   constructor(canvas, { link, marker, hover, menu, inspector }) {
@@ -187,7 +185,7 @@ export class PlayerController {
 
   /** The map tile under the mouse, or null off the map. */
   _groundTile(x, y) {
-    const hit = Screen.ray(x, y).intersectPlane(GROUND, new THREE.Vector3());
+    const hit = Screen.groundPoint(Screen.ray(x, y));
     if (!hit) return null;
     const tile = worldToTile(hit);
     return ClientState.world.inBounds(tile) ? tile : null;

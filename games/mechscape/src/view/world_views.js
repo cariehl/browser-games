@@ -4,7 +4,8 @@
 
 import * as THREE from 'three';
 import { ClientState } from '../client/client_state.js';
-import { tileToWorld, color, darkened } from './tile_math.js';
+import { tileToWorld, color, darkened, setGroundSource } from './tile_math.js';
+import { buildDecor } from './decor_view.js';
 import { Models } from './models.js';
 import { Hitbox, HitboxKind } from './hitbox.js';
 import { EntityView } from './entity_view.js';
@@ -44,7 +45,14 @@ export class WorldViews {
     this.scene = scene;
     this.root = new THREE.Group();
     scene.add(this.root);
-    this.root.add(buildGrid(world));
+    setGroundSource(world);
+    const grid = buildGrid(world);
+    this.root.add(grid.group);
+    /** The ground mesh, to find the tile under the mouse. */
+    this.groundMesh = grid.ground;
+    const decor = buildDecor(world);
+    this.root.add(decor.group);
+    this.decorLights = decor.lights;
     /** entity id -> EntityView */
     this.entities = new Map();
     /** node id -> GatherNodeView */

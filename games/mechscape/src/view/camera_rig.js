@@ -71,6 +71,10 @@ export class CameraRig {
     const tilt = (this._keys.has('ArrowUp') ? 1 : 0) - (this._keys.has('ArrowDown') ? 1 : 0);
     this._yaw += turn * ORBIT_KEY_SPEED * delta;
     this._pitch = THREE.MathUtils.clamp(this._pitch - tilt * ORBIT_KEY_SPEED * delta, MIN_PITCH, MAX_PITCH);
+    if (this.snapNextFrame && this.target) {
+      this.snapNextFrame = false;
+      this.position.copy(this.target.position);
+    }
     if (this.target) this.position.lerp(this.target.position, 1 - Math.exp(-FOLLOW_SPEED * delta));
     this._apply();
   }

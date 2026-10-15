@@ -85,5 +85,59 @@
    1.0
   ],
   "size": 1.25
+ },
+ "foreman": {
+  "id": "foreman",
+  "display_name": "Foreman Ada",
+  "hitpoints": 10,
+  "attackable": false,
+  "talk": "foreman",
+  "wander_radius": 2,
+  "model": "player.glb",
+  "model_scale": 1.0,
+  "walk_cycle_distance": 1.5,
+  "color": [
+   0.9,
+   0.7,
+   0.2,
+   1
+  ],
+  "size": 1.0
+ },
+ "scrap_artist": {
+  "id": "scrap_artist",
+  "display_name": "Scrap artist Juno",
+  "hitpoints": 10,
+  "attackable": false,
+  "talk": "scrap_artist",
+  "wander_radius": 2,
+  "model": "player.glb",
+  "model_scale": 1.0,
+  "walk_cycle_distance": 1.5,
+  "color": [
+   0.85,
+   0.35,
+   0.65,
+   1
+  ],
+  "size": 1.0
+ },
+ "surveyor": {
+  "id": "surveyor",
+  "display_name": "Surveyor Pell",
+  "hitpoints": 10,
+  "attackable": false,
+  "talk": "surveyor",
+  "wander_radius": 2,
+  "model": "player.glb",
+  "model_scale": 1.0,
+  "walk_cycle_distance": 1.5,
+  "color": [
+   0.3,
+   0.7,
+   0.6,
+   1
+  ],
+  "size": 1.0
  }
 }

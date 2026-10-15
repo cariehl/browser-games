@@ -43,7 +43,7 @@ export class NpcBrain {
         x: npc.spawn_tile.x + world.rng.randiRange(-r, r),
         y: npc.spawn_tile.y + world.rng.randiRange(-r, r),
       };
-      if (world.isWalkable(dest)) npc.path = world.findPath(npc.tile, dest);
+      if (world.isWalkable(dest)) npc.path = world.findPath(npc.tile, dest, npc);
     }
   }
 
@@ -54,7 +54,7 @@ export class NpcBrain {
     if (!target || target.isDead()) return true;
     const away = Math.max(Math.abs(target.tile.x - npc.spawn_tile.x), Math.abs(target.tile.y - npc.spawn_tile.y));
     if (away > npc.def.leash_radius) {
-      npc.path = world.findPath(npc.tile, npc.spawn_tile);
+      npc.path = world.findPath(npc.tile, npc.spawn_tile, npc);
       return false;
     }
     return true;
@@ -70,7 +70,7 @@ export class NpcBrain {
 
   /** Its target can't be reached: walk home and heal to full (no safespots). */
   cannotReach(world, npc) {
-    npc.path = world.findPath(npc.tile, npc.spawn_tile);
+    npc.path = world.findPath(npc.tile, npc.spawn_tile, npc);
     npc.damage_by = {};
     if (npc.hp < npc.maxHp()) {
       npc.hp = npc.maxHp();

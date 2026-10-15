@@ -1,0 +1,7 @@
+{
+ "name": "Scrapyard",
+ "areas": [
+  { "id": "scrapyard", "map": "data/maps/scrapyard.map", "at": [0, 0] }
+ ],
+ "links": []
+}

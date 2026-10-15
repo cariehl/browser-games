@@ -29,11 +29,20 @@ const DIRS = [
   [1, 1], [1, -1], [-1, 1], [-1, -1],
 ];
 
+/** Two tiles whose heights differ by more than this have a cliff between them. */
+export const MAX_STEP = 0.5;
+
 export class Grid {
   constructor(width, height) {
     this.width = width;
     this.height = height;
     this.solid = new Uint8Array(width * height);
+    /**
+     * Ground height of every tile, in levels: 0, 1, 2... for flat ground and
+     * halves (0.5, 1.5...) for ramps. Walking needs a step of at most
+     * MAX_STEP, so a ramp joins two levels and anything steeper is a cliff.
+     */
+    this.heights = new Float32Array(width * height);
   }
 
   inBounds(t) {
@@ -48,6 +57,15 @@ export class Grid {
     this.solid[t.y * this.width + t.x] = solid ? 1 : 0;
   }
 
+  heightAt(t) {
+    return this.inBounds(t) ? this.heights[t.y * this.width + t.x] : 0;
+  }
+
+  /** Whether a step between two touching tiles isn't up or down a cliff. */
+  edgeOk(a, b) {
+    return Math.abs(this.heightAt(a) - this.heightAt(b)) <= MAX_STEP;
+  }
+
   _open(x, y) {
     return x >= 0 && y >= 0 && x < this.width && y < this.height && this.solid[y * this.width + x] === 0;
   }
@@ -55,10 +73,32 @@ export class Grid {
   /**
    * Tiles from [from] to [to], both included, or [] if [to] can't be reached
    * (or is solid).
+   *
+   * [mask]: a Uint8Array over the grid; 1 makes a tile solid for this path
+   * only (NPCs keep out of safe zones, a mech stays in its zone).
+   * [size]: the mover's footprint, size × size tiles with [from] and [to] its
+   * top-left corner. Every tile it covers must be open and on one level.
    */
-  findPath(from, to) {
+  findPath(from, to, { mask = null, size = 1 } = {}) {
     const w = this.width;
-    if (!this.inBounds(from) || !this.inBounds(to) || this.isSolid(to)) return [];
+    const hts = this.heights;
+    const open = (x, y) => {
+      if (x < 0 || y < 0 || x + size > w || y + size > this.height) return false;
+      let lo = Infinity;
+      let hi = -Infinity;
+      for (let j = 0; j < size; j++) {
+        for (let i = 0; i < size; i++) {
+          const k = (y + j) * w + x + i;
+          if (this.solid[k] === 1 || (mask && mask[k] === 1)) return false;
+          if (hts[k] < lo) lo = hts[k];
+          if (hts[k] > hi) hi = hts[k];
+        }
+      }
+      return hi - lo <= MAX_STEP;
+    };
+    const level = (x, y) => (size === 1 ? hts[y * w + x] : hts[y * w + x + ((size - 1) >> 1) + ((size - 1) >> 1) * w]);
+    const step = (ax, ay, bx, by) => Math.abs(level(ax, ay) - level(bx, by)) <= MAX_STEP;
+    if (!this.inBounds(from) || !this.inBounds(to) || !open(to.x, to.y)) return [];
     const start = from.y * w + from.x;
     const goal = to.y * w + to.x;
     if (start === goal) return [{ x: from.x, y: from.y }];
@@ -84,8 +124,12 @@ export class Grid {
       for (const [dx, dy] of DIRS) {
         const nx = cx + dx;
         const ny = cy + dy;
-        if (!this._open(nx, ny)) continue;
-        if (dx !== 0 && dy !== 0 && (!this._open(cx + dx, cy) || !this._open(cx, cy + dy))) continue;
+        if (!open(nx, ny) || !step(cx, cy, nx, ny)) continue;
+        if (dx !== 0 && dy !== 0) {
+          // No squeezing past a blocked corner, or round the top of a cliff.
+          if (!open(cx + dx, cy) || !open(cx, cy + dy)) continue;
+          if (!step(cx, cy, cx + dx, cy) || !step(cx + dx, cy, nx, ny) || !step(cx, cy, cx, cy + dy) || !step(cx, cy + dy, nx, ny)) continue;
+        }
         const ni = ny * w + nx;
         if (closed[ni]) continue;
         const cost = g[cur] + (dx !== 0 && dy !== 0 ? SQRT2 : 1);

@@ -63,7 +63,9 @@ export const Combat = {
   /** In reach, and for ranged attacks, with a clear line of sight? */
   canHit(world, from, to, reach) {
     if (!Combat.inReach(from, to, reach)) return false;
-    return reach <= 1 || Combat.hasLineOfSight(world, from, to);
+    // Melee can't reach up or down a cliff.
+    if (reach <= 1) return world.edgeOk(from, to);
+    return Combat.hasLineOfSight(world, from, to);
   },
 
   /**
@@ -73,13 +75,17 @@ export const Combat = {
    */
   hasLineOfSight(world, from, to) {
     const steps = Math.max(Math.abs(to.x - from.x), Math.abs(to.y - from.y));
+    // Ground higher than both ends (a ridge, a cliff seen from below) blocks the shot too.
+    const top = Math.max(world.heightAt(from), world.heightAt(to)) + 0.5;
+    const ridge = (t) => world.heightAt(t) > top;
     for (let i = 1; i < steps; i++) {
       const t = i / steps;
       const px = from.x + (to.x - from.x) * t;
       const py = from.y + (to.y - from.y) * t;
       // Check both roundings, so a line grazing a wall corner counts as blocked.
       if (world.blocksSight({ x: Math.floor(px), y: Math.floor(py) }) && world.blocksSight({ x: Math.ceil(px), y: Math.ceil(py) })) return false;
-      if (world.blocksSight({ x: godotRound(px), y: godotRound(py) })) return false;
+      const near = { x: godotRound(px), y: godotRound(py) };
+      if (world.blocksSight(near) || ridge(near)) return false;
     }
     return true;
   },
@@ -134,7 +140,9 @@ export const Combat = {
     const target = world.entities.get(hit.target_id);
     if (!target || target.isDead()) return;
     const attacker = world.entities.get(hit.attacker_id) || null;
-    const damage = Math.min(hit.damage, target.hp);
+    // Nobody gets hurt in a safe zone.
+    const safe = !target.isNpc() && world.inZone(target.tile, 'safe');
+    const damage = safe ? 0 : Math.min(hit.damage, target.hp);
     target.last_combat_tick = world.tick;
     if (attacker) attacker.last_combat_tick = world.tick;
     world.emitEvent(target.id, 'hit', { attacker: hit.attacker_id, target: target.id, damage });

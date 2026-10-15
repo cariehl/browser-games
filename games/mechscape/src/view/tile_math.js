@@ -4,9 +4,23 @@
 import * as THREE from 'three';
 
 export const TILE_SIZE = 1;
+/** Metres per ground level (see Grid heights). */
+export const LEVEL_HEIGHT = 0.9;
 
+/** Where ground heights come from: the World the views draw (set by WorldViews). */
+let ground = null;
+export function setGroundSource(world) {
+  ground = world;
+}
+
+/** Height of a tile's ground, in metres. */
+export function groundY(tile) {
+  return ground ? ground.heightAt(tile) * LEVEL_HEIGHT : 0;
+}
+
+/** The middle of a tile, [height] metres above its ground. */
 export function tileToWorld(tile, height = 0, out = new THREE.Vector3()) {
-  return out.set((tile.x + 0.5) * TILE_SIZE, height, (tile.y + 0.5) * TILE_SIZE);
+  return out.set((tile.x + 0.5) * TILE_SIZE, height + groundY(tile), (tile.y + 0.5) * TILE_SIZE);
 }
 
 export function worldToTile(pos) {

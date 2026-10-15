@@ -23,10 +23,21 @@ import { Trading } from './trade.js';
 const PRIVATE_EVENTS = new Set(['message', 'xp', 'level_up', 'open_station', 'open_storage', 'wreck', 'boost',
   'trade_request', 'open_trade', 'close_trade', 'traded']);
 
-/** The world as [viewerId] may see it. */
+/** Event types everyone hears about, wherever they are. */
+const GLOBAL_EVENTS = new Set(['chat', 'broadcast']);
+
+/**
+ * The world as [viewerId] may see it: only the area they're in (other
+ * players, NPCs, gather nodes, items on the ground and what happens there),
+ * plus their own private parts.
+ */
 export function takeSnapshot(world, viewerId) {
+  const viewer = world.entities.get(viewerId);
+  const area = viewer ? world.areaIdAt(viewer.tile) : -1;
+  const here = (tile) => area < 0 || world.areaIdAt(tile) === area;
   const entities = [];
   for (const e of world.entities.values()) {
+    if (e.id !== viewerId && !here(e.tile) && !(e.isNpc() && e.isDead() && here(e.spawn_tile))) continue;
     const out = {
       id: e.id,
       tile: e.tile,
@@ -42,6 +53,11 @@ export function takeSnapshot(world, viewerId) {
     if (e.isNpc()) {
       out.dead_until = e.dead_until;
       out.husk_tile = e.husk_tile;
+      // NPCs that aren't on the map (pets, a boss's adds) are built from their def.
+      if (e.dynamic) {
+        out.def = e.def.id;
+        out.spawn = e.spawn_tile;
+      }
     } else {
       out.name = e.display_name;
       out.xp = e.xp;
@@ -61,6 +77,7 @@ export function takeSnapshot(world, viewerId) {
   }
   const nodes = [];
   for (const n of world.nodes.values()) {
+    if (!here(n.tile)) continue;
     nodes.push({ id: n.id, def: n.def.id, tile: n.tile, respawn: n.respawn_tick, expire: n.expire_tick, successes: n.successes });
   }
   const wrecks = [];
@@ -70,10 +87,16 @@ export function takeSnapshot(world, viewerId) {
   }
   const ground = [];
   for (const g of world.ground_items.values()) {
+    if (!here(g.tile)) continue;
     ground.push({ id: g.id, item: g.item.id, count: g.count, tile: g.tile, despawn: g.despawn_tick });
   }
-  const events = world.events.filter((ev) => ev.entity === viewerId || !PRIVATE_EVENTS.has(ev.type));
-  return { tick: world.tick, map: world.map_name, entities, nodes, wrecks, ground, events };
+  const events = world.events.filter((ev) => {
+    if (ev.entity === viewerId || GLOBAL_EVENTS.has(ev.type)) return true;
+    if (PRIVATE_EVENTS.has(ev.type)) return false;
+    const who = world.entities.get(ev.entity);
+    return !who || here(who.tile) || here(who.spawn_tile);
+  });
+  return { tick: world.tick, map: world.map_name, area, entities, nodes, wrecks, ground, events };
 }
 
 /**
@@ -88,6 +111,11 @@ export function applySnapshot(world, snap, viewerId) {
   for (const data of snap.entities) {
     seen.add(data.id);
     let e = world.entities.get(data.id);
+    if (!e && data.def !== undefined) {
+      const def = Content.npcs[data.def];
+      if (!def) continue;
+      e = world.addNpc(def, data.spawn || data.tile, data.id);
+    }
     if (!e) {
       if (data.name === undefined) continue; // An NPC this map doesn't have: a different map build.
       e = world.spawn(data.id, data.tile);
@@ -134,9 +162,14 @@ export function applySnapshot(world, snap, viewerId) {
       e.trade_view = data.trade || null;
     }
   }
+  // Players and NPCs that come and go (pets, adds) that weren't sent have gone, or are somewhere else.
   for (const e of [...world.entities.values()]) {
-    if (!seen.has(e.id) && !e.isNpc()) world.removePlayer(e.id);
+    if (seen.has(e.id)) continue;
+    if (!e.isNpc()) world.removePlayer(e.id);
+    else if (e.dynamic) world.removeNpc(e.id);
   }
+  // Nodes and ground items elsewhere weren't sent; only what's in this area is complete.
+  const here = (tile) => snap.area === undefined || snap.area < 0 || world.areaIdAt(tile) === snap.area;
 
   // Gather nodes: map nodes change state; husks come and go.
   const nodeIds = new Set();
@@ -155,7 +188,7 @@ export function applySnapshot(world, snap, viewerId) {
     node.expire_tick = data.expire;
     node.successes = data.successes;
   }
-  for (const id of [...world.nodes.keys()]) if (!nodeIds.has(id)) world.removeObject(id);
+  for (const [id, node] of [...world.nodes]) if (!nodeIds.has(id) && here(node.tile)) world.removeObject(id);
 
   const wreckIds = new Set();
   for (const data of snap.wrecks) {
@@ -182,7 +215,7 @@ export function applySnapshot(world, snap, viewerId) {
     ground.tile = { ...data.tile };
     ground.despawn_tick = data.despawn;
   }
-  for (const id of [...world.ground_items.keys()]) if (!groundIds.has(id)) world.removeGroundItem(id);
+  for (const [id, g] of [...world.ground_items]) if (!groundIds.has(id) && here(g.tile)) world.removeGroundItem(id);
 }
 
 function sameArmor(a, b) {
