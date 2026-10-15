@@ -195,6 +195,21 @@ The headless tests use their own small map, `tests/maps/test_yard.map` (the orig
 
 Input is queued: clicking sends an action as JSON, and the latest action per slot wins until the next tick consumes it. Offline, `SimulatedLink` hands it to the `GameLoop` in the page. Online, `NetLink` sends it to the server, which queues it for the sender's own pilot.
 
+## What's in the alpha
+
+The alpha plan (`plans/alpha-plan.md` in the project) is built. Each piece of it is a feature module in `src/sim/` that hooks into the world through `features.js`, so the core rules didn't have to know about any of them. `ALPHA_NOTES.md` lists where the build took a shortcut or differs from the plan.
+
+- **Chat and trade:** Enter to chat (text floats over you); right-click a player to trade, accepted twice.
+- **The world:** four areas in one world (`data/maps/world.json`): the Commons and camp, the Undercroft dungeon under the hatch, the Deadfields (mechs only past the drop point) and the Quiet Reach up the lift. Maps have heights, ramps, ground types, decor and zones.
+- **Quests** (`quests.js`): Ignition (the main story: the blueprint in the Undercroft, then the mech), Found Art (the silly side quest that ends with the paintball cannon and the easy Splatterpress) and the Quiet Reach survey. Talk to anyone with a Talk-to option.
+- **Your look** (`appearance.js`): picked on the connect screen with a turntable, changed at the manufactory after a respawn. Cosmetics, pets and fun weapons (the paintball cannon, the confetti blade) are drops and rewards.
+- **The mech** (`mech.js`): components from every skill chain, installed at the gantry console in camp; the walker stands up on the pad when the last one goes in. Board it as pilot or gunner, deploy it to the Deadfields, salvage wreckage only a mech can reach, and fight the scrap colossus, which only a mech can hurt. It burns vent gas and cartridges and is repaired with alloy plating, at the gantry or the rig in the Deadfields.
+- **The Splatterpress** (`boss.js`): the pilot boss in the Undercroft's press hall. Dodge red tiles, soak blue ones together, run the amber panels to drop its shield, and kill the drones before they repair it. Overclocked (three phases) unlocks after Found Art.
+- **The hab** (`hab.js`): the crew's quarters beside camp. Furniture and fittings from the fabricator, placed in build mode (click a piece in your inventory; Q turns, C recolours). Tool walls and coolant racks help crafters, grow beds turn Reach seeds into Splicing plants, comfort leaves you rested (+10% XP), trophies on the wall give everyone XP, and the commission board is the session's market.
+- **The survey** (`survey.js`): the Quiet Reach has no enemies. Mend the bridge with scrap, feed the blast door vent gas, scan the projector, scan five landmarks and sample three specimens.
+
+The XP rate (`npm start -- --xp-rate 1.5`) is the knob for fitting the mech into one evening.
+
 ## Multiplayer
 
 The server is authoritative and built on [Colyseus](https://colyseus.io) 0.18. It runs the same `src/sim/` as the browser: one `World`, ticking every 0.6 s, in one Colyseus room called `scrapyard` that up to 16 players share. One Node process serves both the game's files and the room, on one port (2567 by default; `npm start -- --port 8080` to change it).
@@ -206,7 +221,7 @@ The server is authoritative and built on [Colyseus](https://colyseus.io) 0.18. I
 - **Leaving and coming back**: if the connection drops, the client reconnects by itself and the pilot waits in the world for 30 seconds. Reloading the page takes the waiting pilot straight back. After that the pilot logs out of the world, and the server remembers it by name (inventory, gear, XP, storage, where it stood) until that name joins again. Wrecks follow their owner back.
 - **Restarts**: the autosave (`saves/world.json`, every minute and on Ctrl+C) has the world and every pilot. After a restart everyone is logged out and gets their pilot back by joining with the same name. Nothing carries over between play sessions unless you keep the save; start each session with `npm start -- --new`.
 
-Hosting for friends: run `npm start` on the host and give friends `http://<address>:2567`. On one network that's the host's LAN address (`ipconfig` on Windows). Over the internet, forward TCP port 2567 on the router to the host and use its public address, or use a tunnel such as Tailscale. There are no accounts or passwords, so anyone who can reach the port can join under any free name; only share the address with friends.
+Hosting for friends: run `npm start` on the host and give friends `http://<address>:2567`. On one network that's the host's LAN address (`ipconfig` on Windows). Over the internet, the easiest is a Cloudflare quick tunnel (`cloudflared tunnel --url http://localhost:2567` prints a public https address), with no port forwarding; forwarding TCP port 2567 or Tailscale also work. There are no accounts or passwords, so anyone who can reach the port can join under any free name; only share the address with friends.
 
 ## Differences from the Godot version
 
@@ -215,7 +230,7 @@ Hosting for friends: run `npm start` on the host and give friends `http://<addre
 - **Fixed: no lying dead at the manufactory.** A player dies and is printed in the same tick; Godot's animator stopped at the death event and never played Print, so the player lay in the death pose until it ended. Here the print wins.
 - **Labels and the HUD are HTML** over the canvas instead of Godot controls and `Label3D`, with the same layout and colours.
 - **No catalog export:** the debug window's Export catalog button isn't ported (`CATALOG.md`, copied from the Godot project, still describes the same content).
-- **Multiplayer:** the Godot MVP was single player; this one is played on a Colyseus server, with offline single player kept behind `?offline`. Each player gets their own colour by id (player 1 keeps the original orange), and other players' names float over them.
+- **Multiplayer:** the Godot MVP was single player; this one is played on a Colyseus server, with offline single player kept behind `?offline`. Each player picks their own look, and other players' names float over them.
 - **The page installs nothing:** no engine and no build. three.js and the Colyseus client are vendored; only the server needs `npm install`.
 
 ## Roadmap
@@ -223,4 +238,5 @@ Hosting for friends: run `npm start` on the host and give friends `http://<addre
 - [x] Rebuild the Godot MVP in three.js: sim, map, models, animation, UI, debug tools, saving
 - [ ] MVP check: a fresh character, one evening, start to alloy tier
 - [x] Multiplayer: an authoritative Colyseus server running `src/sim/`, browser clients mirroring it
+- [x] Alpha features: chat, trade, areas, quests, looks, the mech, the pilot boss, the hab and the survey
 - [ ] Alpha: friends on one hosted server for a session
