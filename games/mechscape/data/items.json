@@ -25,7 +25,7 @@
    0.82,
    1.0
   ],
-  "abbreviation": "Chest",
+  "abbreviation": "A.Chest",
   "armor_slot": "torso",
   "defence_bonus": 21,
   "equip_level": 10
@@ -40,7 +40,7 @@
    0.82,
    1.0
   ],
-  "abbreviation": "Gaunt",
+  "abbreviation": "A.Gaunts",
   "armor_slot": "arms",
   "defence_bonus": 7,
   "equip_level": 10
@@ -55,7 +55,7 @@
    0.82,
    1.0
   ],
-  "abbreviation": "Grvs",
+  "abbreviation": "A.Greaves",
   "armor_slot": "legs",
   "defence_bonus": 14,
   "equip_level": 10
@@ -70,7 +70,7 @@
    0.82,
    1.0
   ],
-  "abbreviation": "Helm",
+  "abbreviation": "A.Helm",
   "armor_slot": "head",
   "defence_bonus": 10,
   "equip_level": 10
@@ -129,7 +129,8 @@
    0.58,
    1.0
   ],
-  "abbreviation": "Can"
+  "abbreviation": "Can",
+  "description": "A metal canister. Good for holding gaseous things."
  },
  "coolant": {
   "id": "coolant",
