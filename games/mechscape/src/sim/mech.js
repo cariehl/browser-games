@@ -31,10 +31,9 @@ import { Task, AttackTask, StationHandlers, findBonus } from './tasks.js';
 import { GatherNode } from './objects.js';
 import { NO_TARGET, eq, chebyshev } from './grid.js';
 import { FIREARMS, ENGINEERING } from './skills.js';
+import { Text } from './text.js';
 
 export const SEATS = ['pilot', 'gunner'];
-/** How close to the repair rig the mech has to be for servicing. */
-export const RIG_RANGE = 6;
 
 /** A walker mech: an NPC with a footprint, a crew, a fuel tank and a magazine. */
 export class MechState extends NpcState {
@@ -112,6 +111,16 @@ export const Mechs = {
   /** The first (for the alpha, only) mech def. */
   defaultDef() {
     return Object.values(Content.mechs || {})[0] || null;
+  },
+
+  /** The name of the area [def] deploys to ("Deadfields"). */
+  fieldName(def) {
+    return (def && def.drop && Text.areas[def.drop[0]]) || 'field';
+  },
+
+  /** Template vars for [def]'s messages: its name and its field's. */
+  vars(def, more = {}) {
+    return { mech: def ? def.display_name : 'mech', area: Mechs.fieldName(def), ...more };
   },
 
   /** The mech def a station is for. */
@@ -449,7 +458,7 @@ export class InstallComponentAction extends Action {
     const item = Content.item(this.item);
     if (!def || !build || !item) return;
     if (!world.flags.blueprint_loaded) {
-      world.message(player.id, "The gantry has no blueprint loaded. Foreman Ada knows where one is.");
+      world.message(player.id, Text.get('mech.no_blueprint', Mechs.vars(def)));
       return;
     }
     const need = def.needs(item) - (build.installed[item.id] || 0);
@@ -467,7 +476,7 @@ export class InstallComponentAction extends Action {
     if (left === 0 && !Mechs.of(world, build)) {
       Mechs.assemble(world, def, build);
       world.flags.mech_complete = true;
-      world.announce(`The ${def.display_name.toLowerCase()} is complete! ${player.display_name} installed the last part. Foreman Ada wants to power it up.`);
+      world.announce(Text.get('mech.complete', Mechs.vars(def, { player: player.display_name })));
     }
   }
 }
@@ -498,13 +507,13 @@ export class MechCommandAction extends Action {
       case 'deploy': {
         if (!atGantry) return;
         if (!Mechs.parked(world, def, mech)) return say("It's already out in the field.");
-        if (!world.flags.mech_powered) return say("It hasn't been powered up yet. Foreman Ada wants to be there when it wakes.");
+        if (!world.flags.mech_powered) return say(Text.get('mech.not_powered', Mechs.vars(def)));
         const drop = Mechs.spot(world, def.drop);
         mech.clearTask();
         mech.teleport(drop);
         build.deployed = true;
         world.emitEvent(mech.id, 'teleport', { entity: mech.id, tile: drop });
-        world.announce(`The ${def.display_name.toLowerCase()} strides out to the Deadfields.`);
+        world.announce(Text.get('mech.deployed', Mechs.vars(def)));
         return;
       }
       case 'recall': {
@@ -516,12 +525,12 @@ export class MechCommandAction extends Action {
         mech.teleport(pad);
         build.deployed = false;
         world.emitEvent(mech.id, 'teleport', { entity: mech.id, tile: pad });
-        say('The gantry winches the mech back onto its pad.');
+        say(Text.get('mech.recalled', Mechs.vars(def)));
         return;
       }
       case 'service': {
         if (atGantry && !Mechs.parked(world, def, mech)) return say("It's out in the field. Service it at the repair rig by the drop point.");
-        if (!atGantry && mech.distanceTo(station.tile) > RIG_RANGE) return say('Bring the mech up to the rig first.');
+        if (!atGantry && mech.distanceTo(station.tile) > Content.rules.mech.rig_range) return say('Bring the mech up to the rig first.');
         const done = Mechs.service(world, player, mech);
         if (!done) {
           const names = [def.repair_item, def.fuel_item, def.ammo_item].filter(Boolean).map((i) => i.display_name.toLowerCase());
@@ -561,17 +570,17 @@ function routeSeated(world, player, action) {
       return true;
     }
     if (mech.fuel <= 0) {
-      world.message(player.id, "The tank's dry. Fill it with vent gas at the repair rig.");
+      world.message(player.id, `The tank's dry. Fill it with ${mech.mech && mech.mech.fuel_item ? mech.mech.fuel_item.display_name.toLowerCase() : 'fuel'} at the repair rig.`);
       return true;
     }
     if (mech.mech && Mechs.parked(world, mech.mech, mech)) {
-      world.message(player.id, "It's clamped to the gantry. Deploy it from the console to take it out to the Deadfields.");
+      world.message(player.id, Text.get('mech.clamped', Mechs.vars(mech.mech)));
       return true;
     }
     if (mech.task && mech.task.chase !== false) mech.clearTask();
     mech.path = world.findPath(mech.tile, action.target, mech);
     if (!mech.path.length && !eq(mech.tile, action.target)) {
-      world.message(player.id, world.inZone(action.target, 'mech') ? "The mech can't fit through there." : "The mech can't leave the Deadfields.");
+      world.message(player.id, world.inZone(action.target, 'mech') ? "The mech can't fit through there." : Text.get('mech.cant_leave', Mechs.vars(mech.mech)));
     }
     return true;
   }
@@ -579,7 +588,7 @@ function routeSeated(world, player, action) {
     const target = world.entities.get(action.target_id);
     if (!target || !target.isNpc() || !target.def.attackable || target.isDead()) return true;
     if (!mech.mech || mech.ammo <= 0) {
-      world.message(player.id, 'The magazine is empty. Load gas cartridges at the repair rig.');
+      world.message(player.id, `The magazine is empty. Load ${mech.mech && mech.mech.ammo_item ? mech.mech.ammo_item.display_name.toLowerCase() : 'ammo'} at the repair rig.`);
       return true;
     }
     mech.task = new MechAttackTask(target.id, pilot && mech.fuel > 0, player.id);
@@ -693,7 +702,7 @@ Features.register({
     player.riding = null;
   },
 
-  /** Foreman Ada's "Power it up!": the first time, the mech wakes and can be deployed. */
+  /** The foreman's "Power it up!": the first time, the mech wakes and can be deployed. */
   onQuestEvent(world, player, name) {
     if (name !== 'mech_powerup') return;
     const def = Mechs.defaultDef();
@@ -701,7 +710,7 @@ Features.register({
     if (world.flags.mech_powered) return;
     world.flags.mech_powered = true;
     if (mech) world.emitEvent(mech.id, 'mech_powerup', { mech: mech.id });
-    world.announce(`${player.display_name} and Foreman Ada power up the ${def ? def.display_name.toLowerCase() : 'mech'}. Its visor lights up, and it stands. Deploy it from the gantry console.`);
+    world.announce(Text.get('mech.powered_up', Mechs.vars(def, { player: player.display_name })));
   },
 
   routeAction(world, entity, action) {
@@ -761,7 +770,8 @@ Features.register({
     build.installed = kept;
     build.mech_id = -1;
     build.deployed = false;
-    world.announce(`The ${def.display_name.toLowerCase()} has been destroyed! Its frame, legs and cockpit survive; the rest has to be rebuilt.`);
+    const survivors = def.keep_on_destroy.map((id) => (Content.item(id) ? Content.item(id).display_name.toLowerCase() : id));
+    world.announce(Text.get('mech.destroyed', Mechs.vars(def, { kept: Text.list(survivors) })));
   },
 
   /** Seated crew can't be hurt; only a mech can hurt a mech-only boss. */
@@ -769,7 +779,7 @@ Features.register({
     if (target.riding) return 0;
     if (target.isNpc() && target.def.mech_only_damage && !(attacker instanceof MechState)) {
       world.emitEvent(target.id, 'no_effect', { attacker: attacker ? attacker.id : -1, target: target.id });
-      if (attacker && !attacker.isNpc()) world.message(attacker.id, 'Your attack glances off its hide. Only a mech can hurt it.');
+      if (attacker && !attacker.isNpc()) world.message(attacker.id, Text.get('mech.only_mechs_hurt'));
       return 0;
     }
     // The crew learn from the mech's shots.

@@ -95,3 +95,8 @@ test('trees and rocks are solid, and nothing a player needs is walled off by the
   const tuft = world.decor.find((d) => d.def.id === 'grass_tuft');
   assert.ok(world.isWalkable(tuft.tile), 'grass does not');
 });
+
+test('every message the code asks for is in the data, and every text token names something', async () => {
+  const { checkText } = await import('../tools/check_text.js');
+  assert.deepEqual(checkText(), []);
+});

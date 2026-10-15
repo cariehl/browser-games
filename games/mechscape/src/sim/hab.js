@@ -26,25 +26,13 @@ import { Task, StationHandlers, a } from './tasks.js';
 import { Inventory, ItemStack } from './inventory.js';
 import { key, eq, UP, DOWN, LEFT, RIGHT, add } from './grid.js';
 import { XENOBIOLOGY } from './skills.js';
+import { Text } from './text.js';
+import { TICK_SECONDS } from './constants.js';
 
-/** Comfort a hab needs before a minute there leaves you rested. */
-export const RESTED_COMFORT = 12;
-/** Ticks in the hab to get rested (a minute), and how long it lasts (ten). */
-export const RESTED_AFTER = 100;
-export const RESTED_TICKS = 1000;
-export const RESTED_BONUS = 0.1;
-/** XP bonus per trophy on the wall, in its skill. */
-export const TROPHY_BONUS = 0.02;
-/** Comfort for each complete set. */
-export const SET_COMFORT = 5;
-/** Sets of pieces that light up together. */
-export const SETS = {
-  workshop: { name: 'Workshop corner', pieces: ['tool_wall', 'crate_stack', 'work_lamp'] },
-  greenhouse: { name: 'Greenhouse corner', pieces: ['grow_bed', 'coolant_rack', 'potted_glowroot'] },
-};
-export const MAX_COMMISSIONS_EACH = 3;
-const LIQUIDS = ['ichor', 'coolant'];
-const WATER = 5;
+/** The hab's numbers (data/rules.json "hab"): comfort, resting, trophies, sets, commissions, beds. */
+const rules = () => Content.rules.hab;
+/** "ichor or coolant": what a grow bed can be watered with. */
+const liquidNames = () => rules().bed_liquids.map((id) => (Content.item(id) ? Content.item(id).display_name.toLowerCase() : id)).join(' or ');
 
 /** A piece of furniture or a fitting placed in the hab. */
 export class HabPiece extends WorldObject {
@@ -163,18 +151,38 @@ export const Hab = {
   comfort(world) {
     let total = 0;
     for (const p of world.pieces.values()) if (world.inZone(p.tile, 'hab')) total += p.def.comfort || 0;
-    return total + Hab.completeSets(world).length * SET_COMFORT;
+    return total + Hab.completeSets(world).length * rules().set_comfort;
+  },
+
+  /** Set id -> the item ids of its pieces (each piece's "set" in data/items.json). */
+  sets() {
+    const out = {};
+    for (const item of Object.values(Content.items)) {
+      if (item.piece && item.piece.set) (out[item.piece.set] = out[item.piece.set] || []).push(item.id);
+    }
+    return out;
+  },
+
+  /** A set's name, from data/rules.json (hab.sets). */
+  setName(id) {
+    return (rules().sets || {})[id] || id;
   },
 
   completeSets(world) {
     const placed = new Set([...world.pieces.values()].filter((p) => world.inZone(p.tile, 'hab')).map((p) => p.item.id));
-    return Object.entries(SETS).filter(([, set]) => set.pieces.every((id) => placed.has(id))).map(([id]) => id);
+    return Object.entries(Hab.sets()).filter(([, pieces]) => pieces.every((id) => placed.has(id))).map(([id]) => id);
   },
 
-  /** Whether a placed piece in the hab has [effect]. */
+  /** A piece placed in the hab whose effect is [effect] (and, if given, for [skill]), or null. */
+  fitting(world, effect, skill = null) {
+    for (const p of world.pieces.values()) {
+      if (p.def.effect === effect && (!skill || p.def.skill === skill) && world.inZone(p.tile, 'hab')) return p;
+    }
+    return null;
+  },
+
   hasFitting(world, effect) {
-    for (const p of world.pieces.values()) if (p.def.effect === effect && world.inZone(p.tile, 'hab')) return true;
-    return false;
+    return Hab.fitting(world, effect) != null;
   },
 
   addPiece(world, item, tile, id = -1) {
@@ -221,7 +229,7 @@ export class PieceTask extends Task {
     if (!bed.seed) {
       const slot = player.inventory.slots.findIndex((s) => s && s.item.kind === 'seed');
       if (slot < 0) {
-        world.message(player.id, 'The bed is empty. Seeds come from the specimen plants in the Quiet Reach.');
+        world.message(player.id, Text.get('hab.bed_empty'));
         return false;
       }
       const seed = player.inventory.slots[slot].item;
@@ -229,26 +237,27 @@ export class PieceTask extends Task {
       bed.seed = seed.id;
       bed.fed = false;
       bed.ready = -1;
-      world.message(player.id, `You plant ${a(seed.display_name.toLowerCase())}. It needs watering with ${WATER} ichor or coolant.`);
+      world.message(player.id, `You plant ${a(seed.display_name.toLowerCase())}. It needs watering with ${rules().bed_water} ${liquidNames()}.`);
       world.emitEvent(piece.id, 'planted', { piece: piece.id });
       return false;
     }
     const seed = Content.item(bed.seed);
     if (!bed.fed) {
-      const liquid = LIQUIDS.map((id) => Content.item(id)).find((it) => it && player.inventory.countOf(it) >= WATER);
+      const water = rules().bed_water;
+      const liquid = rules().bed_liquids.map((id) => Content.item(id)).find((it) => it && player.inventory.countOf(it) >= water);
       if (!liquid) {
-        world.message(player.id, `It needs watering: ${WATER} ichor or coolant. Nothing grows dry.`);
+        world.message(player.id, `It needs watering: ${water} ${liquidNames()}. Nothing grows dry.`);
         return false;
       }
-      player.inventory.remove(liquid, WATER);
+      player.inventory.remove(liquid, water);
       bed.fed = true;
       bed.ready = world.tick + seed.grow_ticks;
-      world.message(player.id, `You water the bed with ${liquid.display_name.toLowerCase()}. The ${seed.grows} will be ready in about ${Math.ceil(seed.grow_ticks * 0.6 / 60)} minutes.`);
+      world.message(player.id, `You water the bed with ${liquid.display_name.toLowerCase()}. The ${seed.grows} will be ready in about ${Math.ceil(seed.grow_ticks * TICK_SECONDS / 60)} minutes.`);
       world.emitEvent(piece.id, 'watered', { piece: piece.id });
       return false;
     }
     if (world.tick < bed.ready) {
-      world.message(player.id, `The ${seed.grows} is still growing. About ${Math.ceil((bed.ready - world.tick) * 0.6)} seconds to go.`);
+      world.message(player.id, `The ${seed.grows} is still growing. About ${Math.ceil((bed.ready - world.tick) * TICK_SECONDS)} seconds to go.`);
       return false;
     }
     const crop = Content.item(seed.grows);
@@ -387,7 +396,8 @@ export class CommissionAction extends Action {
         const wantCount = Math.max(1, Math.min(this.want_count, 1000));
         const offerCount = Math.max(1, Math.min(this.offer_count, 1000));
         if (!want || !offer || ['quest'].includes(want.kind)) return say("You can't ask for that.");
-        if (list.filter((x) => x.by === player.display_name).length >= MAX_COMMISSIONS_EACH) return say(`You can only have ${MAX_COMMISSIONS_EACH} commissions up at once.`);
+        const most = rules().max_commissions_each;
+        if (list.filter((x) => x.by === player.display_name).length >= most) return say(`You can only have ${most} commissions up at once.`);
         if (player.inventory.countOf(offer) < offerCount) return say(`You don't have ${offerCount} ${offer.display_name.toLowerCase()} to offer.`);
         player.inventory.remove(offer, offerCount);
         const id = world.next_commission_id++;
@@ -435,7 +445,7 @@ Hab.checkSets = (world, player) => {
   for (const id of Hab.completeSets(world)) {
     if (world.hab_sets_done.includes(id)) continue;
     world.hab_sets_done.push(id);
-    world.announce(`${player.display_name} finished the hab's ${SETS[id].name.toLowerCase()}! The hab feels cosier (+${SET_COMFORT} comfort).`);
+    world.announce(Text.get('hab.set_done', { player: player.display_name, set: Hab.setName(id), comfort: rules().set_comfort }));
   }
 };
 
@@ -452,16 +462,17 @@ StationHandlers[StationKind.TROPHY] = (world, player) => {
     player.inventory.remove(stack.item, 1);
     world.trophies.push({ item: stack.item.id, by: player.display_name });
     const skill = stack.item.trophy_skill;
-    world.announce(`${player.display_name} mounted ${a(stack.item.display_name.toLowerCase())} on the hab's trophy wall.${skill ? ` Everyone gets +${Math.round(TROPHY_BONUS * 100)}% ${skill} XP.` : ''}`);
+    world.announce(`${player.display_name} mounted ${a(stack.item.display_name.toLowerCase())} on the hab's trophy wall.${skill ? ` Everyone gets +${Math.round(rules().trophy_bonus * 100)}% ${skill} XP.` : ''}`);
     return;
   }
   if (!world.trophies.length) {
-    world.message(player.id, 'The trophy wall is bare. Trophies come from tough fights: a sentry\'s eye, a loader\'s horn, the warden\'s core...');
+    const trophies = Object.values(Content.items).filter((i) => i.kind === 'trophy').map((i) => a(i.display_name.toLowerCase()));
+    world.message(player.id, Text.get('hab.trophy_wall_bare', { trophies: Text.list(trophies) }));
     return;
   }
   const lines = world.trophies.map((t) => {
     const item = Content.item(t.item);
-    return `${item ? item.display_name : t.item} (${t.by}${item && item.trophy_skill ? `, +${Math.round(TROPHY_BONUS * 100)}% ${item.trophy_skill}` : ''})`;
+    return `${item ? item.display_name : t.item} (${t.by}${item && item.trophy_skill ? `, +${Math.round(rules().trophy_bonus * 100)}% ${item.trophy_skill}` : ''})`;
   });
   world.message(player.id, `On the wall: ${lines.join(', ')}.`);
 };
@@ -501,14 +512,15 @@ Features.register({
         continue;
       }
       player.hab_ticks++;
-      if (player.hab_ticks >= RESTED_AFTER && player.rested_until < world.tick + RESTED_TICKS - RESTED_AFTER && comfort !== null) {
-        if (comfort >= RESTED_COMFORT) {
+      const r = rules();
+      if (player.hab_ticks >= r.rested_after_ticks && player.rested_until < world.tick + r.rested_ticks - r.rested_after_ticks && comfort !== null) {
+        if (comfort >= r.rested_comfort) {
           const fresh = player.rested_until <= world.tick;
-          player.rested_until = world.tick + RESTED_TICKS;
+          player.rested_until = world.tick + r.rested_ticks;
           player.hab_ticks = 0;
-          if (fresh) world.message(player.id, `You feel rested. +${Math.round(RESTED_BONUS * 100)}% XP for the next ten minutes.`);
-        } else if (player.hab_ticks === RESTED_AFTER) {
-          world.message(player.id, `The hab's a bit bare to really rest in (comfort ${comfort} of ${RESTED_COMFORT}). More furniture would help.`);
+          if (fresh) world.message(player.id, Text.get('hab.rested', { bonus: Math.round(r.rested_bonus * 100), minutes: Math.round(r.rested_ticks * TICK_SECONDS / 60) }));
+        } else if (player.hab_ticks === r.rested_after_ticks) {
+          world.message(player.id, Text.get('hab.too_bare', { comfort, needed: r.rested_comfort }));
         }
       }
     }
@@ -517,27 +529,28 @@ Features.register({
   xpAmount(amount, world, entity, skill) {
     if (entity.isNpc()) return amount;
     let bonus = 0;
-    if (entity.rested_until > world.tick) bonus += RESTED_BONUS;
+    if (entity.rested_until > world.tick) bonus += rules().rested_bonus;
     for (const t of world.trophies) {
       const item = Content.item(t.item);
-      if (item && item.trophy_skill === skill) bonus += TROPHY_BONUS;
+      if (item && item.trophy_skill === skill) bonus += rules().trophy_bonus;
     }
     return amount * (1 + bonus);
   },
 
   craftTicks(ticks, world, entity, station, recipe) {
-    if (recipe.skill === 'engineering' && world.inZone(station.tile, 'hab') && Hab.hasFitting(world, 'craft_speed')) {
-      return Math.max(1, Math.round(ticks * 0.6));
+    if (world.inZone(station.tile, 'hab') && Hab.fitting(world, 'craft_speed', recipe.skill)) {
+      return Math.max(1, Math.round(ticks * rules().craft_speed_factor));
     }
     return ticks;
   },
 
   afterCraft(world, entity, station, recipe) {
-    if (recipe.skill !== 'splicing' || !world.inZone(station.tile, 'hab') || !Hab.hasFitting(world, 'save_liquid')) return;
-    if (world.rng.randf() >= 0.3) return;
-    const saved = recipe.inputs.filter((i) => LIQUIDS.includes(i.item.id));
+    const rack = world.inZone(station.tile, 'hab') ? Hab.fitting(world, 'save_liquid', recipe.skill) : null;
+    if (!rack) return;
+    if (world.rng.randf() >= rules().save_liquid_chance) return;
+    const saved = recipe.inputs.filter((i) => rules().bed_liquids.includes(i.item.id));
     for (const input of saved) entity.inventory.add(input.item, input.count);
-    if (saved.length) world.message(entity.id, `The coolant rack keeps your ${saved.map((i) => i.item.display_name.toLowerCase()).join(' and ')} from going to waste.`);
+    if (saved.length) world.message(entity.id, `The ${rack.displayName().toLowerCase()} keeps your ${saved.map((i) => i.item.display_name.toLowerCase()).join(' and ')} from going to waste.`);
   },
 
   save(world) {

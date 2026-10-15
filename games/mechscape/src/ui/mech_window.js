@@ -10,6 +10,7 @@
 import { ClientState } from '../client/client_state.js';
 import { Content, StationKind } from '../sim/defs.js';
 import { Mechs, InstallComponentAction, MechCommandAction, LeaveMechAction, BoardAction } from '../sim/mech.js';
+import { Text } from '../sim/text.js';
 import { el } from './screen.js';
 import { onEscape } from './common.js';
 
@@ -77,7 +78,7 @@ export class MechWindow {
 
     if (atGantry) {
       if (!world.flags.blueprint_loaded) {
-        el('div', 'muted', 'No blueprint loaded. Foreman Ada says the last one is in the warden\'s vault, deep in the Undercroft.', body);
+        el('div', 'muted', Text.get('mech.console_no_blueprint', Mechs.vars(def)), body);
       } else {
         el('div', 'muted small', 'Every part has to be made and installed. Anyone can install anything.', body);
         const list = el('div', 'mech-parts', '', body);
@@ -105,7 +106,7 @@ export class MechWindow {
     if (mech) {
       el('hr', '', '', body);
       const parked = Mechs.parked(world, def, mech);
-      el('div', '', `${def.display_name}: ${parked ? 'on the pad' : 'in the Deadfields'}`, body);
+      el('div', '', `${def.display_name}: ${parked ? 'on the pad' : `in the ${Mechs.fieldName(def)}`}`, body);
       const stats = el('div', 'mech-stats', '', body);
       el('div', '', `HP ${mech.hp}/${mech.maxHp()}`, stats);
       el('div', '', `Fuel ${mech.fuel}/${def.tank}`, stats);

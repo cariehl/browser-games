@@ -18,11 +18,11 @@
      },
      {
       "who": "npc",
-      "text": "We used to have mechs. Walkers you could climb inside, big enough to take on what walks the Deadfields. The foundry that built them is under our feet."
+      "text": "We used to have mechs. Walkers you could climb inside, big enough to take on that monstrosity in the Deadfields. The foundry that built them is under our feet."
      },
      {
       "who": "npc",
-      "text": "The last blueprint is down there, in the warden's vault. Bring it to me and this gantry builds again. It'll take everyone, mind. One pilot can't make every part."
+      "text": "The last blueprint is down there, in the warden's vault. Bring it to me and this gantry builds again. It'll take everyone, mind. Pilots weren't built to work alone."
      }
     ],
     "choices": [
@@ -67,7 +67,7 @@
     "lines": [
      {
       "who": "npc",
-      "text": "The vault's at the bottom, up past the foundry floor. The warden won't let it open while it's standing. Go in with friends."
+      "text": "The vault's at the bottom, up past the foundry floor. The warden won't let it open while it's standing. Bring a squad."
      }
     ]
    },
@@ -118,7 +118,7 @@
     "lines": [
      {
       "who": "npc",
-      "text": "The console by the pad lists every component and who's installed what. Trade for what you can't make."
+      "text": "The console by the pad lists every component and who's installed what. Work with your squad. Let's get this thing built!"
      }
     ]
    },
@@ -130,7 +130,7 @@
     "lines": [
      {
       "who": "npc",
-      "text": "It's finished. I never thought I'd see one stand up again."
+      "text": "It's finished! I never thought I'd see one stand up again."
      },
      {
       "who": "npc",
@@ -159,7 +159,7 @@
     "lines": [
      {
       "who": "npc",
-      "text": "Look at it. Take it out to the Deadfields; that's what it was built for. Bring it back in one piece if you can. Repairs take alloy plating."
+      "text": "Take that walker out to the Deadfields; that's what it was built for. Bring it back in one piece if you can. If it takes a beating, some alloy plates should patch it up."
      }
     ]
    },
@@ -305,7 +305,7 @@
         "complete": "found_art"
        },
        {
-        "say": "A paintball cannon! Harmless, mostly. Go and make the yard prettier. And if you liked the press... I may have overclocked it."
+        "say": "A paintball cannon! Harmless, mostly. Go and make the yard prettier. Oh, and I think I hear that paint press still stomping around down there, louder than ever. Might want to check it out."
        }
       ]
      }
@@ -323,7 +323,7 @@
      },
      {
       "who": "npc",
-      "text": "The press is still down there, overclocked. Bring friends."
+      "text": "The press is still down there, stomping around. Bring friends."
      }
     ]
    },

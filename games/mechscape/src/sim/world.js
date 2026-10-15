@@ -10,7 +10,8 @@ import { GatherNode, Station, Wreck, GroundItem } from './objects.js';
 import { Inventory, ItemStack } from './inventory.js';
 import { Combat } from './combat.js';
 import { AttackTask } from './tasks.js';
-import { StationKind } from './defs.js';
+import { Content, StationKind } from './defs.js';
+import { Text } from './text.js';
 import { TICK_SECONDS } from './constants.js';
 import { Trading } from './trade.js';
 import { Features } from './features.js';
@@ -23,14 +24,14 @@ const EMPTY_SIZE = { x: 32, y: 32 };
 
 export class World {
   /** HP regenerates by 1 every this many ticks, outside combat. */
-  static REGEN_TICKS = 10;
-  /** Ground items despawn after this long (3 minutes, like OSRS). */
-  static GROUND_ITEM_TICKS = 300;
+  static get REGEN_TICKS() { return Content.rules.world.regen_ticks; }
+  /** Ground items despawn after this long. */
+  static get GROUND_ITEM_TICKS() { return Content.rules.world.ground_item_ticks; }
   /** A husk lies where its NPC fell, or on the nearest free tile up to this far. */
   static HUSK_RADIUS = 2;
   static TICK_SECONDS = TICK_SECONDS;
-  /** A player's wreck crumbles this long after they die (15 minutes). */
-  static WRECK_TICKS = 1500;
+  /** A player's wreck crumbles this long after they die. */
+  static get WRECK_TICKS() { return Content.rules.world.wreck_ticks; }
   /** How far from where they fell a wreck may be placed, if the tile is taken. */
   static WRECK_RADIUS = 8;
   /** Players take ids from 1 up to this; NPC ids start above it. */
@@ -147,6 +148,7 @@ export class World {
       dark: !!entry.dark, ground: map ? map.defaultGround : null, music: entry.music || '',
     };
     this.areas.push(area);
+    Text.areas[area.id] = area.name;
     const w = this.size.x;
     for (let y = 0; y < size.y; y++) {
       for (let x = 0; x < size.x; x++) {
@@ -310,7 +312,7 @@ export class World {
     for (const wreck of [...this.wrecks.values()]) {
       if (this.tick >= wreck.expire_tick) {
         this.removeObject(wreck.id);
-        this.message(wreck.owner_id, 'Your wreck has crumbled, and everything in it is gone.');
+        this.message(wreck.owner_id, Text.get('death.wreck_crumbled'));
       }
     }
     for (const ground of [...this.ground_items.values()]) {
@@ -526,16 +528,16 @@ export class World {
       }
       return;
     }
-    this.message(entity.id, 'Oh dear, you are dead!');
+    this.message(entity.id, Text.get('death.dead'));
     const wreck = this._wreckBelongings(entity);
     entity.teleport(this.spawn_point);
     entity.hp = entity.maxHp();
     this.emitEvent(entity.id, 'printed', { entity: entity.id });
     if (wreck) {
       this.emitEvent(entity.id, 'wreck', { wreck: wreck.id, tile: wreck.tile });
-      this.message(entity.id, `You're printed fresh at the manufactory. Your wreck lies near (${wreck.tile.x}, ${wreck.tile.y}). It will crumble in ${Math.round(World.WRECK_TICKS * TICK_SECONDS / 60)} minutes.`);
+      this.message(entity.id, Text.get('death.printed_wreck', { x: wreck.tile.x, y: wreck.tile.y, minutes: Math.round(World.WRECK_TICKS * TICK_SECONDS / 60) }));
     } else {
-      this.message(entity.id, "You're printed fresh at the manufactory.");
+      this.message(entity.id, Text.get('death.printed'));
     }
   }
 

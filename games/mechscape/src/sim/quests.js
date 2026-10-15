@@ -29,9 +29,13 @@ import { Action, registerActions } from './actions.js';
 import { Task, StationHandlers, a } from './tasks.js';
 import { Content, StationKind } from './defs.js';
 import { chebyshev } from './grid.js';
+import { Text } from './text.js';
 
-/** Dialogue closes when you're further than this from who you're talking to. */
-const TALK_RANGE = 2;
+/** Dialogue lines with their text tokens ({npcs:foreman}) filled in. */
+function fillLines(lines) {
+  return lines.map((line) => ({ ...line, text: Text.fill(line.text) }));
+}
+
 
 export const Quests = {
   /** 'none', a stage id, or 'done'. */
@@ -57,7 +61,7 @@ export const Quests = {
     if (!stage) return;
     player.quests[questId] = { stage: stageId, counts: {} };
     world.emitEvent(player.id, 'quest', { quest: questId, stage: stageId });
-    world.message(player.id, `Quest journal (${quest.display_name}): ${stage.journal}`);
+    world.message(player.id, `Quest journal (${quest.display_name}): ${Text.fill(stage.journal)}`);
     Quests._advance(world, player, questId);
   },
 
@@ -115,7 +119,7 @@ export const Quests = {
       return;
     }
     const entry = Content.dialogue[npc.def.talk].entries[index];
-    player.dialogue = { npc_id: npc.id, talk: npc.def.talk, entry: index, lines: entry.lines, choices: (entry.choices || []).map((c) => c.text), serial: ++player.dialogue_serial };
+    player.dialogue = { npc_id: npc.id, talk: npc.def.talk, entry: index, lines: fillLines(entry.lines), choices: (entry.choices || []).map((c) => Text.fill(c.text)), serial: ++player.dialogue_serial };
     npc.path = [];
     npc.face_target = { ...player.tile };
   },
@@ -125,7 +129,7 @@ export const Quests = {
     const open = player.dialogue;
     if (!open) return;
     const npc = world.entities.get(open.npc_id);
-    if (!npc || chebyshev(npc.tile, player.tile) > TALK_RANGE) {
+    if (!npc || chebyshev(npc.tile, player.tile) > Content.rules.world.talk_range) {
       player.dialogue = null;
       return;
     }
@@ -159,7 +163,7 @@ export const Quests = {
       if (e.say) say = e.say;
     }
     if (say) {
-      player.dialogue = { npc_id: npc.id, talk: open.talk, entry: -1, lines: [{ who: 'npc', text: say }], choices: [], serial: ++player.dialogue_serial };
+      player.dialogue = { npc_id: npc.id, talk: open.talk, entry: -1, lines: fillLines([{ who: 'npc', text: say }]), choices: [], serial: ++player.dialogue_serial };
     }
   },
 };
@@ -355,7 +359,7 @@ Features.register({
       for (const questId of Object.keys(player.quests)) Quests._advance(world, player, questId);
       if (player.dialogue) {
         const npc = world.entities.get(player.dialogue.npc_id);
-        if (!npc || npc.isDead() || chebyshev(npc.tile, player.tile) > TALK_RANGE) player.dialogue = null;
+        if (!npc || npc.isDead() || chebyshev(npc.tile, player.tile) > Content.rules.world.talk_range) player.dialogue = null;
       }
     }
   },

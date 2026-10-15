@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>MechScape Content Editor</title>
+<link rel="icon" href="data:,">
+<link rel="stylesheet" href="editor.css">
+</head>
+<body>
+<header id="top">
+  <div class="brand">Content editor</div>
+  <div id="status" class="muted"></div>
+  <div class="grow"></div>
+  <button id="check">Check</button>
+  <button id="revert" title="Throw away unsaved changes and reload from disk">Revert</button>
+  <button id="save" class="primary" title="Ctrl+S">Save</button>
+</header>
+<div id="body">
+  <nav id="nav"></nav>
+  <section id="list"></section>
+  <main id="main"></main>
+</div>
+<div id="problems" hidden></div>
+<script type="module" src="app.js"></script>
+</body>
+</html>

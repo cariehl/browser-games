@@ -5,7 +5,7 @@
 
 import { ClientState } from '../client/client_state.js';
 import { Content } from '../sim/defs.js';
-import { CommissionAction, SETS, RESTED_COMFORT, MAX_COMMISSIONS_EACH } from '../sim/hab.js';
+import { CommissionAction, Hab } from '../sim/hab.js';
 import { el } from './screen.js';
 import { onEscape } from './common.js';
 
@@ -97,8 +97,8 @@ export class BoardWindow {
     const key = JSON.stringify([world.commissions, world.hab_comfort, world.hab_sets, inv]);
     if (key === this._key) return;
     this._key = key;
-    const sets = (world.hab_sets || []).map((id) => SETS[id].name);
-    this._summary.textContent = `Hab comfort ${world.hab_comfort || 0} (${RESTED_COMFORT} to rest well).${sets.length ? ` Sets: ${sets.join(', ')}.` : ''}`;
+    const sets = (world.hab_sets || []).map((id) => Hab.setName(id));
+    this._summary.textContent = `Hab comfort ${world.hab_comfort || 0} (${Content.rules.hab.rested_comfort} to rest well).${sets.length ? ` Sets: ${sets.join(', ')}.` : ''}`;
 
     const name = (id) => (Content.item(id) || { display_name: id }).display_name;
     this._list.innerHTML = '';
@@ -131,6 +131,6 @@ export class BoardWindow {
     }
     if (seen.has(current)) this._offer.value = current;
     const posted = list.filter((c) => c.by === me.display_name).length;
-    this._post.disabled = !seen.size || posted >= MAX_COMMISSIONS_EACH;
+    this._post.disabled = !seen.size || posted >= Content.rules.hab.max_commissions_each;
   }
 }

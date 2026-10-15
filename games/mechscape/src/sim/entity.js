@@ -5,9 +5,7 @@ import { NO_TARGET, eq } from './grid.js';
 import { Inventory, Storage } from './inventory.js';
 import { Skills, TOUGHNESS, ENDURANCE } from './skills.js';
 import { NpcBrain } from './npc_brain.js';
-
-/** How long after a hit someone counts as "in combat" (no regen, HP bar shown). */
-export const COMBAT_TICKS = 10;
+import { Content } from './defs.js';
 
 export class EntityState {
   constructor(id, tile) {
@@ -65,7 +63,7 @@ export class EntityState {
     /** Players aboard a mech: { mech, seat }, or null. Not saved (crew load dismounted). */
     this.riding = null;
 
-    for (const [skill, level] of Object.entries(Skills.STARTING_LEVELS)) this.xp[skill] = Skills.xpForLevel(level);
+    for (const skill of Skills.ALL) if (Skills.startingLevel(skill) > 1) this.xp[skill] = Skills.xpForLevel(Skills.startingLevel(skill));
     this.hp = this.level(TOUGHNESS);
   }
 
@@ -137,7 +135,7 @@ export class EntityState {
   }
 
   inCombat(tick) {
-    return tick - this.last_combat_tick < COMBAT_TICKS;
+    return tick - this.last_combat_tick < Content.rules.world.in_combat_ticks;
   }
 
   hasFaceTarget() {

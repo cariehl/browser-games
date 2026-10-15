@@ -2,7 +2,7 @@
  "ignition": {
   "id": "ignition",
   "display_name": "Ignition",
-  "description": "Foreman Ada wants the gantry working again. There used to be mechs in the Scrapyard.",
+  "description": "Foreman Ada wants the gantry working again. Rumor has it that there used to be mechs in the Scrapyard...",
   "main": true,
   "stages": [
    {
@@ -34,7 +34,7 @@
    },
    {
     "id": "build_mech",
-    "journal": "The blueprint is loaded into the gantry. Every component has to be made and installed: check the gantry console for what's missing. Nobody can make them all alone.",
+    "journal": "The blueprint is loaded into the gantry. Every component has to be made and installed; I can check the gantry console for what's missing. I should get some friends to help me.",
     "goal": {
      "type": "flag",
      "flag": "mech_complete"
@@ -65,11 +65,11 @@
  "found_art": {
   "id": "found_art",
   "display_name": "Found Art",
-  "description": "Juno the scrap artist is working on a masterpiece and needs some very particular scrap.",
+  "description": "Juno the scrap artist is working on a masterpiece and needs some very particular scrap. I can find Juno hanging out at The Spawn Camp.",
   "stages": [
    {
     "id": "collect",
-    "journal": "Juno wants three things for her sculpture: a sentry's eye, intact (from a sentry husk); a loader's horn (from a loader husk); and a ventbloom grown in coolant (a bio-still can do it, with Splicing 3).",
+    "journal": "Juno wants three things for her sculpture:\n- a sentry's eye, intact (from a sentry husk);\n- a loader's horn (from a loader husk);\n- a ventbloom grown in coolant (a bio-still can do it, with Splicing 3).",
     "goal": {
      "type": "have",
      "items": [
@@ -128,11 +128,11 @@
  "survey": {
   "id": "survey",
   "display_name": "The Quiet Reach",
-  "description": "Surveyor Pell wants someone to map the Quiet Reach, up the lift from the Commons. No fighting required.",
+  "description": "Surveyor Pell wants someone to map the Quiet Reach. No fighting required.",
   "stages": [
    {
     "id": "survey",
-    "journal": "Scan the five landmarks of the Quiet Reach and bring back three specimens (a glowcap, a skyfern and a ruin orchid). The drone will help. Some paths need a little work to open.",
+    "journal": "I need to scan the five landmarks of the Quiet Reach and bring back three specimens (a glowcap, a skyfern and a ruin orchid). The drone will help. Some paths need a little work to open.",
     "goal": {
      "type": "all",
      "goals": [
@@ -154,7 +154,7 @@
    },
    {
     "id": "report",
-    "journal": "The survey is done. Back down the lift to Surveyor Pell.",
+    "journal": "The survey is done. I should return to the Scrapyard and speak with Surveyor Pell.",
     "goal": {
      "type": "talk"
     }

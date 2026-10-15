@@ -19,9 +19,7 @@ import { Content, StationKind } from './defs.js';
 import { StationHandlers } from './tasks.js';
 import { fromKey } from './grid.js';
 import { XENOBIOLOGY } from './skills.js';
-
-/** XP for solving a puzzle. */
-export const PUZZLE_XP = 60;
+import { Text } from './text.js';
 
 export const Survey = {
   /** Opens every tile of terrain [id] (once), and remembers it. */
@@ -55,8 +53,8 @@ StationHandlers[StationKind.PUZZLE] = (world, player, station) => {
   }
   Survey.open(world, def.opens);
   world.message(player.id, def.done_text);
-  world.grantXp(player, XENOBIOLOGY, PUZZLE_XP);
-  world.announce(`${player.display_name} got the ${def.display_name.toLowerCase()} working in the Quiet Reach.`);
+  world.grantXp(player, XENOBIOLOGY, Content.rules.survey.puzzle_xp);
+  world.announce(Text.get('survey.puzzle_solved', { player: player.display_name, puzzle: def.display_name, area: world.areaAt(station.tile)?.name || '' }));
   world.emitEvent(player.id, 'puzzle_solved', { station: station.id, opens: def.opens });
 };
 

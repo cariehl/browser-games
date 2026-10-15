@@ -20,11 +20,7 @@ import { MELEE, ENDURANCE, TOUGHNESS } from './skills.js';
 import { PendingHit } from './objects.js';
 import { AttackTask } from './tasks.js';
 import { Features } from './features.js';
-
-/** Paint a paintball leaves: bright colours, one picked per shot. */
-export const PAINT_COLORS = [[1, 0.25, 0.45], [0.2, 0.75, 1], [1, 0.85, 0.15], [0.45, 1, 0.3], [0.75, 0.35, 1], [1, 0.55, 0.15]];
-/** How long paint stays on (a minute). */
-export const PAINT_TICKS = 100;
+import { Content } from './defs.js';
 
 /** Ticks between committing an attack and its strike. */
 export const WINDUP_TICKS = 1;
@@ -211,8 +207,9 @@ export const Combat = {
   funHit(world, hit, target) {
     const data = { attacker: hit.attacker_id, target: target.id, effect: hit.fun };
     if (hit.fun === 'paint') {
-      const color = PAINT_COLORS[world.rng.randiRange(0, PAINT_COLORS.length - 1)];
-      target.paint = { color, until: world.tick + PAINT_TICKS };
+      const { paint_colors: colors, paint_ticks: ticks } = Content.rules.combat;
+      const color = colors[world.rng.randiRange(0, colors.length - 1)];
+      target.paint = { color, until: world.tick + ticks };
       data.color = color;
     }
     world.emitEvent(target.id, 'fun_hit', data);

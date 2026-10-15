@@ -6,6 +6,7 @@
 import { ClientState } from '../client/client_state.js';
 import { Skills } from '../sim/skills.js';
 import { Content } from '../sim/defs.js';
+import { Text } from '../sim/text.js';
 import { cssColor } from '../view/tile_math.js';
 import { el } from './screen.js';
 import { commas, onEscape, capitalize } from './common.js';
@@ -52,20 +53,17 @@ export class SkillGuide {
     return this.el.style.display !== 'none';
   }
 
-  /** One line under the title about how the skill works. */
+  /** One line under the title about how the skill works (data/skills.json), and for crafting skills the XP per material. */
   static note(skill) {
-    switch (skill) {
-      case 'melee': return 'Trained by fighting with blades. Higher levels hit more often and harder. Blades swing every 4 ticks and are the steady, low-attention style.';
-      case 'firearms': return 'Trained by fighting with pistols. Pistols fire every 3 ticks from up to 6 tiles and use a gas cartridge per shot; shoot and step back to kite.';
-      case 'toughness': return 'Your maximum HP equals your Toughness level. Every hit you land gives Toughness XP.';
-      case 'endurance': return 'Makes you harder to hit. Trained by switching combat XP to Endurance in the Gear tab. Armor adds to it.';
-      case 'salvaging':
-      case 'siphoning':
-      case 'xenobiology': return "Gathering: click a node to work it until it's stripped or your inventory is full.";
-      case 'engineering': return 'Manufacturing: weapons, ammo and empty injectors at the weapons bench, armor and canisters at the metal press. XP comes from the materials used, the same per unit whatever you make: scrap metal 7, vent gas 1, relic circuitry 15, alloy plating 25.';
-      case 'splicing': return 'Manufacturing from living things, at the bio-still: healing injectors distilled from ventbloom and ichor. XP comes from the materials, the same per unit: ventbloom 10, ichor 1.';
-      default: return '';
+    const def = Content.skills[skill];
+    let text = def ? Text.fill(def.description) : '';
+    const xp = new Map();
+    for (const recipe of Object.values(Content.recipes)) {
+      if (recipe.skill !== skill) continue;
+      for (const input of recipe.inputs) if (input.item && input.item.craft_xp > 0) xp.set(input.item.display_name.toLowerCase(), input.item.craft_xp);
     }
+    if (xp.size) text += ` XP per unit: ${[...xp].sort((a, b) => a[1] - b[1]).map(([name, n]) => `${name} ${n}`).join(', ')}.`;
+    return text;
   }
 
   /** Everything the skill unlocks, sorted by level: { level, name, detail, color }. Level 0 means "no requirement". */
@@ -98,7 +96,7 @@ export class SkillGuide {
       }
     }
     if (skill === 'toughness') {
-      const start = Skills.STARTING_LEVELS[skill] || 1;
+      const start = Skills.startingLevel(skill);
       out.push({ level: start, name: 'Starting HP', detail: `Everyone starts at Toughness ${start}: ${start} HP`, color: GREEN });
       for (const level of [20, 40, 60, 80, 99]) out.push({ level, name: `${level} HP`, detail: 'One more HP per level', color: GREEN });
     }

@@ -283,6 +283,8 @@ export class TerrainDef {
       color: [0.45, 0.42, 0.4, 1], height: 1.2,
       /** Drawn see-through and flickering (holo walls). */
       shimmer: false,
+      /** Each tile drawn a little different in size and turn (rocks), so a ridge isn't a row of crates. */
+      vary: false,
       /** What a puzzle that opens this terrain leaves in its place ('' for nothing). */
       opens_to: '',
       /** Clickable (rocks), with an Inspect option showing its name and description. */
@@ -364,6 +366,21 @@ export class QuestDef {
 export class DialogueDef {
   constructor(raw) {
     assign(this, { id: '', entries: [] }, raw);
+  }
+
+  resolve() {}
+}
+
+/** A skill's name and how it's described in the skill guide. Which skills exist, and what they do, is code (sim/skills.js). */
+export class SkillDef {
+  constructor(raw) {
+    assign(this, {
+      id: '', display_name: '',
+      /** The line under the skill guide's title. Can use text tokens (see sim/text.js). */
+      description: '',
+      /** Every new character starts at this level. */
+      starting_level: 1,
+    }, raw);
   }
 
   resolve() {}
@@ -463,6 +480,7 @@ const KINDS = {
   quests: QuestDef,
   dialogue: DialogueDef,
   mechs: MechDef,
+  skills: SkillDef,
 };
 
 /** The data file each kind lives in (data/<file>.json). */
@@ -470,6 +488,7 @@ export const CONTENT_FILES = {
   weaponTypes: 'weapon_types', items: 'items', nodes: 'nodes', npcs: 'npcs',
   recipes: 'recipes', stations: 'stations', terrain: 'terrain', decor: 'decor', ground: 'ground',
   lootTables: 'loot_tables', quests: 'quests', dialogue: 'dialogue', mechs: 'mechs',
+  skills: 'skills', rules: 'rules', text: 'text',
 };
 
 /** Items whose id changed: old id -> new id, so old saves still find them. */
@@ -482,8 +501,15 @@ const RENAMED_ITEMS = Object.assign(Object.create(null), { gas_canister: 'canist
 export const Content = {
   loaded: false,
 
+  /** Tuning numbers (data/rules.json), read where they're used: Content.rules.hab.rested_comfort. */
+  rules: {},
+  /** Message templates by key (data/text.json); see sim/text.js. */
+  text: {},
+
   /** [bundle]: kind -> { id -> raw data }, kinds as in CONTENT_FILES. */
   load(bundle) {
+    this.rules = bundle.rules || {};
+    this.text = bundle.text || {};
     for (const [kind, cls] of Object.entries(KINDS)) {
       this[kind] = Object.create(null); // Ids come from saves and clients; no inherited keys.
       for (const [id, raw] of Object.entries(bundle[kind] || {})) this[kind][id] = new cls(raw);

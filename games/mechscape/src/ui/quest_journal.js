@@ -3,6 +3,7 @@
 
 import { Content } from '../sim/defs.js';
 import { Quests } from '../sim/quests.js';
+import { Text } from '../sim/text.js';
 import { el } from './screen.js';
 
 export class QuestJournal {
@@ -43,7 +44,7 @@ export class QuestJournal {
       el('div', 'title', quest.display_name, this._detail);
       let text = quest.description;
       if (stage === 'done') text = `Quest complete! ${quest.rewards && quest.rewards.text ? `Reward: ${quest.rewards.text}.` : ''}`;
-      else if (stage !== 'none') text = quest.stage(stage).journal;
+      else if (stage !== 'none') text = Text.fill(quest.stage(stage).journal);
       el('div', '', text, this._detail);
     } else {
       el('div', 'muted', 'Click a quest to read its journal. Talk to people around camp to start them.', this._detail);

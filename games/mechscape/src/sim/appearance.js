@@ -9,6 +9,7 @@ import { NpcBrain } from './npc_brain.js';
 import { Inventory, ItemStack } from './inventory.js';
 import { Content, StationKind } from './defs.js';
 import { chebyshev } from './grid.js';
+import { Text } from './text.js';
 
 export const HEADS = ['standard', 'dome', 'crest', 'mono'];
 export const CHASSIS = ['standard', 'heavy', 'sleek'];
@@ -45,11 +46,11 @@ export class SetLookAction extends Action {
   apply(world, entity) {
     const atManufactory = [...world.stations.values()].some((s) => s.def.kind === StationKind.RESPAWN && chebyshev(s.tile, entity.tile) <= 2);
     if (!atManufactory) {
-      world.message(entity.id, 'You can only be reconfigured at the manufactory.');
+      world.message(entity.id, Text.get('reconfigure.not_here'));
       return;
     }
     entity.look = cleanLook(this, entity.id);
-    world.message(entity.id, 'The manufactory whirs and reprints your plating. Looking good.');
+    world.message(entity.id, Text.get('reconfigure.done'));
     world.emitEvent(entity.id, 'reconfigured', { entity: entity.id });
   }
 }

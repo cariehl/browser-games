@@ -201,7 +201,7 @@ function buildObstacles(world) {
       material.emissive = color([0.15, 0.3, 0.4]);
     }
     const mesh = new THREE.InstancedMesh(geometry, material, tiles.length);
-    const rock = def.id === 'rock';
+    const rock = def.vary;
     tiles.forEach((tile, i) => {
       const rng = seeded(tile.x * 31 + tile.y * 977);
       tileToWorld(tile, flat ? 0.0 : def.height / 2 - 0.25, at);

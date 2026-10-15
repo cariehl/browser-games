@@ -10,9 +10,8 @@
 import { NO_TARGET, eq } from './grid.js';
 import { AttackTask } from './tasks.js';
 import { Combat } from './combat.js';
+import { Content } from './defs.js';
 
-/** Chance per idle tick that an NPC wanders somewhere. */
-const WANDER_CHANCE = 0.08;
 
 let standard = null;
 /** Named brains (NpcDef.brain): name -> brain. */
@@ -49,7 +48,7 @@ export class NpcBrain {
         return;
       }
     }
-    if (!npc.isMoving() && world.rng.randf() < WANDER_CHANCE) {
+    if (!npc.isMoving() && world.rng.randf() < Content.rules.world.npc_wander_chance) {
       const r = npc.def.wander_radius;
       const dest = {
         x: npc.spawn_tile.x + world.rng.randiRange(-r, r),

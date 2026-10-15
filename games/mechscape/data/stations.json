@@ -2,7 +2,7 @@
  "bio_still": {
   "id": "bio_still",
   "display_name": "Bio-still",
-  "description": "Distils herbs in ichor",
+  "description": "Distils herbs in ichor.",
   "skill": "splicing",
   "recipes": [
    "healing_injector",
@@ -24,7 +24,7 @@
  "manufactory": {
   "id": "manufactory",
   "display_name": "Manufactory",
-  "description": "Prints you a new body when you die",
+  "description": "Centrepiece of the Spawn Camp. If I get wrecked, I'll be reprinted here.",
   "skill": "",
   "kind": "respawn",
   "color": [
@@ -38,7 +38,7 @@
  },
  "metal_press": {
   "id": "metal_press",
-  "description": "Presses armor and canisters",
+  "description": "Presses armor and canisters out of various metals.",
   "display_name": "Metal press",
   "skill": "engineering",
   "recipes": [
@@ -80,7 +80,7 @@
  "storage_locker": {
   "id": "storage_locker",
   "display_name": "Storage locker",
-  "description": "Your storage, reachable from any locker",
+  "description": "My personal storage. Shared across all lockers.",
   "skill": "",
   "kind": "storage",
   "color": [
@@ -94,7 +94,7 @@
  },
  "weapons_bench": {
   "id": "weapons_bench",
-  "description": "Weapon crafting station",
+  "description": "A bench for crafting weapons from parts.",
   "display_name": "Weapons bench",
   "skill": "engineering",
   "recipes": [
@@ -123,7 +123,7 @@
  "gantry": {
   "id": "gantry",
   "display_name": "Mech gantry",
-  "description": "The console for the mech build on the pad beside it",
+  "description": "Not to be confused with a mech pantry.",
   "skill": "",
   "kind": "gantry",
   "recipes": [],
@@ -138,7 +138,7 @@
  "undercroft_hatch": {
   "id": "undercroft_hatch",
   "display_name": "Hatch",
-  "description": "A rusted hatch into the dark below",
+  "description": "A rusted hatch. Who knows where it leads?",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -152,7 +152,7 @@
  "undercroft_ladder": {
   "id": "undercroft_ladder",
   "display_name": "Ladder",
-  "description": "Back up to the Scrapyard",
+  "description": "A ladder back to the Scrapyard.",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -166,7 +166,7 @@
  "reach_lift": {
   "id": "reach_lift",
   "display_name": "Survey lift",
-  "description": "Rides out to the Quiet Reach",
+  "description": "A lift that will take me to the Quiet Reach.",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -184,7 +184,7 @@
  "reach_return": {
   "id": "reach_return",
   "display_name": "Survey lift",
-  "description": "Back to the Scrapyard",
+  "description": "A lift back to the Scrapyard.",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -202,7 +202,7 @@
  "deadfields_gate": {
   "id": "deadfields_gate",
   "display_name": "Deadfields gate",
-  "description": "Through to the Deadfields, where the mech fights",
+  "description": "A gate to the Deadfields. Wonder why it's called that?",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -216,7 +216,7 @@
  "deadfields_return": {
   "id": "deadfields_return",
   "display_name": "Deadfields gate",
-  "description": "Back to the Scrapyard",
+  "description": "A gate back to the Scrapyard.",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -230,7 +230,7 @@
  "fabricator": {
   "id": "fabricator",
   "display_name": "Fabricator",
-  "description": "Prints fittings and furniture for the hab",
+  "description": "Prints fittings and furniture for the hab.",
   "skill": "engineering",
   "kind": "craft",
   "recipes": [
@@ -259,7 +259,7 @@
  "hab_workbench": {
   "id": "hab_workbench",
   "display_name": "Hab workbench",
-  "description": "A tidy bench. Fittings in the hab make work here faster",
+  "description": "A tidy bench. Fittings in the hab make work here faster.",
   "skill": "engineering",
   "kind": "craft",
   "recipes": [
@@ -313,7 +313,7 @@
  "bio_bench": {
   "id": "bio_bench",
   "display_name": "Bio-bench",
-  "description": "Splicing, with the hab's racks and coolers to hand",
+  "description": "Distils herbs in ichor. The hab's racks and coolers make work here faster.",
   "skill": "splicing",
   "kind": "craft",
   "recipes": [
@@ -335,7 +335,7 @@
  "commission_board": {
   "id": "commission_board",
   "display_name": "Commission board",
-  "description": "Post a request, or fill someone else's",
+  "description": "I can request items here, or view requests from other pilots.",
   "skill": "",
   "kind": "board",
   "recipes": [],
@@ -350,7 +350,7 @@
  "trophy_wall": {
   "id": "trophy_wall",
   "display_name": "Trophy wall",
-  "description": "Mount trophies here for a bonus everyone shares",
+  "description": "Mount trophies here for a bonus everyone shares.",
   "skill": "",
   "kind": "trophy",
   "recipes": [],
@@ -365,7 +365,7 @@
  "blueprint_cache": {
   "id": "blueprint_cache",
   "display_name": "Sealed vault",
-  "description": "Something important was locked away down here",
+  "description": "Something important was locked away down here...",
   "skill": "",
   "kind": "cache",
   "recipes": [],
@@ -384,7 +384,7 @@
  "arena_door": {
   "id": "arena_door",
   "display_name": "Press hall door",
-  "description": "A heavy door to the old paint press hall",
+  "description": "A heavy door to the old paint press hall.",
   "skill": "",
   "kind": "arena_door",
   "recipes": [],
@@ -400,7 +400,7 @@
  "repair_rig": {
   "id": "repair_rig",
   "display_name": "Repair rig",
-  "description": "Feed it alloy plating to patch up the mech",
+  "description": "I can feed it alloy plating to patch up the mech.",
   "skill": "",
   "kind": "repair",
   "recipes": [],
@@ -415,7 +415,7 @@
  "bridge_winch": {
   "id": "bridge_winch",
   "display_name": "Bridge winch",
-  "description": "A winch for the broken bridge. It needs scrap to mend",
+  "description": "A winch for the broken bridge. I can mend it with some scrap.",
   "skill": "",
   "kind": "puzzle",
   "recipes": [],
@@ -436,7 +436,7 @@
  "gas_valve": {
   "id": "gas_valve",
   "display_name": "Door valve",
-  "description": "Feeds gas to the old blast door",
+  "description": "Feeds gas to the old blast door.",
   "skill": "",
   "kind": "puzzle",
   "recipes": [],
@@ -457,7 +457,7 @@
  "veil_projector": {
   "id": "veil_projector",
   "display_name": "Projector",
-  "description": "A flickering projector, still running after all this time",
+  "description": "A flickering projector, still running after all this time.",
   "skill": "",
   "kind": "puzzle",
   "recipes": [],
@@ -475,7 +475,7 @@
  "landmark_skull": {
   "id": "landmark_skull",
   "display_name": "Colossus skull",
-  "description": "Scan it for your survey log",
+  "description": "A massive colossus skull. I should scan it for my survey log.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
@@ -491,7 +491,7 @@
  "landmark_antenna": {
   "id": "landmark_antenna",
   "display_name": "Old relay mast",
-  "description": "Scan it for your survey log",
+  "description": "An old relay mast, still blinking. I should scan it for my survey log.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
@@ -507,7 +507,7 @@
  "landmark_pool": {
   "id": "landmark_pool",
   "display_name": "Glow pool",
-  "description": "Scan it for your survey log",
+  "description": "A glowing pool of ichor. I should scan it for my survey log.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
@@ -523,7 +523,7 @@
  "landmark_overlook": {
   "id": "landmark_overlook",
   "display_name": "The overlook",
-  "description": "Scan it for your survey log",
+  "description": "A breathtaking view, if I could breathe. I should scan it for my survey log.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
@@ -539,7 +539,7 @@
  "landmark_lander": {
   "id": "landmark_lander",
   "display_name": "Crashed lander",
-  "description": "Scan it for your survey log",
+  "description": "A crashed lander. I should scan it for my survey log.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
