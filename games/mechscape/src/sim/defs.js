@@ -170,6 +170,8 @@ export class NpcDef {
       attackable: true,
       /** Dialogue id when you can talk to it (see data/dialogue.json), or ''. */
       talk: '',
+      /** Pets: what it says about things you find, by landmark id (and 'specimen', 'puzzle'). */
+      comments: {},
       aggressive: false, aggro_radius: 3, wander_radius: 3, leash_radius: 8, respawn_ticks: 30,
       /** Only a mech (or its gunner) can hurt it; anything else does nothing. */
       mech_only_damage: false,

@@ -19,6 +19,7 @@ import { cssColor } from '../view/tile_math.js';
 import { el } from './screen.js';
 import { ITEM_COLOR, commas, short, capitalize } from './common.js';
 import { InspectInfo } from './inspect_info.js';
+import { COSMETIC_PARTS, CallPetAction, DismissPetAction } from '../sim/appearance.js';
 
 /**
  * The full skill list from the design doc, so the menu shows its eventual
@@ -343,6 +344,8 @@ export class PlayerPanel {
     if (item.isConsumable()) options.push({ verb: item.use_verb, target: item.display_name, color: ITEM_COLOR, action: () => this._use(index) });
     else if (item.isWeapon) options.push({ verb: 'Wield', target: item.display_name, color: ITEM_COLOR, action: () => this._equip(index) });
     else if (item.isArmor()) options.push({ verb: 'Wear', target: item.display_name, color: ITEM_COLOR, action: () => this._equip(index) });
+    else if (item.kind === 'cosmetic') options.push({ verb: 'Wear', target: item.display_name, color: ITEM_COLOR, action: () => this.link.send(ClientState.localPlayerId, new EquipAction(index)) });
+    else if (item.kind === 'pet') options.push({ verb: 'Call', target: item.display_name, color: ITEM_COLOR, action: () => this.link.send(ClientState.localPlayerId, new CallPetAction(index)) });
     else if (item.lore) options.push({ verb: 'Read', target: item.display_name, color: ITEM_COLOR, action: () => this.inspector.open(() => InspectInfo.lore(item), x, y, false) });
     options.push({ verb: 'Drop', target: item.display_name, color: ITEM_COLOR, action: () => this._drop(index) });
     options.push({
@@ -376,11 +379,27 @@ export class PlayerPanel {
       button.addEventListener('click', () => this.link.send(ClientState.localPlayerId, new UnequipAction(slot)));
       this._armorButtons[slot] = button;
     }
+    el('div', 'muted small', 'Cosmetics', page);
+    this._cosmeticButtons = {};
+    for (const part of COSMETIC_PARTS) {
+      const button = el('button', 'gear-button', '', page);
+      button.addEventListener('click', () => this.link.send(ClientState.localPlayerId, new UnequipAction(part)));
+      this._cosmeticButtons[part] = button;
+    }
+    this._petButton = el('button', 'gear-button', '', page);
+    this._petButton.addEventListener('click', () => this.link.send(ClientState.localPlayerId, new DismissPetAction()));
     el('hr', '', '', page);
     this._statsLabel = el('div', 'muted small pre', '', page);
   }
 
   _updateGear(me) {
+    for (const part of COSMETIC_PARTS) {
+      const item = me.cosmetics && me.cosmetics[part];
+      setText(this._cosmeticButtons[part], `${capitalize(part)}: ${item ? item.display_name : 'nothing'}`);
+      this._cosmeticButtons[part].title = item ? 'Click to take off' : '';
+    }
+    setText(this._petButton, `Pet: ${me.pet ? me.pet.display_name : 'none'}`);
+    this._petButton.title = me.pet ? 'Click to put it back in your pack' : 'Pets are very rare finds. Use one from your pack to call it out.';
     for (const slot of ARMOR_SLOTS) {
       const button = this._armorButtons[slot];
       const item = me.armor[slot];

@@ -11,6 +11,7 @@
 // kept between play sessions: the operator starts a fresh world for those
 // (npm start -- --new).
 
+import { cleanLook } from '../src/sim/appearance.js';
 import { World, DEFAULT_MAP } from '../src/sim/world.js';
 import { GameLoop } from '../src/sim/game_loop.js';
 import { Action } from '../src/sim/actions.js';
@@ -26,9 +27,11 @@ export class Game {
    * [debug]: allow debug actions (granting XP).
    * [fresh]: ignore any saved world and start a new one.
    */
-  constructor({ store = null, debug = false, fresh = false, map = DEFAULT_MAP } = {}) {
+  constructor({ store = null, debug = false, fresh = false, map = DEFAULT_MAP, xpRate = 1 } = {}) {
     this.store = store;
     this.debug = debug;
+    /** Every XP gain is multiplied by this: the tuning knob for the night (--xp-rate). */
+    this.xpRate = xpRate;
     /** Logged-out players by name key: playerToDict() data. */
     this.away = new Map();
     /** Entity ids of players online now. */
@@ -46,6 +49,7 @@ export class Game {
       world = new World(map);
       this.notice = 'Started a new world.';
     }
+    world.xp_rate = xpRate;
     this.loop = new GameLoop(world);
     this.loop.onTick((tick) => {
       if (this.store && tick % AUTOSAVE_TICKS === 0) this.save();
@@ -70,7 +74,7 @@ export class Game {
    * session, otherwise a new one at the manufactory. Returns the entity.
    * Throws (with a message for the player) if the name is taken or the world is full.
    */
-  join(rawName) {
+  join(rawName, look = null) {
     const name = Game.checkName(rawName);
     const key = nameKey(name);
     const world = this.world;
@@ -95,6 +99,8 @@ export class Game {
       player = world.spawn(id, world.spawn_point);
     }
     player.display_name = name;
+    // The look the client remembers (picked on the connect screen).
+    if (look) player.look = cleanLook(look, player.id);
     // The client numbers its actions from 1 again.
     player.last_action_seq = 0;
     this.online.add(player.id);

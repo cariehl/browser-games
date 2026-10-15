@@ -66,6 +66,8 @@ export class World {
     /** Everything that happened during the latest tick, for views: { entity, type, data } */
     this.events = [];
     this.rng = new Rng();
+    /** Every XP gain is multiplied by this (the server's --xp-rate). Not saved; the server sets it. */
+    this.xp_rate = 1;
     /** Lines for everyone, shown at the start of the next tick (see announce()). */
     this._announcements = [];
     /**
@@ -334,6 +336,7 @@ export class World {
   }
 
   grantXp(entity, skill, amount) {
+    amount = Math.round(amount * this.xp_rate * 10) / 10;
     const before = entity.level(skill);
     entity.xp[skill] = Math.min((entity.xp[skill] || 0) + amount, Skills.MAX_XP);
     this.emitEvent(entity.id, 'xp', { skill, amount });
@@ -537,6 +540,7 @@ export class World {
     }
     for (const slot of Object.keys(player.armor)) items.push(new ItemStack(player.armor[slot]));
     player.armor = {};
+    for (const f of Features.list) if (f.dropOnDeath) items.push(...f.dropOnDeath(this, player));
     if (items.length === 0) return null;
     return this.addWreck(player.id, this.wreckTileNear(player.tile), items, this.tick + World.WRECK_TICKS);
   }
@@ -754,7 +758,8 @@ export class World {
 
   /** How [entity] may path: NPCs keep out of safe zones. */
   pathOptions(entity) {
-    if (entity && entity.isNpc()) return { mask: this._npcMask };
+    // Hostile NPCs keep out of safe zones; pets and people you talk to go anywhere.
+    if (entity && entity.isNpc() && entity.def.attackable) return { mask: this._npcMask };
     return {};
   }
 

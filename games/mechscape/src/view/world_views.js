@@ -10,7 +10,8 @@ import { Models } from './models.js';
 import { Hitbox, HitboxKind } from './hitbox.js';
 import { EntityView } from './entity_view.js';
 import { ModelAnimator } from './model_animator.js';
-import { PlayerAppearance } from './player_appearance.js';
+import { PlayerAppearance, PaintTint } from './player_appearance.js';
+import { Bursts } from './bursts.js';
 import { GatherNodeView } from './gather_node_view.js';
 import { StationView } from './station_view.js';
 import { buildGrid } from './grid_view.js';
@@ -25,10 +26,6 @@ const TICK_SECONDS = 0.6;
 /** How long a chat line floats over whoever said it. */
 const CHAT_SECONDS = 5;
 /** Each player's own colour, by id, so friends can tell each other apart. Player 1 keeps the original orange. */
-export const PLAYER_COLOURS = [
-  [0.85, 0.55, 0.25], [0.25, 0.55, 0.85], [0.35, 0.75, 0.35], [0.8, 0.3, 0.35],
-  [0.65, 0.4, 0.8], [0.9, 0.8, 0.3], [0.3, 0.75, 0.75], [0.85, 0.45, 0.65],
-];
 
 /** Every model file the world's content refers to, to preload. */
 export function modelFiles(content) {
@@ -69,9 +66,15 @@ export class WorldViews {
     }
     for (const state of world.entities.values()) this._addEntity(state);
     this._syncNodes();
+    this.bursts = new Bursts(this.root);
     ClientState.onTick(() => {
       for (const event of ClientState.world.events) {
-        if (event.type !== 'chat') continue;
+        if (event.type === 'fun_hit') {
+          const target = this.entities.get(event.data.target);
+          if (target) this.bursts.spawn(target.position.clone().setY(target.position.y + target.headHeight * 0.6), event.data.effect, event.data.color);
+          continue;
+        }
+        if (event.type !== 'chat' && event.type !== 'say') continue;
         const view = this.entities.get(event.entity);
         if (!view) continue;
         if (!view.chatLabel) view.chatLabel = new WorldLabel('chat-label');
@@ -88,6 +91,7 @@ export class WorldViews {
 
   update(delta) {
     const world = ClientState.world;
+    this.bursts.update(delta);
     for (const state of world.entities.values()) if (!this.entities.has(state.id)) this._addEntity(state);
     // Players who logged out (online only: NPCs never leave the world).
     for (const [id, view] of this.entities) {
@@ -249,7 +253,6 @@ function makePlayerView(state) {
     view.lunges = false;
   }
   view.appearance = new PlayerAppearance(model, state);
-  view.appearance.primary = PLAYER_COLOURS[(Math.max(state.id, 1) - 1) % PLAYER_COLOURS.length];
   const box = Models.bounds(model);
   view.headHeight = box.max.y + 0.15;
   // Other players can be clicked (trade); your own model never is.
@@ -277,6 +280,8 @@ function makeNpcView(state) {
     const box = Models.bounds(model);
     view.headHeight = box.max.y + 0.15;
     view.add(new Hitbox(HitboxKind.NPC, state.id, box.getSize(new THREE.Vector3()), box.getCenter(new THREE.Vector3())));
+    const paint = new PaintTint(model);
+    view.appearance = { update: () => paint.update(state.paint) };
     return view;
   }
   const s = def.size;

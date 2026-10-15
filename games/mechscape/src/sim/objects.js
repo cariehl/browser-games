@@ -127,5 +127,7 @@ export class PendingHit {
     this.target_id = targetId;
     this.damage = damage;
     this.impact_tick = impactTick;
+    /** A fun weapon's effect ('paint', 'confetti') instead of damage, or ''. */
+    this.fun = '';
   }
 }

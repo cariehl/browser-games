@@ -19,6 +19,12 @@
 import { MELEE, ENDURANCE, TOUGHNESS } from './skills.js';
 import { PendingHit } from './objects.js';
 import { AttackTask } from './tasks.js';
+import { Features } from './features.js';
+
+/** Paint a paintball leaves: bright colours, one picked per shot. */
+export const PAINT_COLORS = [[1, 0.25, 0.45], [0.2, 0.75, 1], [1, 0.85, 0.15], [0.45, 1, 0.3], [0.75, 0.35, 1], [1, 0.55, 0.15]];
+/** How long paint stays on (a minute). */
+export const PAINT_TICKS = 100;
 
 /** Ticks between committing an attack and its strike. */
 export const WINDUP_TICKS = 1;
@@ -46,6 +52,7 @@ export const Combat = {
       ammo: w ? w.ammo : null,
       attack_level: attackLevel,
       max_hit: Combat.maxHit(attackLevel, w ? w.power : 0),
+      fun: w ? w.fun_effect : '',
     };
   },
 
@@ -110,6 +117,15 @@ export const Combat = {
    * schedules the hit to land on [strikeTick]. Ammo is spent by the caller.
    */
   commit(world, attacker, target, p, strikeTick) {
+    if (p.fun) {
+      // Fun weapons never hurt, never miss and never train anything.
+      attacker.last_combat_tick = world.tick;
+      world.emitEvent(attacker.id, 'attack', { attacker: attacker.id, target: target.id, strike_tick: strikeTick });
+      const hit = new PendingHit(attacker.id, target.id, 0, strikeTick);
+      hit.fun = p.fun;
+      world.pending_hits.push(hit);
+      return;
+    }
     const [defLevel, defBonus] = Combat.defence(target);
     const chance = Combat.hitChance(p.attack_level, p.accuracy, defLevel, defBonus);
     let damage = 0;
@@ -140,9 +156,14 @@ export const Combat = {
     const target = world.entities.get(hit.target_id);
     if (!target || target.isDead()) return;
     const attacker = world.entities.get(hit.attacker_id) || null;
+    if (hit.fun) {
+      Combat.funHit(world, hit, target);
+      return;
+    }
     // Nobody gets hurt in a safe zone.
     const safe = !target.isNpc() && world.inZone(target.tile, 'safe');
-    const damage = safe ? 0 : Math.min(hit.damage, target.hp);
+    let damage = safe ? 0 : Math.min(hit.damage, target.hp);
+    damage = Math.max(0, Math.min(Features.reduce('hitDamage', damage, world, attacker, target), target.hp));
     target.last_combat_tick = world.tick;
     if (attacker) attacker.last_combat_tick = world.tick;
     world.emitEvent(target.id, 'hit', { attacker: hit.attacker_id, target: target.id, damage });
@@ -155,6 +176,17 @@ export const Combat = {
       return;
     }
     if (attacker && !attacker.isDead()) Combat._retaliate(target, attacker);
+  },
+
+  /** A paintball or a confetti blade: no damage, no fight, just a mess. */
+  funHit(world, hit, target) {
+    const data = { attacker: hit.attacker_id, target: target.id, effect: hit.fun };
+    if (hit.fun === 'paint') {
+      const color = PAINT_COLORS[world.rng.randiRange(0, PAINT_COLORS.length - 1)];
+      target.paint = { color, until: world.tick + PAINT_TICKS };
+      data.color = color;
+    }
+    world.emitEvent(target.id, 'fun_hit', data);
   },
 
   /** Idle targets fight back: NPCs as their brain decides, players when they aren't busy. */

@@ -22,7 +22,7 @@ import { Features } from './features.js';
 
 /** Event types only the entity they belong to is told about. */
 const PRIVATE_EVENTS = new Set(['message', 'xp', 'level_up', 'open_station', 'open_storage', 'wreck', 'boost',
-  'trade_request', 'open_trade', 'close_trade', 'traded']);
+  'trade_request', 'open_trade', 'close_trade', 'traded', 'open_reconfigure']);
 
 /** Event types everyone hears about, wherever they are. */
 const GLOBAL_EVENTS = new Set(['chat', 'broadcast']);
@@ -50,6 +50,7 @@ export function takeSnapshot(world, viewerId) {
       face: e.face_target,
       combat: e.last_combat_tick,
       boosts: e.boosts,
+      paint: e.paint && e.paint.until > world.tick ? e.paint : null,
     };
     if (e.isNpc()) {
       out.dead_until = e.dead_until;
@@ -134,6 +135,7 @@ export function applySnapshot(world, snap, viewerId) {
     e.face_target = data.face ? { ...data.face } : NO_TARGET;
     e.last_combat_tick = data.combat;
     e.boosts = data.boosts || {};
+    e.paint = data.paint || null;
     if (e.isNpc()) {
       e.dead_until = data.dead_until;
       e.husk_tile = data.husk_tile ? { ...data.husk_tile } : NO_TARGET;

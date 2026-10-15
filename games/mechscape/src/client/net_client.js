@@ -11,6 +11,7 @@ import { World } from '../sim/world.js';
 import { applySnapshot } from '../sim/snapshot.js';
 import { TICK_SECONDS } from '../sim/constants.js';
 import { SimulatedLink } from './simulated_link.js';
+import { LookEditor, savedLook, rememberLook } from '../ui/look_editor.js';
 
 export const ROOM_NAME = 'scrapyard';
 const NAME_KEY = 'mechscape_name';
@@ -101,10 +102,10 @@ function loadSdk() {
  * { room, loop, id, debug } once the first snapshot is in the mirror, or
  * rejects with the server's reason (name taken, server full...).
  */
-export async function join(name, mapPath = World.defaultMap) {
+export async function join(name, mapPath = World.defaultMap, look = savedLook()) {
   const Colyseus = await loadSdk();
   const client = new Colyseus.Client(window.location.origin);
-  const room = await client.join(ROOM_NAME, { name });
+  const room = await client.join(ROOM_NAME, look ? { name, look } : { name });
   rememberName(name);
   // Ticks can arrive before the welcome is handled; hold them until the mirror exists.
   let loop = null;
@@ -121,11 +122,22 @@ export async function join(name, mapPath = World.defaultMap) {
   loop = new NetLoop(world, welcome.id);
   applySnapshot(world, welcome.snapshot, welcome.id);
   for (const snapshot of early) if (snapshot.tick > world.tick) loop.receive(snapshot);
-  return { room, loop, id: welcome.id, debug: welcome.debug };
+  return { room, loop, id: welcome.id, debug: welcome.debug, xpRate: welcome.xp_rate || 1 };
+}
+
+/** What the server says about itself (GET /server-info), or null. */
+async function serverInfo() {
+  try {
+    const res = await fetch('/server-info');
+    return res.ok ? await res.json() : null;
+  } catch {
+    return null;
+  }
 }
 
 /**
- * Shows a name box over the loading screen and resolves with what's typed.
+ * Shows the connect screen over the loading screen (a name box and the look
+ * picker) and resolves with the name typed; the look picked is remembered.
  * [error] is shown above it (why the last try failed).
  */
 export function askName(status, initial = '', error = '') {
@@ -134,16 +146,26 @@ export function askName(status, initial = '', error = '') {
     status.classList.remove('error');
     const form = document.createElement('form');
     form.className = 'join-form panel';
-    form.innerHTML = '<div class="title">MechScape</div>'
+    form.innerHTML = '<div class="title">MechScape</div><div class="muted small server-info"></div>'
       + '<label>Pilot name <input name="name" maxlength="12" autocomplete="nickname" spellcheck="false"></label>'
+      + '<div class="look-slot"></div>'
       + '<div class="warn join-error"></div><button type="submit">Join</button>';
     const input = form.querySelector('input');
     input.value = initial;
     form.querySelector('.join-error').textContent = error;
+    const editor = new LookEditor(form.querySelector('.look-slot'), savedLook());
+    serverInfo().then((info) => {
+      if (!info) return;
+      const parts = [`${info.online} online`];
+      if (info.xp_rate && info.xp_rate !== 1) parts.push(`XP rate ×${info.xp_rate}`);
+      form.querySelector('.server-info').textContent = parts.join('  ·  ');
+    });
     form.addEventListener('submit', (e) => {
       e.preventDefault();
       const name = input.value.trim();
       if (!name) return;
+      rememberLook(editor.look);
+      editor.dispose();
       form.remove();
       resolve(name);
     });

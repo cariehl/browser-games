@@ -58,6 +58,8 @@ export class EntityState {
     this.trade_id = -1;
     /** A trade asked for: { target, until }, or null. Not saved. */
     this.trade_request = null;
+    /** Paint from a paintball: { color, until }, or null. Not saved. */
+    this.paint = null;
 
     for (const [skill, level] of Object.entries(Skills.STARTING_LEVELS)) this.xp[skill] = Skills.xpForLevel(level);
     this.hp = this.level(TOUGHNESS);
@@ -167,6 +169,8 @@ export class NpcState extends EntityState {
     this.hp = def.hitpoints;
     /** Not on the map: spawned by something (a pet, an add). Not saved with the map's NPCs. */
     this.dynamic = false;
+    /** Pets: the player it follows (undefined for everything else). */
+    this.owner_id = undefined;
   }
 
   brain() {

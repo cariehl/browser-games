@@ -33,6 +33,8 @@ export class AttackTask extends Task {
   process(world, entity) {
     const target = world.entities.get(this.target_id);
     if (!target || target.isDead() || target === entity) return false;
+    // Players are only ever targets of fun weapons.
+    if (!target.isNpc() && !entity.isNpc() && !(entity.weapon && entity.weapon.fun_effect)) return false;
 
     const p = Combat.profile(entity);
     entity.face_target = { ...target.tile };
@@ -256,6 +258,7 @@ export class StationTask extends Task {
         break;
       case StationKind.RESPAWN:
         world.message(entity.id, `The ${station.def.display_name.toLowerCase()} hums. If you die, you'll be printed here.`);
+        world.emitEvent(entity.id, 'open_reconfigure', { station: station.id });
         break;
       case StationKind.PORTAL: {
         const link = world.linkAt(station.tile);

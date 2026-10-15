@@ -103,6 +103,7 @@ function readField(kind, value) {
       return Number.isSafeInteger(x) && Number.isSafeInteger(y) && Math.abs(x) <= 100000 && Math.abs(y) <= 100000 ? { x, y } : undefined;
     }
     case 'text': return cleanText(value);
+    case 'color': return typeof value === 'string' && /^#[0-9a-f]{6}$/i.test(value) ? value.toLowerCase() : undefined;
     default: throw new Error(`unknown field kind ${kind}`);
   }
 }
@@ -142,9 +143,10 @@ export class AttackAction extends Action {
   cancelsTask() { return true; }
   apply(world, entity) {
     const target = world.entities.get(this.target_id);
-    // No fighting other players (no PvP in the alpha).
-    if (!target || target.isDead() || target === entity || !target.isNpc()) return;
-    if (!target.def.attackable) {
+    if (!target || target.isDead() || target === entity) return;
+    // No fighting other players (no PvP in the alpha), though a paintball is fair game.
+    if (!target.isNpc() && !(entity.weapon && entity.weapon.fun_effect)) return;
+    if (target.isNpc() && !target.def.attackable) {
       world.message(entity.id, "You can't attack that.");
       return;
     }
@@ -326,6 +328,9 @@ export class EquipAction extends Action {
     } else if (item.isArmor()) {
       previous = entity.armor[item.armor_slot] || null;
       entity.armor[item.armor_slot] = item;
+    } else if (item.kind === 'cosmetic' && entity.cosmetics) {
+      previous = entity.cosmetics[item.cosmetic_part] || null;
+      entity.cosmetics[item.cosmetic_part] = item;
     } else {
       return;
     }
@@ -345,14 +350,16 @@ export class UnequipAction extends Action {
   slot() { return `unequip_${this.equip_slot}`; }
   apply(world, entity) {
     const weapon = this.equip_slot === UnequipAction.WEAPON;
-    if (!weapon && !Object.hasOwn(entity.armor, this.equip_slot)) return;
-    const item = weapon ? entity.weapon : entity.armor[this.equip_slot];
+    const cosmetic = entity.cosmetics && Object.hasOwn(entity.cosmetics, this.equip_slot);
+    if (!weapon && !cosmetic && !Object.hasOwn(entity.armor, this.equip_slot)) return;
+    const item = weapon ? entity.weapon : cosmetic ? entity.cosmetics[this.equip_slot] : entity.armor[this.equip_slot];
     if (!item) return;
     if (!entity.inventory.add(item)) {
       world.message(entity.id, "You don't have enough inventory space to do that.");
       return;
     }
     if (weapon) entity.weapon = null;
+    else if (cosmetic) delete entity.cosmetics[this.equip_slot];
     else delete entity.armor[this.equip_slot];
   }
 }

@@ -18,6 +18,7 @@ import { SimulatedLink } from './client/simulated_link.js';
 import { PlayerController } from './client/player_controller.js';
 import { SaveManager } from './client/save_manager.js';
 import { NetLink, join, savedName, askName } from './client/net_client.js';
+import { savedLook } from './ui/look_editor.js';
 import { Models } from './view/models.js';
 import { WorldViews, modelFiles } from './view/world_views.js';
 import { CameraRig } from './view/camera_rig.js';
@@ -35,6 +36,7 @@ import { PlayerPanel } from './ui/player_panel.js';
 import { SkillGuide } from './ui/skill_guide.js';
 import { CraftMenu } from './ui/craft_menu.js';
 import { StorageMenu } from './ui/storage_menu.js';
+import { ReconfigureWindow } from './ui/reconfigure_window.js';
 import { DebugHud } from './ui/debug_hud.js';
 import { DialogueBox } from './ui/dialogue_box.js';
 import { QuestJournal } from './ui/quest_journal.js';
@@ -128,9 +130,11 @@ function addEnvironment(scene) {
 /** Asks for a name if there isn't one, and joins; asks again if the server turns it away. */
 async function joinServer(status) {
   let name = savedName();
+  // A name in the URL joins straight away; otherwise the connect screen (name and look) shows first.
+  const quick = new URLSearchParams(window.location.search).has('name');
   let error = '';
   for (;;) {
-    if (!name || error) name = await askName(status, name, error);
+    if (!name || error || !quick) name = await askName(status, name, error);
     status.textContent = `Joining as ${name}…`;
     try {
       return await join(name, DEFAULT_MAP);
@@ -166,13 +170,16 @@ async function main() {
     const { world, notice } = SaveManager.startingWorld(() => new World(DEFAULT_MAP));
     ClientState.start(world);
     ClientState.notice = notice;
-    ClientState.localPlayer();
+    const me = ClientState.localPlayer();
+    const look = savedLook();
+    if (look && me) me.look = look;
   } else {
     net = await joinServer(status);
     ClientState.online = true;
     ClientState.start(net.loop.world, net.loop);
     ClientState.localPlayerId = net.id;
-    ClientState.notice = `You're playing as ${ClientState.me().display_name}.`;
+    ClientState.notice = `You're playing as ${ClientState.me().display_name}.`
+      + (net.xpRate !== 1 ? ` This server gives XP at ×${net.xpRate}.` : '');
   }
   const world = ClientState.world;
   status.remove();
@@ -219,6 +226,7 @@ async function main() {
   const dialogue = new DialogueBox(ui, link);
   const craft = new CraftMenu(ui, link);
   const storage = new StorageMenu(ui, link, menu);
+  new ReconfigureWindow(ui, link);
   const trade = new TradeWindow(ui, link, menu);
   const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
   const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector });

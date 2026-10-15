@@ -71,7 +71,7 @@ export const SaveGame = {
         id: g.id, item: g.item.id, count: g.count, tile: g.tile, despawn_tick: g.despawn_tick,
       })),
       pending_hits: world.pending_hits.map((h) => ({
-        attacker: h.attacker_id, target: h.target_id, damage: h.damage, impact_tick: h.impact_tick,
+        attacker: h.attacker_id, target: h.target_id, damage: h.damage, impact_tick: h.impact_tick, fun: h.fun || '',
       })),
       features: Features.collect('save', world),
     };
@@ -136,7 +136,11 @@ export const SaveGame = {
       for (const entry of data.pending_hits || []) {
         const attacker = bySavedId.get(entry.attacker);
         const target = bySavedId.get(entry.target);
-        if (attacker && target) world.pending_hits.push(new PendingHit(attacker.id, target.id, entry.damage, entry.impact_tick));
+        if (attacker && target) {
+          const hit = new PendingHit(attacker.id, target.id, entry.damage, entry.impact_tick);
+          if (entry.fun) hit.fun = entry.fun;
+          world.pending_hits.push(hit);
+        }
       }
     } else {
       for (const e of world.entities.values()) {

@@ -12,6 +12,7 @@
 // back as the same pilot before it's logged out. Joining afresh with that
 // name in the meantime (reloading the page) takes the pilot over at once.
 
+import { cleanLook } from '../src/sim/appearance.js';
 import { Room } from '@colyseus/core';
 import { takeSnapshot } from '../src/sim/snapshot.js';
 
@@ -58,14 +59,15 @@ export class ScrapyardRoom extends Room {
       dropped.deferred.reject(new Error('taken over'));
       player = this.game.world.entities.get(droppedId);
       player.last_action_seq = 0;
+      if (options.look) player.look = cleanLook(options.look, player.id);
     } else {
       // Throwing turns the join away, with the message shown to the player.
-      player = this.game.join(options.name);
+      player = this.game.join(options.name, options.look);
     }
     client.userData = { id: player.id };
     const snapshot = takeSnapshot(this.game.world, player.id);
     snapshot.events = [];
-    client.send('welcome', { id: player.id, debug: this.game.debug, snapshot });
+    client.send('welcome', { id: player.id, debug: this.game.debug, xp_rate: this.game.xpRate, snapshot });
     console.log(`${player.display_name} joined as #${player.id} (${this.clients.length} online)`);
   }
 

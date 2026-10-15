@@ -11,6 +11,11 @@
 //   onKill(world, victim, killer)  an entity died (NPC or player), before it's reset
 //   onGather(world, entity, node)  a gather attempt succeeded
 //   onQuestEvent(world, player, name)  a dialogue choice fired a named event
+//   dropOnDeath(world, player) -> [ItemStack]  more things a dying player drops
+//       into their wreck (cosmetics, a pet)
+//   hitDamage(damage, world, attacker, target) -> damage  changes a landing hit
+//       (shields, mech-only bosses); return { damage, blocked: true } style via
+//       world.emitEvent if it needs to tell anyone
 //   save(world) / load(world, data)              world-level state in saves
 //   savePlayer(player) / loadPlayer(world, player, data)  per-player state in saves
 //   snapshot(world, viewer) / apply(world, data)  world-level state sent to
@@ -46,6 +51,12 @@ export const Features = {
       if (value !== undefined) out[f.id] = value;
     }
     return out;
+  },
+
+  /** Passes [value] through every feature's [hook](value, ...args) in turn. */
+  reduce(hook, value, ...args) {
+    for (const f of this.list) if (f[hook]) value = f[hook](value, ...args);
+    return value;
   },
 
   /** Feeds each feature its part of [data] (from collect()) through [hook]. */
