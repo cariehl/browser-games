@@ -178,3 +178,23 @@ input.number { width: 110px; }
 .message-log .line.request { color: rgb(255, 140, 220); cursor: pointer; }
 .message-log .line.request:hover { text-decoration: underline; }
 .inspect-grid .wide { grid-column: 1 / -1; font-style: italic; line-height: 1.4; margin-bottom: 4px; }
+
+/* Dialogue */
+.dialogue-box { position: fixed; left: 50%; bottom: 200px; transform: translateX(-50%); width: 520px; z-index: 22; display: flex; flex-direction: column; gap: 8px; background: var(--panel-solid); border: 1px solid rgba(255, 220, 120, 0.35); }
+.dialogue-box .speaker { color: rgb(255, 217, 64); font-weight: 600; }
+.dialogue-box .speaker.mine { color: rgb(120, 220, 255); }
+.dialogue-box .text { line-height: 1.45; font-size: 15px; }
+.dialogue-box .choices { display: flex; flex-direction: column; gap: 4px; }
+.dialogue-box .choice { text-align: left; }
+.dialogue-box .continue { cursor: pointer; font-size: 12px; align-self: center; }
+
+/* Quests */
+.page.quests { display: flex; flex-direction: column; gap: 8px; width: 196px; }
+.quest-list { display: flex; flex-direction: column; gap: 3px; }
+.quest-list .quest { text-align: left; background: transparent; padding: 3px 4px; }
+.quest-list .quest.not-started { color: rgb(255, 110, 100); }
+.quest-list .quest.started { color: rgb(255, 230, 90); }
+.quest-list .quest.done { color: rgb(120, 230, 120); }
+.quest-list .quest.selected { background: rgba(255, 255, 255, 0.12); }
+.quest-detail { font-size: 13px; line-height: 1.4; }
+.quest-detail .title { font-size: 15px; margin-bottom: 4px; }

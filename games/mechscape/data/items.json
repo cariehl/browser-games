@@ -1042,5 +1042,175 @@
   ],
   "kind": "trophy",
   "description": "Warm, heavy, and much bigger than a heart should be."
+ },
+ "mech_blueprint": {
+  "id": "mech_blueprint",
+  "display_name": "Mech blueprint",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.5,
+   0.85,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "Rolled plans for a two-seat walker, stamped with the foundry's seal. The foreman will want this."
+ },
+ "coolant_bloom": {
+  "id": "coolant_bloom",
+  "display_name": "Coolant bloom",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.85,
+   0.9,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "A ventbloom grown in coolant instead of ichor. It glows a cold blue and is very slightly cold to the touch."
+ },
+ "paint_reservoir": {
+  "id": "paint_reservoir",
+  "display_name": "Paint reservoir",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.3,
+   0.65,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "The Splatterpress's paint tank. It sloshes. Every colour at once."
+ },
+ "pilot_wings": {
+  "id": "pilot_wings",
+  "display_name": "Pilot wings decal",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.8,
+   0.4,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "decal",
+  "cosmetic_look": "wings",
+  "description": "Given to the crew that first powered up the mech."
+ },
+ "surveyor_hat": {
+  "id": "surveyor_hat",
+  "display_name": "Surveyor's hat",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.45,
+   0.3,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "surveyor",
+  "description": "Wide-brimmed, for squinting at horizons."
+ },
+ "survey_drone_pet": {
+  "id": "survey_drone_pet",
+  "display_name": "Survey drone",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.7,
+   0.6,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_survey_drone",
+  "description": "Pell's little survey drone. It has opinions about everything you find."
+ },
+ "glowcap_specimen": {
+  "id": "glowcap_specimen",
+  "display_name": "Glowcap specimen",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.9,
+   0.7,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "A glowing cap from the fungal cavern, sealed in a sample jar."
+ },
+ "skyfern_specimen": {
+  "id": "skyfern_specimen",
+  "display_name": "Skyfern specimen",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.8,
+   0.4,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "A fern that only grows where it can see the sky."
+ },
+ "ruin_orchid_specimen": {
+  "id": "ruin_orchid_specimen",
+  "display_name": "Ruin orchid specimen",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.5,
+   0.8,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "An orchid growing out of a crack in a wall older than the yard."
+ },
+ "paintball_cannon": {
+  "id": "paintball_cannon",
+  "display_name": "Paintball cannon",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.35,
+   0.7,
+   1.0
+  ],
+  "weapon_type": "cannon",
+  "accuracy": 40,
+  "power": 0,
+  "ammo": "paint_pellets",
+  "equip_level": 1,
+  "fun_effect": "paint",
+  "description": "Does no damage at all. Splats paint on whatever it hits, players included. Nobody minds. Much."
+ },
+ "paint_pellets": {
+  "id": "paint_pellets",
+  "display_name": "Paint pellets",
+  "stackable": true,
+  "color": [
+   0.9,
+   0.4,
+   0.6,
+   1.0
+  ],
+  "description": "Every colour, one at a time."
+ },
+ "confetti_blade": {
+  "id": "confetti_blade",
+  "display_name": "Confetti blade",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.75,
+   0.3,
+   1.0
+  ],
+  "weapon_type": "blade",
+  "accuracy": 30,
+  "power": 0,
+  "equip_level": 1,
+  "fun_effect": "confetti",
+  "kind": "trinket",
+  "description": "A party in a sword. Hits for nothing, every time, and celebrates it."
  }
 }

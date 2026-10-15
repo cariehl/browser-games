@@ -52,6 +52,10 @@
    {
     "item": "music_chip",
     "weight": 1
+   },
+   {
+    "item": "confetti_blade",
+    "weight": 0.5
    }
   ]
  },

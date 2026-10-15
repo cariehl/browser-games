@@ -19,9 +19,10 @@ import { Content } from './defs.js';
 import { ItemStack, Inventory } from './inventory.js';
 import { PendingHit } from './objects.js';
 import { NO_TARGET, eq } from './grid.js';
+import { Features } from './features.js';
 
-/** Version 1 is the first three.js save format. */
-export const SAVE_VERSION = 1;
+/** Version 1 is the first three.js save format; 2 adds the features' state (quests, the mech, the hab...). */
+export const SAVE_VERSION = 2;
 
 export const SaveGame = {
   VERSION: SAVE_VERSION,
@@ -72,6 +73,7 @@ export const SaveGame = {
       pending_hits: world.pending_hits.map((h) => ({
         attacker: h.attacker_id, target: h.target_id, damage: h.damage, impact_tick: h.impact_tick,
       })),
+      features: Features.collect('save', world),
     };
   },
 
@@ -126,6 +128,7 @@ export const SaveGame = {
       if (item) world.dropItem(item, entry.count, entry.tile, entry.despawn_tick, entry.id);
     }
     world._nextGroundId = Math.max(world._nextGroundId, data.next_ground_id || 1);
+    Features.feed('load', data.features, world);
 
     // A save from a different map: its tiles mean nothing here, so players
     // start over at this map's spawn, and hits in flight are dropped.
@@ -155,6 +158,7 @@ export const SaveGame = {
     player.armor = Object.fromEntries(Object.entries(entity.armor).map(([slot, item]) => [slot, item.id]));
     player.train_endurance = entity.train_endurance;
     player.storage = Object.fromEntries(entity.storage.items().map((item) => [item.id, entity.storage.countOf(item)]));
+    player.f = Features.collect('savePlayer', entity);
     return player;
   },
 
@@ -178,6 +182,7 @@ export const SaveGame = {
       const item = Content.item(itemId);
       if (item) player.storage.deposit(item, count);
     }
+    Features.feed('loadPlayer', entry.f, world, player);
     return player;
   },
 

@@ -19,6 +19,7 @@ import { Hitbox, HitboxKind } from '../view/hitbox.js';
 import { worldToTile } from '../view/tile_math.js';
 import { isTyping } from '../view/camera_rig.js';
 import { Screen } from '../ui/screen.js';
+import { TalkAction } from '../sim/quests.js';
 import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 
@@ -99,6 +100,10 @@ export class PlayerController {
       const npc = world.entities.get(hitbox.targetId);
       if (!npc || npc.isDead()) return [];
       const name = npc.def.display_name;
+      if (!npc.def.attackable) {
+        if (!npc.def.talk) return [];
+        return [{ verb: 'Talk-to', target: name, color: NPC_COLOR, action: () => this._talk(npc.id) }];
+      }
       return [
         { verb: 'Attack', target: name, color: NPC_COLOR, action: () => this._attack(npc.id) },
         { verb: 'Inspect', target: name, color: NPC_COLOR, action: () => this._inspect(() => InspectInfo.npc(ClientState.world, npc, ClientState.me()), x, y) },
@@ -143,6 +148,13 @@ export class PlayerController {
       return options;
     }
     return [];
+  }
+
+  _talk(npcId) {
+    const npc = ClientState.world.entities.get(npcId);
+    if (!npc) return;
+    this.marker.showAt(npc.tile, false);
+    this.link.send(ClientState.localPlayerId, new TalkAction(npcId));
   }
 
   _trade(playerId) {

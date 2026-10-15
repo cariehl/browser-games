@@ -548,5 +548,22 @@
   ],
   "output": "relic_circuitry",
   "action_ticks": 2
+ },
+ "coolant_bloom": {
+  "id": "coolant_bloom",
+  "skill": "splicing",
+  "level_required": 3,
+  "inputs": [
+   {
+    "item": "ventbloom",
+    "count": 1
+   },
+   {
+    "item": "coolant",
+    "count": 1
+   }
+  ],
+  "output": "coolant_bloom",
+  "action_ticks": 4
  }
 }

@@ -67,6 +67,8 @@ export class ItemDef {
       cosmetic_part: '', cosmetic_look: '',
       /** Pets: the NPC def id that follows you when it's out. */
       pet_npc: '',
+      /** Fun weapons: what a hit does instead of hurting (paint, confetti). */
+      fun_effect: '',
     }, raw);
     if (!this.abbreviation) this.abbreviation = abbreviate(this.display_name);
   }
@@ -112,6 +114,8 @@ export class GatherNodeDef {
       requires_mech: false,
       /** A loot table (data/loot_tables.json) rolled after a success, with this chance: junk, trinkets, lore, rare cosmetics. */
       bonus_table: null, bonus_chance: 0,
+      /** Items only found while on a quest stage: [{ quest, stage, item, chance }]. */
+      quest_drops: [],
       model: null, depleted_model: null, model_scale: 1,
       look: 'wreck', color: [0.5, 0.5, 0.5, 1], size: 1,
     }, raw);
@@ -121,6 +125,7 @@ export class GatherNodeDef {
     this.loot = content.ref('items', this.loot);
     this.rare_loot = content.ref('items', this.rare_loot);
     this.bonus_table = content.ref('lootTables', this.bonus_table);
+    this.quest_drops = this.quest_drops.map((d) => ({ ...d, item: content.ref('items', d.item) }));
   }
 
   /** Every item the bonus table can give. */
@@ -247,11 +252,15 @@ export class StationDef {
       needs: null, scan: false, opens: '', done_text: '',
       /** Landmarks: the survey log entry. */
       lore: '',
+      // Caches: the item inside, the NPC that must be down for it to open, and who it's for.
+      gives: null, guard: '', quest: '', quest_stage: '',
     }, raw);
   }
 
   resolve(content) {
     this.recipes = this.recipes.map((id) => content.ref('recipes', id));
+    this.gives = content.ref('items', this.gives);
+    if (this.needs) this.needs = { count: 1, ...this.needs, item: content.ref('items', this.needs.item) };
   }
 }
 
@@ -312,6 +321,38 @@ export class LootTableDef {
   }
 }
 
+/**
+ * A quest: stages in order, each with a goal (see quests.js) and journal
+ * text, and rewards when it's done.
+ */
+export class QuestDef {
+  constructor(raw) {
+    assign(this, { id: '', display_name: '', description: '', main: false, stages: [], rewards: {} }, raw);
+  }
+
+  resolve(content) {
+    for (const stage of this.stages) {
+      for (const goal of stage.goal.type === 'all' ? stage.goal.goals : [stage.goal]) {
+        for (const id of goal.items || []) content.ref('items', id);
+      }
+    }
+    for (const r of this.rewards.items || []) content.ref('items', r.item);
+  }
+
+  stage(id) {
+    return this.stages.find((s) => s.id === id) || null;
+  }
+}
+
+/** What an NPC says: entries tried in order, the first whose conditions hold (see quests.js). */
+export class DialogueDef {
+  constructor(raw) {
+    assign(this, { id: '', entries: [] }, raw);
+  }
+
+  resolve() {}
+}
+
 /** A prop drawn on the map that blocks nothing and isn't part of the sim: scrap piles, lamps, cables. */
 export class DecorDef {
   constructor(raw) {
@@ -356,13 +397,15 @@ const KINDS = {
   decor: DecorDef,
   ground: GroundDef,
   lootTables: LootTableDef,
+  quests: QuestDef,
+  dialogue: DialogueDef,
 };
 
 /** The data file each kind lives in (data/<file>.json). */
 export const CONTENT_FILES = {
   weaponTypes: 'weapon_types', items: 'items', nodes: 'nodes', npcs: 'npcs',
   recipes: 'recipes', stations: 'stations', terrain: 'terrain', decor: 'decor', ground: 'ground',
-  lootTables: 'loot_tables',
+  lootTables: 'loot_tables', quests: 'quests', dialogue: 'dialogue',
 };
 
 /** Items whose id changed: old id -> new id, so old saves still find them. */

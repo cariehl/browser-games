@@ -14,5 +14,13 @@
   "attack_speed": 3,
   "attack_range": 6,
   "attack_windup_frames": 6
+ },
+ "cannon": {
+  "id": "cannon",
+  "display_name": "Cannon",
+  "combat_skill": "firearms",
+  "attack_speed": 4,
+  "attack_range": 6,
+  "attack_windup_frames": 0
  }
 }

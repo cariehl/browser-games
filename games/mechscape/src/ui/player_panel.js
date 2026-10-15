@@ -37,7 +37,7 @@ const DRAG_THRESHOLD = 6;
 const PREDICTION_MS = 5000;
 
 export class PlayerPanel {
-  constructor(parent, { link, menu, inspector, hover, guide }) {
+  constructor(parent, { link, menu, inspector, hover, guide, extraTabs = [] }) {
     this.link = link;
     this.menu = menu;
     this.inspector = inspector;
@@ -46,12 +46,14 @@ export class PlayerPanel {
     this.el = el('div', 'player-panel panel', '', parent);
 
     const tabs = el('div', 'tabs', '', this.el);
-    this._tabButtons = ['Inventory', 'Gear', 'Skills'].map((name, i) => {
+    /** More tabs from elsewhere (quests): { name, build(page), update(me) }. */
+    this._extraTabs = extraTabs;
+    this._tabButtons = ['Inventory', 'Gear', 'Skills', ...extraTabs.map((t) => t.name)].map((name, i) => {
       const button = el('button', 'tab', name, tabs);
       button.addEventListener('click', () => this._showTab(i));
       return button;
     });
-    this._pages = [el('div', 'page', '', this.el), el('div', 'page', '', this.el), el('div', 'page', '', this.el)];
+    this._pages = this._tabButtons.map(() => el('div', 'page', '', this.el));
 
     /** Inventory slot under the mouse, or -1. */
     this._hoveredSlot = -1;
@@ -76,6 +78,7 @@ export class PlayerPanel {
     this._buildInventory(this._pages[0]);
     this._buildGear(this._pages[1]);
     this._buildSkills(this._pages[2]);
+    extraTabs.forEach((tab, i) => tab.build(this._pages[3 + i]));
     this._showTab(0);
 
     window.addEventListener('pointermove', (e) => this._onPointerMove(e));
@@ -464,7 +467,8 @@ export class PlayerPanel {
     if (!me) return;
     if (this._tab === 0) this._updateInventory(me);
     else if (this._tab === 1) this._updateGear(me);
-    else this._updateSkills(me);
+    else if (this._tab === 2) this._updateSkills(me);
+    else this._extraTabs[this._tab - 3].update(me);
   }
 }
 

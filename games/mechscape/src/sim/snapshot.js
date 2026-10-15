@@ -18,6 +18,7 @@ import { Content } from './defs.js';
 import { ItemStack, Inventory, Storage } from './inventory.js';
 import { NO_TARGET } from './grid.js';
 import { Trading } from './trade.js';
+import { Features } from './features.js';
 
 /** Event types only the entity they belong to is told about. */
 const PRIVATE_EVENTS = new Set(['message', 'xp', 'level_up', 'open_station', 'open_storage', 'wreck', 'boost',
@@ -63,7 +64,9 @@ export function takeSnapshot(world, viewerId) {
       out.xp = e.xp;
       out.weapon = e.weapon ? e.weapon.id : '';
       out.armor = Object.fromEntries(Object.entries(e.armor).map(([slot, item]) => [slot, item.id]));
+      out.f = Features.collect('publicPlayer', e);
       if (e.id === viewerId) {
+        out.mine = Features.collect('privatePlayer', world, e);
         out.inventory = e.inventory.slots.map((s) => (s ? [s.item.id, s.count] : null));
         out.storage = e.storage.items().map((item) => [item.id, e.storage.countOf(item)]);
         out.train_endurance = e.train_endurance;
@@ -96,7 +99,8 @@ export function takeSnapshot(world, viewerId) {
     const who = world.entities.get(ev.entity);
     return !who || here(who.tile) || here(who.spawn_tile);
   });
-  return { tick: world.tick, map: world.map_name, area, entities, nodes, wrecks, ground, events };
+  const features = Features.collect('snapshot', world, viewer || null);
+  return { tick: world.tick, map: world.map_name, area, entities, nodes, wrecks, ground, events, features };
 }
 
 /**
@@ -106,6 +110,7 @@ export function takeSnapshot(world, viewerId) {
 export function applySnapshot(world, snap, viewerId) {
   world.tick = snap.tick;
   world.events = snap.events;
+  Features.feed('apply', snap.features, world);
 
   const seen = new Set();
   for (const data of snap.entities) {
@@ -144,6 +149,8 @@ export function applySnapshot(world, snap, viewerId) {
     }
     // Keep the same object while nothing changed, so views can compare cheaply.
     if (!sameArmor(e.armor, armor)) e.armor = armor;
+    Features.feed('applyPlayer', data.f, world, e);
+    if (data.mine) Features.feed('applyMine', data.mine, world, e);
     if (data.inventory) {
       if (!e.inventory) e.inventory = new Inventory();
       data.inventory.forEach((line, i) => {

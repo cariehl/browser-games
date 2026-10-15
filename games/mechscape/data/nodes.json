@@ -229,7 +229,15 @@
   ],
   "size": 1.45,
   "bonus_table": "loader",
-  "bonus_chance": 0.35
+  "bonus_chance": 0.35,
+  "quest_drops": [
+   {
+    "quest": "found_art",
+    "stage": "collect",
+    "item": "loader_horn",
+    "chance": 0.3
+   }
+  ]
  },
  "rustcap_cluster": {
   "id": "rustcap_cluster",
@@ -311,7 +319,15 @@
   ],
   "size": 1.15,
   "bonus_table": "sentry",
-  "bonus_chance": 0.35
+  "bonus_chance": 0.35,
+  "quest_drops": [
+   {
+    "quest": "found_art",
+    "stage": "collect",
+    "item": "sentry_eye",
+    "chance": 0.3
+   }
+  ]
  },
  "ventbloom_patch": {
   "id": "ventbloom_patch",
@@ -548,7 +564,15 @@
   "rare_loot": "relic_circuitry",
   "rare_chance": 0.5,
   "bonus_table": "press",
-  "bonus_chance": 0.6
+  "bonus_chance": 0.6,
+  "quest_drops": [
+   {
+    "quest": "found_art",
+    "stage": "press",
+    "item": "paint_reservoir",
+    "chance": 1.0
+   }
+  ]
  },
  "colossus_husk": {
   "id": "colossus_husk",
@@ -581,5 +605,74 @@
   "rare_chance": 0.5,
   "bonus_table": "colossus",
   "bonus_chance": 0.5
+ },
+ "glowcap_cluster": {
+  "id": "glowcap_cluster",
+  "display_name": "Glowcap cluster",
+  "skill": "xenobiology",
+  "verb": "sample",
+  "level_required": 1,
+  "xp": 15,
+  "loot": "glowcap_specimen",
+  "action_ticks": 3,
+  "deplete_chance": 0,
+  "respawn_ticks": 10,
+  "chance_low": 160,
+  "chance_high": 240,
+  "blocks_movement": true,
+  "look": "plant",
+  "color": [
+   0.3,
+   0.8,
+   0.6,
+   1.0
+  ],
+  "size": 0.9
+ },
+ "skyfern_patch": {
+  "id": "skyfern_patch",
+  "display_name": "Skyfern patch",
+  "skill": "xenobiology",
+  "verb": "sample",
+  "level_required": 1,
+  "xp": 15,
+  "loot": "skyfern_specimen",
+  "action_ticks": 3,
+  "deplete_chance": 0,
+  "respawn_ticks": 10,
+  "chance_low": 160,
+  "chance_high": 240,
+  "blocks_movement": true,
+  "look": "plant",
+  "color": [
+   0.4,
+   0.7,
+   0.35,
+   1.0
+  ],
+  "size": 0.9
+ },
+ "ruin_orchid": {
+  "id": "ruin_orchid",
+  "display_name": "Ruin orchid",
+  "skill": "xenobiology",
+  "verb": "sample",
+  "level_required": 1,
+  "xp": 15,
+  "loot": "ruin_orchid_specimen",
+  "action_ticks": 3,
+  "deplete_chance": 0,
+  "respawn_ticks": 10,
+  "chance_low": 160,
+  "chance_high": 240,
+  "blocks_movement": true,
+  "look": "plant",
+  "color": [
+   0.8,
+   0.45,
+   0.75,
+   1.0
+  ],
+  "size": 0.9
  }
 }

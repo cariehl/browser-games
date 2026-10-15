@@ -1,0 +1,176 @@
+{
+ "ignition": {
+  "id": "ignition",
+  "display_name": "Ignition",
+  "description": "Foreman Ada wants the gantry working again. There used to be mechs in the Scrapyard.",
+  "main": true,
+  "stages": [
+   {
+    "id": "find_hatch",
+    "journal": "Foreman Ada says the mech blueprints were kept in the Undercroft, the old foundry under the yard. The way down is a hatch in the sentry ruins.",
+    "goal": {
+     "type": "visit",
+     "area": "undercroft"
+    },
+    "next": "find_blueprint"
+   },
+   {
+    "id": "find_blueprint",
+    "journal": "The blueprint is sealed in the warden's vault, at the bottom of the Undercroft. The vault won't open while the warden stands guard.",
+    "goal": {
+     "type": "have",
+     "items": [
+      "mech_blueprint"
+     ]
+    },
+    "next": "return_blueprint"
+   },
+   {
+    "id": "return_blueprint",
+    "journal": "I have the blueprint. Foreman Ada is waiting by the gantry in the Commons.",
+    "goal": {
+     "type": "talk"
+    }
+   },
+   {
+    "id": "build_mech",
+    "journal": "The blueprint is loaded into the gantry. Every component has to be made and installed: check the gantry console for what's missing. Nobody can make them all alone.",
+    "goal": {
+     "type": "flag",
+     "flag": "mech_complete"
+    },
+    "next": "power_up"
+   },
+   {
+    "id": "power_up",
+    "journal": "The mech is complete! Foreman Ada wants to be there when it powers up.",
+    "goal": {
+     "type": "talk"
+    }
+   }
+  ],
+  "rewards": {
+   "xp": {
+    "engineering": 800
+   },
+   "items": [
+    {
+     "item": "pilot_wings",
+     "count": 1
+    }
+   ],
+   "text": "the pilot wings decal, and 800 Engineering XP"
+  }
+ },
+ "found_art": {
+  "id": "found_art",
+  "display_name": "Found Art",
+  "description": "Juno the scrap artist is working on a masterpiece and needs some very particular scrap.",
+  "stages": [
+   {
+    "id": "collect",
+    "journal": "Juno wants three things for her sculpture: a sentry's eye, intact (from a sentry husk); a loader's horn (from a loader husk); and a ventbloom grown in coolant (a bio-still can do it, with Splicing 3).",
+    "goal": {
+     "type": "have",
+     "items": [
+      "sentry_eye",
+      "loader_horn",
+      "coolant_bloom"
+     ]
+    },
+    "next": "bring_parts"
+   },
+   {
+    "id": "bring_parts",
+    "journal": "I have everything Juno asked for. She's in camp.",
+    "goal": {
+     "type": "talk"
+    }
+   },
+   {
+    "id": "press",
+    "journal": "Juno needs paint for the finishing touch: the reservoir from the old paint press in the Undercroft. It is apparently \"a bit lively\". It's behind a heavy door off the antechamber.",
+    "goal": {
+     "type": "have",
+     "items": [
+      "paint_reservoir"
+     ]
+    },
+    "next": "bring_paint"
+   },
+   {
+    "id": "bring_paint",
+    "journal": "I have the Splatterpress's paint reservoir. Back to Juno.",
+    "goal": {
+     "type": "talk"
+    }
+   }
+  ],
+  "rewards": {
+   "xp": {
+    "firearms": 400,
+    "splicing": 200
+   },
+   "items": [
+    {
+     "item": "paintball_cannon",
+     "count": 1
+    },
+    {
+     "item": "paint_pellets",
+     "count": 200
+    }
+   ],
+   "text": "the paintball cannon, 200 paint pellets, and the Overclocked press for the brave",
+   "unlock": "overclocked"
+  }
+ },
+ "survey": {
+  "id": "survey",
+  "display_name": "The Quiet Reach",
+  "description": "Surveyor Pell wants someone to map the Quiet Reach, up the lift from the Commons. No fighting required.",
+  "stages": [
+   {
+    "id": "survey",
+    "journal": "Scan the five landmarks of the Quiet Reach and bring back three specimens (a glowcap, a skyfern and a ruin orchid). The drone will help. Some paths need a little work to open.",
+    "goal": {
+     "type": "all",
+     "goals": [
+      {
+       "type": "scan",
+       "count": 5
+      },
+      {
+       "type": "have",
+       "items": [
+        "glowcap_specimen",
+        "skyfern_specimen",
+        "ruin_orchid_specimen"
+       ]
+      }
+     ]
+    },
+    "next": "report"
+   },
+   {
+    "id": "report",
+    "journal": "The survey is done. Back down the lift to Surveyor Pell.",
+    "goal": {
+     "type": "talk"
+    }
+   }
+  ],
+  "rewards": {
+   "xp": {
+    "xenobiology": 600
+   },
+   "items": [
+    {
+     "item": "surveyor_hat",
+     "count": 1
+    }
+   ],
+   "text": "the surveyor's hat and 600 Xenobiology XP"
+  }
+ }
+}

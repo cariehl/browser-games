@@ -1,0 +1,3 @@
+// Imports every feature module so each registers its hooks (see features.js).
+
+import './quests.js';

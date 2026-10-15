@@ -13,6 +13,8 @@ import { AttackTask } from './tasks.js';
 import { StationKind } from './defs.js';
 import { TICK_SECONDS } from './constants.js';
 import { Trading } from './trade.js';
+import { Features } from './features.js';
+import './all_features.js';
 
 /** The game world: every area's map and how they connect (see data/maps/world.json). */
 export const DEFAULT_MAP = 'data/maps/world.json';
@@ -89,6 +91,7 @@ export class World {
       this._setupGrid(EMPTY_SIZE);
       this._addArea({ id: 'field', name: '' }, { x: 0, y: 0 }, EMPTY_SIZE, null);
       this._buildMasks();
+      Features.call('init', this);
       return;
     }
     const layout = mapPath.endsWith('.json') ? loadLayout(mapPath) : { areas: [{ id: 'main', map: mapPath, at: [0, 0] }] };
@@ -120,6 +123,7 @@ export class World {
       if (from && to) this.links.set(key(from), { to, text: link.text || '' });
     }
     this._buildMasks();
+    Features.call('init', this);
   }
 
   _setupGrid(size) {
@@ -234,6 +238,7 @@ export class World {
             const trade = Trading.of(this, entity);
             if (trade) Trading.cancel(this, trade, 'The trade was called off.');
           }
+          Features.call('beforeAction', this, entity, action);
           if (action.cancelsTask()) entity.clearTask();
           action.apply(this, entity);
         } catch (err) {
@@ -267,6 +272,7 @@ export class World {
       }
       if (!entity.task.process(this, entity)) entity.clearTask();
     }
+    Features.call('tick', this);
 
     // 5. Regeneration, and boosts running out.
     for (const entity of this.entities.values()) {
@@ -345,6 +351,7 @@ export class World {
   spawn(id, tile) {
     const entity = new EntityState(id, tile);
     this.entities.set(id, entity);
+    Features.call('initPlayer', this, entity);
     return entity;
   }
 
@@ -475,6 +482,7 @@ export class World {
     entity.path = [];
     const trade = Trading.of(this, entity);
     if (trade) Trading.cancel(this, trade, 'The trade was called off.');
+    Features.call('onKill', this, entity, killer);
     let huskTile = NO_TARGET;
     if (entity.isNpc() && entity.def.husk) huskTile = this.freeTileNear(entity.tile, World.HUSK_RADIUS);
     this.emitEvent(entity.id, 'death', { entity: entity.id, killer: killer ? killer.id : -1, husk_tile: huskTile });

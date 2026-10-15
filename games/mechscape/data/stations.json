@@ -8,7 +8,8 @@
    "healing_injector",
    "edge_injector",
    "surge_injector",
-   "deadeye_injector"
+   "deadeye_injector",
+   "coolant_bloom"
   ],
   "model": "bio_still.glb",
   "model_scale": 1.0,
@@ -279,7 +280,8 @@
    "healing_injector",
    "edge_injector",
    "surge_injector",
-   "deadeye_injector"
+   "deadeye_injector",
+   "coolant_bloom"
   ],
   "color": [
    0.35,
@@ -332,7 +334,11 @@
    0.42,
    1.0
   ],
-  "shape": "vault"
+  "shape": "vault",
+  "gives": "mech_blueprint",
+  "guard": "undercroft_warden",
+  "quest": "ignition",
+  "quest_stage": "find_blueprint"
  },
  "arena_door": {
   "id": "arena_door",

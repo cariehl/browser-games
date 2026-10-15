@@ -5,6 +5,13 @@
 import { Combat } from './combat.js';
 import { Skills } from './skills.js';
 import { StationKind } from './defs.js';
+import { Features } from './features.js';
+
+/**
+ * What using a station of each kind does, for kinds that features add
+ * (the gantry, the commission board, landmarks...): kind -> fn(world, entity, station).
+ */
+export const StationHandlers = Object.create(null);
 
 export class Task {
   process(_world, _entity) {
@@ -114,6 +121,7 @@ export class GatherTask extends Task {
     world.message(entity.id, `You ${def.verb} some ${got.display_name.toLowerCase()}.`);
     world.grantXp(entity, def.skill, def.xp);
     if (def.bonus_table && world.rng.randf() < def.bonus_chance) findBonus(world, entity, def.bonus_table);
+    Features.call('onGather', world, entity, node);
 
     node.successes++;
     const capped = def.max_successes > 0 && node.successes >= def.max_successes;
@@ -260,7 +268,8 @@ export class StationTask extends Task {
         break;
       }
       default:
-        world.emitEvent(entity.id, 'open_station', { station: station.id });
+        if (StationHandlers[station.def.kind]) StationHandlers[station.def.kind](world, entity, station);
+        else world.emitEvent(entity.id, 'open_station', { station: station.id });
     }
     return false;
   }

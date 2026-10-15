@@ -43,6 +43,11 @@ export class Action {
     return false;
   }
 
+  /** Whether an open dialogue stays open when this is applied (chat, run toggles). */
+  keepsDialogue() {
+    return this.keepsTrade();
+  }
+
   /** Fields fromJSON() accepts, by kind ('int', 'bool', 'id' or 'tile'). */
   static FIELDS = {};
 
@@ -139,6 +144,10 @@ export class AttackAction extends Action {
     const target = world.entities.get(this.target_id);
     // No fighting other players (no PvP in the alpha).
     if (!target || target.isDead() || target === entity || !target.isNpc()) return;
+    if (!target.def.attackable) {
+      world.message(entity.id, "You can't attack that.");
+      return;
+    }
     entity.path = [];
     entity.task = new AttackTask(this.target_id);
   }

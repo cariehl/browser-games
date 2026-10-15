@@ -36,6 +36,8 @@ import { SkillGuide } from './ui/skill_guide.js';
 import { CraftMenu } from './ui/craft_menu.js';
 import { StorageMenu } from './ui/storage_menu.js';
 import { DebugHud } from './ui/debug_hud.js';
+import { DialogueBox } from './ui/dialogue_box.js';
+import { QuestJournal } from './ui/quest_journal.js';
 import { TradeWindow } from './ui/trade_window.js';
 
 /** Longest frame fed to the game, so a hidden tab doesn't come back to a burst of ticks. */
@@ -213,7 +215,8 @@ async function main() {
   const menu = new ContextMenu(ui);
   const inspector = new InspectWindow(ui);
   const guide = new SkillGuide(ui);
-  const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide });
+  const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide, extraTabs: [new QuestJournal()] });
+  const dialogue = new DialogueBox(ui, link);
   const craft = new CraftMenu(ui, link);
   const storage = new StorageMenu(ui, link, menu);
   const trade = new TradeWindow(ui, link, menu);
@@ -263,6 +266,7 @@ async function main() {
     craft.update();
     storage.update();
     trade.update();
+    dialogue.update();
     hud.update();
     renderer.render(scene, rig.camera);
     requestAnimationFrame(frame);
