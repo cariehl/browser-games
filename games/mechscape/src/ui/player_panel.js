@@ -17,7 +17,7 @@ import {
 } from '../sim/actions.js';
 import { cssColor } from '../view/tile_math.js';
 import { el } from './screen.js';
-import { ITEM_COLOR, commas, short, capitalize } from './common.js';
+import { ITEM_COLOR, commas, short, capitalize, withIds } from './common.js';
 import { InspectInfo } from './inspect_info.js';
 import { lookOptions } from './examine.js';
 import { COSMETIC_PARTS, CallPetAction, DismissPetAction } from '../sim/appearance.js';
@@ -192,7 +192,7 @@ export class PlayerPanel {
       this.hover.setUiOption(options[0], options.length - 2, itemDetail(stack));
     } else {
       // Nothing happens on a left click, so just name it.
-      this.hover.setUiOption({ verb: '', target: item.display_name, color: ITEM_COLOR }, options.length - 1, itemDetail(stack));
+      this.hover.setUiOption(withIds([{ verb: '', target: item.display_name, color: ITEM_COLOR }], item.id)[0], options.length - 1, itemDetail(stack));
     }
   }
 
@@ -357,7 +357,7 @@ export class PlayerPanel {
       source: () => InspectInfo.item(item, ClientState.me()), live: false, kind: 'item', defId: item.id,
     }));
     options.push({ verb: 'Cancel', action: null });
-    return options;
+    return withIds(options, item.id);
   }
 
   // --- Gear ---------------------------------------------------------------

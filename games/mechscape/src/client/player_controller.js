@@ -24,7 +24,7 @@ import { BoardAction, LeaveMechAction } from '../sim/mech.js';
 import { HabPiece, EditPieceAction } from '../sim/hab.js';
 import { bedStage } from '../view/piece_view.js';
 import { DismissPetAction } from '../sim/appearance.js';
-import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
+import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR, withIds } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 import { lookOptions } from '../ui/examine.js';
 
@@ -114,10 +114,14 @@ export class PlayerController {
     return lookOptions({ link: this.link, inspector: this.inspector, target, color, x, y, ...extra });
   }
 
-  /** Options for whatever hitbox is under the mouse, or [] for none. */
+  /** Options for whatever hitbox is under the mouse, or [] for none (with ids, when the debug window shows them). */
   targetOptions(x, y) {
     const hitbox = Hitbox.pick(Screen.ray(x, y));
     if (!hitbox) return [];
+    return withIds(this._optionsFor(hitbox, x, y), debugId(hitbox, ClientState.world));
+  }
+
+  _optionsFor(hitbox, x, y) {
     const world = ClientState.world;
     if (hitbox.kind === HitboxKind.NPC) {
       const npc = world.entities.get(hitbox.targetId);
@@ -283,6 +287,31 @@ export class PlayerController {
     if (!hit) return null;
     const tile = worldToTile(hit);
     return ClientState.world.inBounds(tile) ? tile : null;
+  }
+}
+
+/** What the debug window's "Ids" shows for a hitbox: def id and instance id ("foreman #12"). */
+function debugId(hitbox, world) {
+  switch (hitbox.kind) {
+    case HitboxKind.NPC: {
+      const npc = world.entities.get(hitbox.targetId);
+      return npc && `${npc.def.id} #${npc.id}`;
+    }
+    case HitboxKind.PLAYER: return `#${hitbox.targetId}`;
+    case HitboxKind.OBJECT: {
+      const object = world.getObject(hitbox.targetId);
+      const def = object && (object.def || object.item);
+      return object && `${def && def.id ? `${def.id} ` : ''}#${object.id}`;
+    }
+    case HitboxKind.SCENERY: {
+      const { def, tile } = hitbox.targetId;
+      return `${def.id} ${tile.x},${tile.y}`;
+    }
+    case HitboxKind.ITEM: {
+      const ground = world.ground_items.get(hitbox.targetId);
+      return ground && `${ground.item.id} #${ground.id}`;
+    }
+    default: return '';
   }
 }
 

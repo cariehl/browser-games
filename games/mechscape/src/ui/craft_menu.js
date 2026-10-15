@@ -15,7 +15,7 @@ import { Skills } from '../sim/skills.js';
 import { CraftAction } from '../sim/actions.js';
 import { cssColor } from '../view/tile_math.js';
 import { el } from './screen.js';
-import { onEscape, ITEM_COLOR } from './common.js';
+import { onEscape, ITEM_COLOR, withIds } from './common.js';
 import { InspectInfo } from './inspect_info.js';
 import { lookOptions } from './examine.js';
 
@@ -133,7 +133,7 @@ export class CraftMenu {
         source: () => InspectInfo.item(recipe.output, ClientState.me()), live: false, kind: 'item', defId: recipe.output.id,
       }));
       options.push({ verb: 'Cancel', action: null });
-      this.menu.open(options, e.clientX, e.clientY);
+      this.menu.open(withIds(options, recipe.output.id), e.clientX, e.clientY);
     });
     return { row, level, inputs };
   }
