@@ -31,6 +31,14 @@ export class WeaponTypeDef {
   resolve() {}
 }
 
+/** "Bent bolt" -> "B.Bolt", "Trinket" -> "Trinket": what an inventory slot shows. */
+function abbreviate(name) {
+  const words = name.replace(/^Data shard: /, 'Shard ').split(/\s+/).filter(Boolean);
+  if (words.length <= 1) return (words[0] || '?').slice(0, 7);
+  const last = words[words.length - 1];
+  return `${words[0][0].toUpperCase()}.${last[0].toUpperCase()}${last.slice(1, 6)}`;
+}
+
 export class ItemDef {
   constructor(raw) {
     assign(this, {
@@ -60,6 +68,7 @@ export class ItemDef {
       /** Pets: the NPC def id that follows you when it's out. */
       pet_npc: '',
     }, raw);
+    if (!this.abbreviation) this.abbreviation = abbreviate(this.display_name);
   }
 
   resolve(content) {
