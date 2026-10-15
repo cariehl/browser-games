@@ -184,6 +184,8 @@ export class InteractAction extends Action {
     if (target instanceof GatherNode) entity.task = new GatherTask(this.object_id);
     else if (target instanceof Station) entity.task = new StationTask(this.object_id);
     else if (target instanceof Wreck) entity.task = new WreckTask(this.object_id);
+    // Anything else that can be used (hab pieces) says how.
+    else if (target.makeTask) entity.task = target.makeTask();
   }
 }
 

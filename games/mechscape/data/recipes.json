@@ -711,5 +711,227 @@
   "output": "armor_plate",
   "output_count": 1,
   "action_ticks": 5
+ },
+ "crate_stack": {
+  "id": "crate_stack",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "crate_stack",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "work_lamp": {
+  "id": "work_lamp",
+  "skill": "engineering",
+  "level_required": 2,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 1
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   }
+  ],
+  "output": "work_lamp",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "tool_wall": {
+  "id": "tool_wall",
+  "skill": "engineering",
+  "level_required": 5,
+  "inputs": [
+   {
+    "item": "alloy_plating",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 4
+   }
+  ],
+  "output": "tool_wall",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "coolant_rack": {
+  "id": "coolant_rack",
+  "skill": "engineering",
+  "level_required": 6,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 3
+   },
+   {
+    "item": "relic_circuitry",
+    "count": 1
+   },
+   {
+    "item": "coolant",
+    "count": 10
+   }
+  ],
+  "output": "coolant_rack",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "grow_bed": {
+  "id": "grow_bed",
+  "skill": "engineering",
+  "level_required": 3,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 3
+   },
+   {
+    "item": "ichor",
+    "count": 5
+   }
+  ],
+  "output": "grow_bed",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "potted_glowroot": {
+  "id": "potted_glowroot",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "glowroot",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 1
+   }
+  ],
+  "output": "potted_glowroot",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "bunk": {
+  "id": "bunk",
+  "skill": "engineering",
+  "level_required": 2,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 4
+   }
+  ],
+  "output": "bunk",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "lounge_chair": {
+  "id": "lounge_chair",
+  "skill": "engineering",
+  "level_required": 2,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 3
+   }
+  ],
+  "output": "lounge_chair",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "moss_rug": {
+  "id": "moss_rug",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "seep_moss",
+    "count": 2
+   }
+  ],
+  "output": "moss_rug",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "hab_banner": {
+  "id": "hab_banner",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 1
+   },
+   {
+    "item": "ichor",
+    "count": 2
+   }
+  ],
+  "output": "hab_banner",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "specimen_case_glowcap": {
+  "id": "specimen_case_glowcap",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "glowcap_specimen",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "specimen_case",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "specimen_case_skyfern": {
+  "id": "specimen_case_skyfern",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "skyfern_specimen",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "specimen_case",
+  "output_count": 1,
+  "action_ticks": 3
+ },
+ "specimen_case_ruin_orchid": {
+  "id": "specimen_case_ruin_orchid",
+  "skill": "engineering",
+  "level_required": 1,
+  "inputs": [
+   {
+    "item": "ruin_orchid_specimen",
+    "count": 1
+   },
+   {
+    "item": "scrap_metal",
+    "count": 2
+   }
+  ],
+  "output": "specimen_case",
+  "output_count": 1,
+  "action_ticks": 3
  }
 }

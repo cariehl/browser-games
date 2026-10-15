@@ -627,7 +627,9 @@
    0.6,
    1.0
   ],
-  "size": 0.9
+  "size": 0.9,
+  "bonus_table": "reach_seeds",
+  "bonus_chance": 0.6
  },
  "skyfern_patch": {
   "id": "skyfern_patch",
@@ -650,7 +652,9 @@
    0.35,
    1.0
   ],
-  "size": 0.9
+  "size": 0.9,
+  "bonus_table": "reach_seeds",
+  "bonus_chance": 0.6
  },
  "ruin_orchid": {
   "id": "ruin_orchid",
@@ -673,7 +677,9 @@
    0.75,
    1.0
   ],
-  "size": 0.9
+  "size": 0.9,
+  "bonus_table": "reach_seeds",
+  "bonus_chance": 0.6
  },
  "mech_wreckage": {
   "id": "mech_wreckage",

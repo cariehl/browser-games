@@ -222,7 +222,21 @@
   "description": "Prints fittings and furniture for the hab",
   "skill": "engineering",
   "kind": "craft",
-  "recipes": [],
+  "recipes": [
+   "crate_stack",
+   "work_lamp",
+   "tool_wall",
+   "coolant_rack",
+   "grow_bed",
+   "potted_glowroot",
+   "bunk",
+   "lounge_chair",
+   "moss_rug",
+   "hab_banner",
+   "specimen_case_glowcap",
+   "specimen_case_skyfern",
+   "specimen_case_ruin_orchid"
+  ],
   "color": [
    0.4,
    0.48,

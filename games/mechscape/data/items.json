@@ -989,7 +989,8 @@
    1.0
   ],
   "kind": "trophy",
-  "description": "A relic sentry's eye, still in one piece. It's still looking at you."
+  "description": "A relic sentry's eye, still in one piece. It's still looking at you.",
+  "trophy_skill": "firearms"
  },
  "loader_horn": {
   "id": "loader_horn",
@@ -1002,7 +1003,8 @@
    1.0
   ],
   "kind": "trophy",
-  "description": "The warning horn off a loader mech. HONK."
+  "description": "The warning horn off a loader mech. HONK.",
+  "trophy_skill": "melee"
  },
  "warden_core": {
   "id": "warden_core",
@@ -1015,7 +1017,8 @@
    1.0
   ],
   "kind": "trophy",
-  "description": "The Undercroft warden's heart, humming quietly."
+  "description": "The Undercroft warden's heart, humming quietly.",
+  "trophy_skill": "endurance"
  },
  "press_core": {
   "id": "press_core",
@@ -1028,7 +1031,8 @@
    1.0
   ],
   "kind": "trophy",
-  "description": "The Splatterpress's control core, still dripping."
+  "description": "The Splatterpress's control core, still dripping.",
+  "trophy_skill": "splicing"
  },
  "colossus_heart": {
   "id": "colossus_heart",
@@ -1041,7 +1045,8 @@
    1.0
   ],
   "kind": "trophy",
-  "description": "Warm, heavy, and much bigger than a heart should be."
+  "description": "Warm, heavy, and much bigger than a heart should be.",
+  "trophy_skill": "engineering"
  },
  "mech_blueprint": {
   "id": "mech_blueprint",
@@ -1310,5 +1315,385 @@
   "abbreviation": "Plate",
   "kind": "component",
   "description": "A thick alloy plate for a walker's hull. Each one makes it tougher."
+ },
+ "crate_stack": {
+  "id": "crate_stack",
+  "display_name": "Crate stack",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.42,
+   0.28,
+   1
+  ],
+  "kind": "piece",
+  "description": "Somewhere to put things. Mostly other crates.",
+  "piece": {
+   "shape": "crates",
+   "blocks": true,
+   "comfort": 1,
+   "set": "workshop",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "work_lamp": {
+  "id": "work_lamp",
+  "display_name": "Work lamp",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.8,
+   0.4,
+   1
+  ],
+  "kind": "piece",
+  "description": "A bright lamp on a stand. Good light makes good work.",
+  "piece": {
+   "shape": "lamp",
+   "blocks": false,
+   "comfort": 2,
+   "set": "workshop",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "tool_wall": {
+  "id": "tool_wall",
+  "display_name": "Tool wall",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.52,
+   0.56,
+   1
+  ],
+  "kind": "piece",
+  "description": "Every tool on its hook. Engineering at the hab workbench goes faster while one hangs in the hab.",
+  "piece": {
+   "shape": "tool_wall",
+   "blocks": true,
+   "comfort": 1,
+   "set": "workshop",
+   "effect": "craft_speed",
+   "skill": "engineering",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "coolant_rack": {
+  "id": "coolant_rack",
+  "display_name": "Coolant rack",
+  "stackable": false,
+  "color": [
+   0.35,
+   0.75,
+   0.95,
+   1
+  ],
+  "kind": "piece",
+  "description": "Chilled racks for the bio-bench. Splicing in the hab sometimes saves its ichor and coolant.",
+  "piece": {
+   "shape": "rack",
+   "blocks": true,
+   "comfort": 1,
+   "set": "greenhouse",
+   "effect": "save_liquid",
+   "skill": "splicing",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "grow_bed": {
+  "id": "grow_bed",
+  "display_name": "Grow bed",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.32,
+   0.22,
+   1
+  ],
+  "kind": "piece",
+  "description": "A planter for seeds from the Quiet Reach. Water it with ichor or coolant and it grows Xenobiology plants.",
+  "piece": {
+   "shape": "grow_bed",
+   "blocks": true,
+   "comfort": 1,
+   "set": "greenhouse",
+   "effect": "grow_bed",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "potted_glowroot": {
+  "id": "potted_glowroot",
+  "display_name": "Potted glowroot",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.95,
+   0.5,
+   1
+  ],
+  "kind": "piece",
+  "description": "A glowroot in a pot. It hums a little at night.",
+  "piece": {
+   "shape": "pot",
+   "blocks": false,
+   "comfort": 2,
+   "set": "greenhouse",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "bunk": {
+  "id": "bunk",
+  "display_name": "Bunk",
+  "stackable": false,
+  "color": [
+   0.45,
+   0.5,
+   0.6,
+   1
+  ],
+  "kind": "piece",
+  "description": "A bunk with a real mattress. Pilots sleep in shifts.",
+  "piece": {
+   "shape": "bunk",
+   "blocks": true,
+   "comfort": 3,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "lounge_chair": {
+  "id": "lounge_chair",
+  "display_name": "Lounge chair",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.45,
+   0.3,
+   1
+  ],
+  "kind": "piece",
+  "description": "For watching other people work.",
+  "piece": {
+   "shape": "chair",
+   "blocks": false,
+   "comfort": 3,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "moss_rug": {
+  "id": "moss_rug",
+  "display_name": "Moss rug",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.4,
+   0.75,
+   1
+  ],
+  "kind": "piece",
+  "description": "Woven seep moss. Soft, and only slightly damp.",
+  "piece": {
+   "shape": "rug",
+   "blocks": false,
+   "comfort": 2,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "hab_banner": {
+  "id": "hab_banner",
+  "display_name": "Crew banner",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.3,
+   0.3,
+   1
+  ],
+  "kind": "piece",
+  "description": "Your crew's colours, painted in ichor.",
+  "piece": {
+   "shape": "banner",
+   "blocks": false,
+   "comfort": 1,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "specimen_case": {
+  "id": "specimen_case",
+  "display_name": "Specimen case",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.85,
+   0.8,
+   1
+  ],
+  "kind": "piece",
+  "description": "A glowing case for a specimen from the Quiet Reach. Visitors stare.",
+  "piece": {
+   "shape": "case",
+   "blocks": true,
+   "comfort": 4,
+   "set": "greenhouse",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "glowroot_seed": {
+  "id": "glowroot_seed",
+  "display_name": "Glowroot seed",
+  "stackable": true,
+  "color": [
+   0.55,
+   0.85,
+   0.45,
+   1
+  ],
+  "kind": "seed",
+  "grows": "glowroot",
+  "grow_ticks": 150,
+  "grow_count": [
+   3,
+   5
+  ],
+  "grow_xp": 30,
+  "description": "Plant it in a grow bed in the hab and water it with ichor or coolant. It grows glowroot."
+ },
+ "ventbloom_seed": {
+  "id": "ventbloom_seed",
+  "display_name": "Ventbloom seed",
+  "stackable": true,
+  "color": [
+   0.4,
+   0.8,
+   0.7,
+   1
+  ],
+  "kind": "seed",
+  "grows": "ventbloom",
+  "grow_ticks": 100,
+  "grow_count": [
+   3,
+   5
+  ],
+  "grow_xp": 30,
+  "description": "Plant it in a grow bed in the hab and water it with ichor or coolant. It grows ventbloom."
+ },
+ "rustcap_spores": {
+  "id": "rustcap_spores",
+  "display_name": "Rustcap spores",
+  "stackable": true,
+  "color": [
+   0.75,
+   0.45,
+   0.25,
+   1
+  ],
+  "kind": "seed",
+  "grows": "rustcap",
+  "grow_ticks": 130,
+  "grow_count": [
+   3,
+   5
+  ],
+  "grow_xp": 30,
+  "description": "Plant it in a grow bed in the hab and water it with ichor or coolant. It grows rustcap."
  }
 }

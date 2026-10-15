@@ -325,5 +325,28 @@
     "weight": 20
    }
   ]
+ },
+ "reach_seeds": {
+  "id": "reach_seeds",
+  "entries": [
+   {
+    "item": "glowroot_seed",
+    "weight": 3,
+    "min_count": 1,
+    "max_count": 2
+   },
+   {
+    "item": "ventbloom_seed",
+    "weight": 4,
+    "min_count": 1,
+    "max_count": 3
+   },
+   {
+    "item": "rustcap_spores",
+    "weight": 3,
+    "min_count": 1,
+    "max_count": 2
+   }
+  ]
  }
 }

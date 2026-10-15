@@ -341,6 +341,8 @@ export class World {
   }
 
   grantXp(entity, skill, amount) {
+    // Bonuses from features (rested in the hab, trophies on the wall), then the server's rate.
+    amount = Features.reduce('xpAmount', amount, this, entity, skill);
     amount = Math.round(amount * this.xp_rate * 10) / 10;
     const before = entity.level(skill);
     entity.xp[skill] = Math.min((entity.xp[skill] || 0) + amount, Skills.MAX_XP);
@@ -644,6 +646,7 @@ export class World {
     this.nodes.delete(id);
     this.stations.delete(id);
     this.wrecks.delete(id);
+    if (this.pieces) this.pieces.delete(id);
     this._refreshTile(object.tile);
   }
 

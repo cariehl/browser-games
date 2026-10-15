@@ -195,6 +195,11 @@ export class CraftTask extends Task {
     this._nextMake = 0;
   }
 
+  /** Ticks per batch: the recipe's, or fewer with a feature's help (a tool wall in the hab). */
+  _ticks(world, entity, station) {
+    return Math.max(1, Features.reduce('craftTicks', this.recipe.action_ticks, world, entity, station, this.recipe));
+  }
+
   process(world, entity) {
     const station = world.stations.get(this.station_id);
     const recipe = this.recipe;
@@ -211,13 +216,13 @@ export class CraftTask extends Task {
         return false;
       }
       this._started = true;
-      this._nextMake = world.tick + recipe.action_ticks;
+      this._nextMake = world.tick + this._ticks(world, entity, station);
       entity.activity = recipe.skill;
       return true;
     }
 
     if (world.tick < this._nextMake) return true;
-    this._nextMake = world.tick + recipe.action_ticks;
+    this._nextMake = world.tick + this._ticks(world, entity, station);
 
     if (!recipe.consume(entity.inventory)) return false;
     if (!entity.inventory.add(recipe.output, recipe.output_count)) {
@@ -228,6 +233,7 @@ export class CraftTask extends Task {
     if (recipe.output_count > 1) world.message(entity.id, `You make ${recipe.output_count} ${plural(recipe.displayName())}.`);
     else world.message(entity.id, `You make ${a(recipe.displayName())}.`);
     world.grantXp(entity, recipe.skill, recipe.xp);
+    Features.call('afterCraft', world, entity, station, recipe);
 
     if (this.remaining > 0) {
       this.remaining--;

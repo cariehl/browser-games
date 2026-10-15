@@ -22,7 +22,7 @@ import { Features } from './features.js';
 
 /** Event types only the entity they belong to is told about. */
 const PRIVATE_EVENTS = new Set(['message', 'xp', 'level_up', 'open_station', 'open_storage', 'wreck', 'boost',
-  'trade_request', 'open_trade', 'close_trade', 'traded', 'open_reconfigure', 'open_mech', 'open_arena']);
+  'trade_request', 'open_trade', 'close_trade', 'traded', 'open_reconfigure', 'open_mech', 'open_arena', 'open_board']);
 
 /** Event types everyone hears about, wherever they are. */
 const GLOBAL_EVENTS = new Set(['chat', 'broadcast']);
