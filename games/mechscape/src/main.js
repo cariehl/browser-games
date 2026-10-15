@@ -229,7 +229,7 @@ async function main() {
   const build = new BuildMode(ui, link, views.ghost);
   const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide, build, extraTabs: [new QuestJournal()] });
   const dialogue = new DialogueBox(ui, link);
-  const craft = new CraftMenu(ui, link);
+  const craft = new CraftMenu(ui, link, { menu, inspector });
   const storage = new StorageMenu(ui, link, menu);
   new ReconfigureWindow(ui, link);
   new MechWindow(ui, link);

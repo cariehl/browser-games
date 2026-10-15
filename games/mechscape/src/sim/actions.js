@@ -216,6 +216,32 @@ export class CraftAction extends Action {
   }
 }
 
+/** What Examine can look at, and where its defs live in Content. */
+const EXAMINABLE = { npc: 'npcs', node: 'nodes', station: 'stations', item: 'items', decor: 'decor', terrain: 'terrain' };
+
+/**
+ * Examine something: its description goes to your chat box (on the next
+ * tick, as in OSRS). [kind] is npc, node, station, item, decor or terrain;
+ * [def] is the def's id. It doesn't stop what you're doing.
+ */
+export class ExamineAction extends Action {
+  static TYPE = 'examine';
+  static FIELDS = { kind: 'id', def: 'id' };
+  constructor(kind, def) {
+    super();
+    this.kind = kind;
+    this.def = def;
+  }
+  slot() { return 'examine'; }
+  keepsTrade() { return true; }
+  apply(world, entity) {
+    const coll = Object.hasOwn(EXAMINABLE, this.kind) ? EXAMINABLE[this.kind] : null;
+    const def = coll && Object.hasOwn(Content[coll], this.def) ? Content[coll][this.def] : null;
+    if (!def || typeof def.display_name !== 'string') return;
+    world.message(entity.id, def.description || def.display_name);
+  }
+}
+
 /** Clicked an item on the ground: walk onto its tile and pick it up. */
 export class TakeAction extends Action {
   static TYPE = 'take';
@@ -685,7 +711,7 @@ export const ACTION_TYPES = Object.fromEntries([
   MoveAction, AttackAction, InteractAction, CraftAction, TakeAction, SetRunAction, SetCombatStyleAction,
   SwapItemsAction, DropAction, EquipAction, UnequipAction, UseItemAction, DepositAction, DepositAllAction,
   WithdrawAction, ChatAction, TradeRequestAction, TradeOfferAction, TradeRemoveAction, TradeAcceptAction,
-  TradeCancelAction, DebugGrantXpAction, DebugTeleportAction, DebugGiveAction,
+  TradeCancelAction, DebugGrantXpAction, DebugTeleportAction, DebugGiveAction, ExamineAction,
 ].map((cls) => [cls.TYPE, cls]));
 
 /** Lets a feature module (quests, the mech, the hab...) add its own actions. */

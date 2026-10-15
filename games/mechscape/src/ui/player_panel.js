@@ -19,6 +19,7 @@ import { cssColor } from '../view/tile_math.js';
 import { el } from './screen.js';
 import { ITEM_COLOR, commas, short, capitalize } from './common.js';
 import { InspectInfo } from './inspect_info.js';
+import { lookOptions } from './examine.js';
 import { COSMETIC_PARTS, CallPetAction, DismissPetAction } from '../sim/appearance.js';
 
 /**
@@ -351,10 +352,10 @@ export class PlayerPanel {
     else if (item.kind === 'pet') options.push({ verb: 'Call', target: item.display_name, color: ITEM_COLOR, action: () => this.link.send(ClientState.localPlayerId, new CallPetAction(index)) });
     else if (item.lore) options.push({ verb: 'Read', target: item.display_name, color: ITEM_COLOR, action: () => this.inspector.open(() => InspectInfo.lore(item), x, y, false) });
     options.push({ verb: 'Drop', target: item.display_name, color: ITEM_COLOR, action: () => this._drop(index) });
-    options.push({
-      verb: 'Inspect', target: item.display_name, color: ITEM_COLOR,
-      action: () => this.inspector.open(() => InspectInfo.item(item, ClientState.me()), x, y, false),
-    });
+    options.push(...lookOptions({
+      link: this.link, inspector: this.inspector, target: item.display_name, color: ITEM_COLOR, x, y,
+      source: () => InspectInfo.item(item, ClientState.me()), live: false, kind: 'item', defId: item.id,
+    }));
     options.push({ verb: 'Cancel', action: null });
     return options;
   }

@@ -390,3 +390,16 @@ test('NPCs on the game map fight back and leash home', () => {
   }, 40);
   assert.ok(attacked, 'an aggressive loader attacks a player in range');
 });
+
+test('Examine puts a description in the chat box without stopping anything', async () => {
+  const { ExamineAction, MoveAction } = await import('../src/sim/actions.js');
+  const { world, player } = makeWorld();
+  const node = Object.values(Content.nodes)[0];
+  act(world, player, new MoveAction({ x: player.tile.x + 5, y: player.tile.y }));
+  act(world, player, new ExamineAction('node', node.id));
+  assert.ok(messages(world, player.id).includes(node.description || node.display_name));
+  assert.ok(player.isMoving(), 'still walking');
+  act(world, player, new ExamineAction('npc', 'constructor'));
+  assert.equal(messages(world, player.id).length, 0, 'nothing for an unknown id');
+  assert.equal(Action.fromJSON({ type: 'examine', kind: 'npc', def: 'Bad id' }), null);
+});

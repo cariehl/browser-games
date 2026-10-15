@@ -59,7 +59,7 @@ export class ItemDef {
       container: null, capacity: 0,
       /** What sort of thing it is, for the UI: '' (materials, gear), junk, trinket, lore, cosmetic, pet, trophy, quest, component, piece, seed. */
       kind: '',
-      /** Flavour text, shown when inspected. */
+      /** What Examine says about it (in the chat box). */
       description: '',
       /** Lore items: what "Read" shows. */
       lore: '',
@@ -104,7 +104,10 @@ export class ItemDef {
 export class GatherNodeDef {
   constructor(raw) {
     assign(this, {
-      id: '', display_name: '', skill: 'salvaging', verb: 'salvage',
+      id: '', display_name: '',
+      /** What Examine says about it. */
+      description: '',
+      skill: 'salvaging', verb: 'salvage',
       level_required: 1, xp: 10, loot: null, rare_loot: null, rare_chance: 0,
       action_ticks: 4, deplete_chance: 0.15, max_successes: 0, respawn_ticks: 10,
       temporary: false, lifetime_ticks: 0,
@@ -185,7 +188,7 @@ export class NpcDef {
       shape: '',
       /** People drawn as pilots: parts and colours (see sim/appearance.js), and cosmetics worn (part -> item id). */
       look: null, cosmetics: {},
-      /** What Inspect says about it (people, pets and mechs; hostiles show their stats). */
+      /** What Examine says about it, in the chat box (hostiles also have Inspect, with their stats). */
       description: '',
       color: [0.5, 0.3, 0.28, 1], size: 1,
     }, raw);
@@ -252,7 +255,10 @@ export const StationKind = {
 export class StationDef {
   constructor(raw) {
     assign(this, {
-      id: '', display_name: '', description: '', skill: 'engineering', recipes: [],
+      id: '', display_name: '',
+      /** What Examine says about it. */
+      description: '',
+      skill: 'engineering', recipes: [],
       kind: StationKind.CRAFT,
       blocks_movement: true, blocks_sight: false,
       model: null, model_scale: 1, color: [0.45, 0.38, 0.3, 1],
@@ -287,7 +293,7 @@ export class TerrainDef {
       vary: false,
       /** What a puzzle that opens this terrain leaves in its place ('' for nothing). */
       opens_to: '',
-      /** Clickable (rocks), with an Inspect option showing its name and description. */
+      /** Clickable (rocks), with an Examine option that puts its description in the chat box. */
       inspect: false, description: '',
     }, raw);
   }
@@ -362,13 +368,37 @@ export class QuestDef {
   }
 }
 
-/** What an NPC says: entries tried in order, the first whose conditions hold (see quests.js). */
+/**
+ * What an NPC says: entries tried in order, the first whose conditions hold,
+ * each with lines and a menu of choices that can open menus of their own
+ * (see quests.js).
+ */
 export class DialogueDef {
   constructor(raw) {
     assign(this, { id: '', entries: [] }, raw);
   }
 
-  resolve() {}
+  /** Checks the ids it names (items, quests), all the way down the menus. */
+  resolve(content) {
+    const cond = (c) => {
+      if (!c) return;
+      if (c.quest) content.ref('quests', c.quest);
+      if (c.has) content.ref('items', c.has);
+      for (const f of c.flags || []) if (f.quest) content.ref('quests', f.quest);
+    };
+    const walk = (node) => {
+      cond(node.if);
+      for (const choice of node.choices || []) {
+        for (const e of choice.do || []) {
+          for (const k of ['take', 'give']) if (e[k]) content.ref('items', e[k]);
+          for (const k of ['start', 'complete', 'quest']) if (e[k]) content.ref('quests', e[k]);
+          if (Array.isArray(e.stage)) content.ref('quests', e.stage[0]);
+        }
+        walk(choice);
+      }
+    };
+    for (const entry of this.entries) walk(entry);
+  }
 }
 
 /** A skill's name and how it's described in the skill guide. Which skills exist, and what they do, is code (sim/skills.js). */
@@ -396,7 +426,7 @@ export class DecorDef {
       color: [0.4, 0.38, 0.36, 1], accent: [1, 0.6, 0.2, 1], scale: 1,
       /** A light it gives off: { color, intensity, distance }, or null. */
       light: null,
-      /** Clickable, with an Inspect option showing its name and description. Flat things (grass, puddles) aren't. */
+      /** Clickable, with an Examine option that puts its description in the chat box. Flat things (grass, puddles) aren't. */
       inspect: true, description: '',
       /** Solid: nobody walks through it (trees, rocks). It never blocks shots. */
       blocks_movement: false,

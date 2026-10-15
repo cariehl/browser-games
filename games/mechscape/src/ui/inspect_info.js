@@ -1,5 +1,7 @@
 // What "Inspect" shows for each kind of thing: the stats a player could
 // reasonably see or work out, plus odds worked out against their own stats.
+// Descriptions aren't here: Examine puts those in the chat box. Things with
+// no stats (people, scenery, stations) have no Inspect at all.
 // Read-only: it only looks at the World and the data.
 //
 // Each function returns { title, subtitle, rows: [[label, value, warn?], ...] },
@@ -66,23 +68,6 @@ export const InspectInfo = {
     return { title: def.display_name, subtitle: `${Skills.displayName(def.skill)} node`, rows };
   },
 
-  /** People, pets and mechs: who they are (hostiles show their stats instead, see npc()). */
-  person(world, npc) {
-    if (!npc || !world.entities.has(npc.id)) return null;
-    return { title: npc.def.display_name, subtitle: npc.def.description || '', rows: [] };
-  },
-
-  /** Scenery (decor props, rocks): a name and a line about it. */
-  scenery(def) {
-    return { title: def.display_name, subtitle: def.description || '', rows: [] };
-  },
-
-  station(world, station) {
-    if (!station || !world.stations.has(station.id)) return null;
-    const def = station.def;
-    return { title: def.display_name, subtitle: def.description || 'Crafting station', rows: [] };
-  },
-
   wreck(world, wreck) {
     if (!wreck || !world.wrecks.has(wreck.id)) return null;
     const rows = [];
@@ -126,7 +111,6 @@ export const InspectInfo = {
     }
     const KIND = { junk: 'Junk (recycle it at a metal press)', trinket: 'Trinket', lore: 'Lore', cosmetic: 'Cosmetic', pet: 'Pet', trophy: 'Trophy (mount it on the hab\'s trophy wall)', quest: 'Quest item', component: 'Mech component', piece: 'Hab piece', seed: 'Seed' };
     if (item.kind && KIND[item.kind]) subtitle = KIND[item.kind];
-    if (item.description) rows.unshift(['', item.description]);
     if (item.container) rows.push(['Carried in', `a ${item.container.display_name.toLowerCase()}, ${item.capacity} per canister`]);
     else if (item.stackable) rows.push(['Stacks', 'yes']);
     if (item.craft_xp > 0) rows.push(['Crafting XP', `${item.craft_xp.toFixed(1)} per one used`]);

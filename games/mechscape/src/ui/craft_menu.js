@@ -8,26 +8,31 @@
 // A station that makes more than one kind of thing gets tabs (Weapons,
 // Armor, Supplies), and the list scrolls once it's taller than
 // MAX_LIST_SCREEN of the screen. Each station remembers its last tab.
+// Right-click a recipe to make some, or to Inspect or Examine what it makes.
 
 import { ClientState } from '../client/client_state.js';
 import { Skills } from '../sim/skills.js';
 import { CraftAction } from '../sim/actions.js';
 import { cssColor } from '../view/tile_math.js';
 import { el } from './screen.js';
-import { onEscape } from './common.js';
+import { onEscape, ITEM_COLOR } from './common.js';
+import { InspectInfo } from './inspect_info.js';
+import { lookOptions } from './examine.js';
 
 const MAX_LIST_SCREEN = 0.55;
 const TAB_ORDER = ['Weapons', 'Armor', 'Supplies'];
 
 export class CraftMenu {
-  constructor(parent, link) {
+  constructor(parent, link, { menu = null, inspector = null } = {}) {
     this.link = link;
+    this.menu = menu;
+    this.inspector = inspector;
     this.el = el('div', 'craft-menu panel centered', '', parent);
     this.el.style.display = 'none';
     const header = el('div', 'row', '', this.el);
     this._title = el('div', 'title grow', '', header);
     el('button', '', 'Close', header).addEventListener('click', () => this.close());
-    el('div', 'muted', 'What would you like to make?', this.el);
+    el('div', 'muted', 'What would you like to make? Right-click one to inspect it.', this.el);
     this._tabs = el('div', 'tabs', '', this.el);
     this._list = el('div', 'craft-list', '', this.el);
     this._station = null;
@@ -113,9 +118,23 @@ export class CraftMenu {
     el('div', '', recipe.displayName() + (recipe.output_count > 1 ? `  ×${recipe.output_count}` : ''), text);
     const level = el('div', 'small', '', text);
     const inputs = el('div', 'small', '', text);
-    for (const [label, count] of [['1', 1], ['5', 5], ['All', CraftAction.ALL]]) {
+    const counts = [['1', 1], ['5', 5], ['All', CraftAction.ALL]];
+    for (const [label, count] of counts) {
       el('button', 'count', label, row).addEventListener('click', () => this._choose(index, count));
     }
+    row.addEventListener('pointerdown', (e) => {
+      if (e.button !== 2 || !this.menu) return;
+      e.preventDefault();
+      e.stopPropagation();
+      const name = recipe.output.display_name;
+      const options = counts.map(([label, count]) => ({ verb: `Make ${label}`, target: name, color: ITEM_COLOR, action: () => this._choose(index, count) }));
+      options.push(...lookOptions({
+        link: this.link, inspector: this.inspector, target: name, color: ITEM_COLOR, x: e.clientX, y: e.clientY,
+        source: () => InspectInfo.item(recipe.output, ClientState.me()), live: false, kind: 'item', defId: recipe.output.id,
+      }));
+      options.push({ verb: 'Cancel', action: null });
+      this.menu.open(options, e.clientX, e.clientY);
+    });
     return { row, level, inputs };
   }
 

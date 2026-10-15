@@ -1,6 +1,8 @@
 // A character's dialogue as a conversation: entries tried top to bottom (the
 // first whose "when" holds is what they say), each a run of speech bubbles
-// and then the player's choices, each choice with what it does.
+// and then the player's choices. Each choice has when it's shown, what it
+// does, what's said back, and either a sub-menu of its own choices or what
+// comes after (close, this menu again, the menu above, the first menu).
 
 import { Store } from './store.js';
 import { COLLECTIONS, idsOf, fill } from './schema.js';
@@ -16,10 +18,60 @@ const EFFECTS = {
   complete: { help: 'complete a quest', ref: 'quests' },
   take: { help: 'take an item (the choice fails without it)', ref: 'items' },
   give: { help: 'give an item', ref: 'items' },
-  flag: { help: 'set a world flag' },
+  flag: { help: 'set or clear a flag', flag: true },
   event: { help: 'fire a game event (mech_powerup...)' },
-  say: { help: 'they reply with a line', long: true },
 };
+
+/** Flag scopes, as sim/quests.js has them. */
+const SCOPES = {
+  world: 'world flag (shared by everyone)',
+  quest: 'quest flag (this player, under a quest)',
+  player: 'player flag (this player)',
+  dialogue: 'dialogue flag (cleared when the talk ends)',
+};
+
+/** What comes after a choice with no sub-menu. */
+const AFTER = { end: 'close the conversation', menu: 'show this menu again', parent: 'go back to the menu above', top: 'go back to the first menu' };
+
+/** Every flag name used in the dialogue and quests, for suggestions. */
+function flagDatalist() {
+  let list = document.getElementById('dl-flags');
+  if (!list) list = el('datalist', '', '', document.body), (list.id = 'dl-flags');
+  const names = new Set();
+  const walk = (v) => {
+    if (Array.isArray(v)) v.forEach(walk);
+    else if (v && typeof v === 'object') {
+      for (const k of ['flag', 'not_flag', 'unless_flag']) if (typeof v[k] === 'string' && v[k]) names.add(v[k]);
+      Object.values(v).forEach(walk);
+    }
+  };
+  walk(Store.data(FILE));
+  walk(Store.data(COLLECTIONS.quests.file));
+  list.innerHTML = '';
+  for (const n of [...names].sort()) el('option', '', '', list).value = n;
+}
+
+/** Scope, quest (for quest flags) and name of a flag held in [f]. */
+function flagFields(parent, f, redraw) {
+  const scope = el('select', '', '', parent);
+  for (const [k, label] of Object.entries(SCOPES)) el('option', '', label, scope).value = k;
+  scope.value = f.scope || 'world';
+  scope.addEventListener('change', () => {
+    if (scope.value === 'world') delete f.scope;
+    else f.scope = scope.value;
+    if (scope.value !== 'quest') delete f.quest;
+    else f.quest = f.quest || '';
+    touch();
+    redraw();
+  });
+  if (f.scope === 'quest') refInput(parent, f.quest, 'quests', (v) => { f.quest = v; touch(); });
+  const name = el('input', '', '', parent);
+  name.value = f.flag || '';
+  name.placeholder = 'flag name';
+  name.style.width = '150px';
+  name.setAttribute('list', 'dl-flags');
+  name.addEventListener('input', () => { f.flag = name.value; touch(); });
+}
 
 function refInput(parent, value, coll, onInput) {
   const input = el('input', 'ref-input', '', parent);
@@ -46,10 +98,10 @@ function stageSelect(parent, questId, value, onChange) {
   return select;
 }
 
-/** The "when" of an entry: quest at a stage, carrying an item, a flag set or not. */
-function conditionEditor(parent, entry, redraw) {
+/** The "when" of an entry or choice: quest at a stage, carrying an item, flags set or not. */
+function conditionEditor(parent, entry, redraw, label = 'When', none = 'always') {
   const box = el('div', 'cond', '', parent);
-  el('b', '', 'When', box);
+  el('b', '', label, box);
   const cond = entry.if || {};
   const parts = [];
   if ('quest' in cond) {
@@ -88,15 +140,37 @@ function conditionEditor(parent, entry, redraw) {
       redraw();
     });
   }
-  if (!parts.length) el('span', 'muted', 'always', box);
+  (cond.flags || []).forEach((f, i) => {
+    const span = el('span', 'cond', '', box);
+    flagFields(span, f, redraw);
+    const not = el('select', '', '', span);
+    el('option', '', 'is set', not).value = '';
+    el('option', '', 'is not set', not).value = 'not';
+    not.value = f.not ? 'not' : '';
+    not.addEventListener('change', () => {
+      if (not.value) f.not = true;
+      else delete f.not;
+      touch();
+    });
+    button('×', span, () => {
+      cond.flags.splice(i, 1);
+      if (!cond.flags.length) delete cond.flags;
+      if (!Object.keys(cond).length) delete entry.if;
+      touch();
+      redraw();
+    });
+    parts.push(span);
+  });
+  if (!parts.length) el('span', 'muted', none, box);
   const add = el('select', '', '', box);
   el('option', '', '+ condition', add).value = '';
-  for (const [k, label] of [['quest', 'quest stage'], ['has', 'carrying an item'], ['flag', 'flag set'], ['not_flag', 'flag not set']]) {
-    if (!(k in cond)) el('option', '', label, add).value = k;
+  for (const [k, label] of [['quest', 'quest stage'], ['has', 'carrying an item'], ['flags', 'a flag (any scope)']]) {
+    if (!(k in cond) || k === 'flags') el('option', '', label, add).value = k;
   }
   add.addEventListener('change', () => {
     entry.if = entry.if || {};
     if (add.value === 'quest') Object.assign(entry.if, { quest: '', stage: 'none' });
+    else if (add.value === 'flags') (entry.if.flags = entry.if.flags || []).push({ flag: '', scope: 'dialogue' });
     else entry.if[add.value] = '';
     touch();
     redraw();
@@ -150,6 +224,17 @@ function effectEditor(parent, list, i, redraw) {
     const pair = Array.isArray(effect.stage) ? effect.stage : (effect.stage = ['', '']);
     refInput(row, pair[0], 'quests', (v) => { pair[0] = v; touch(); });
     stageSelect(row, pair[0], pair[1], (v) => { pair[1] = v; touch(); });
+  } else if (spec.flag) {
+    const mode = el('select', '', '', row);
+    el('option', '', 'set', mode).value = '';
+    el('option', '', 'clear', mode).value = 'clear';
+    mode.value = effect.clear ? 'clear' : '';
+    mode.addEventListener('change', () => {
+      if (mode.value) effect.clear = true;
+      else delete effect.clear;
+      touch();
+    });
+    flagFields(row, effect, redraw);
   } else if (spec.ref) {
     refInput(row, effect[kind], spec.ref, (v) => { effect[kind] = v; touch(); });
   } else {
@@ -157,6 +242,19 @@ function effectEditor(parent, list, i, redraw) {
     input.value = effect[kind] || '';
     if (spec.long) input.rows = 2;
     input.addEventListener('input', () => { effect[kind] = input.value; touch(); });
+  }
+  if (kind === 'take' || kind === 'give') {
+    el('span', 'muted small', '×', row);
+    const count = el('input', '', '', row);
+    count.type = 'number';
+    count.min = 1;
+    count.value = effect.count || 1;
+    count.style.width = '50px';
+    count.addEventListener('input', () => {
+      if (Number(count.value) > 1) effect.count = Number(count.value);
+      else delete effect.count;
+      touch();
+    });
   }
   if (kind === 'take') {
     el('span', 'muted small', 'unless flag', row);
@@ -172,43 +270,82 @@ function effectEditor(parent, list, i, redraw) {
   button('×', row, () => { list.splice(i, 1); touch(); redraw(); });
 }
 
-function choices(parent, entry, redraw) {
-  (entry.choices || []).forEach((choice, i) => {
+/** The menu of [node] (an entry or a choice): its choices, each with its own sub-menu. */
+function choices(parent, node, redraw, depth = 0) {
+  const list = node.choices || [];
+  list.forEach((choice, i) => {
     const box = el('div', 'choice', '', parent);
+    if (depth) box.style.marginLeft = '24px';
     const head = el('div', 'row', '', box);
     el('b', '', '▸', head);
     const text = el('input', 'grow', '', head);
     text.value = choice.text || '';
     text.placeholder = 'What you can answer';
     text.addEventListener('input', () => { choice.text = text.value; touch(); });
+    button('↑', head, () => { list.splice(i - 1, 0, list.splice(i, 1)[0]); touch(); redraw(); }).disabled = i === 0;
+    button('↓', head, () => { list.splice(i + 1, 0, list.splice(i, 1)[0]); touch(); redraw(); }).disabled = i === list.length - 1;
+    button('Copy', head, () => { list.splice(i + 1, 0, clone(choice)); touch(); redraw(); });
     button('×', head, () => {
-      entry.choices.splice(i, 1);
-      if (!entry.choices.length) delete entry.choices;
+      list.splice(i, 1);
+      if (!list.length) delete node.choices;
       touch();
       redraw();
     });
+    conditionEditor(box, choice, redraw, 'Shown', 'always');
     (choice.do || []).forEach((_, j) => effectEditor(box, choice.do, j, redraw));
-    if (!(choice.do || []).length) el('div', 'muted small effect', 'Closes the conversation.', box);
     button('+ effect', box, () => {
-      (choice.do = choice.do || []).push({ say: '' });
+      (choice.do = choice.do || []).push({ give: '' });
+      touch();
+      redraw();
+    }, 'small');
+    if ((choice.lines || []).length) {
+      const said = el('div', '', '', box);
+      bubbles(said, choice.lines, redraw);
+    }
+    button('+ response line', box, () => {
+      (choice.lines = choice.lines || []).push({ who: 'npc', text: '' });
+      touch();
+      redraw();
+    }, 'small');
+    if ((choice.choices || []).length) {
+      el('div', 'muted small', 'Then this menu:', box);
+      choices(box, choice, redraw, depth + 1);
+    } else {
+      const then = el('div', 'effect', '', box);
+      el('span', 'muted small', 'Then', then);
+      const after = el('select', '', '', then);
+      for (const [k, label] of Object.entries(AFTER)) el('option', '', label, after).value = k;
+      after.value = choice.after || 'end';
+      after.addEventListener('change', () => {
+        if (after.value === 'end') delete choice.after;
+        else choice.after = after.value;
+        touch();
+      });
+      button('+ sub-menu', then, () => {
+        delete choice.after;
+        choice.choices = [{ text: '' }];
+        touch();
+        redraw();
+      }, 'small');
+    }
+  });
+  if (depth === 0 || list.length) {
+    const add = button(depth ? '+ Choice in this menu' : '+ Choice', parent, () => {
+      (node.choices = node.choices || []).push({ text: '' });
       touch();
       redraw();
     });
-  });
-  const add = button('+ Choice', parent, () => {
-    (entry.choices = entry.choices || []).push({ text: '', do: [] });
-    touch();
-    redraw();
-  });
-  add.style.marginLeft = '60px';
+    add.style.marginLeft = `${60 + depth * 24}px`;
+  }
 }
 
 export function dialogueView(main, id, dialogue) {
   const speakers = Object.values(Store.data(COLLECTIONS.npcs.file) || {}).filter((n) => n.talk === id).map((n) => n.display_name);
-  el('div', 'subtitle', `${speakers.length ? `Spoken by ${speakers.join(', ')}.` : 'No NPC uses this yet (set an NPC\'s "talk" to this id).'} Entries are tried top to bottom; the first whose "when" holds is what they say. Text can use tokens like {npcs:foreman} or {area:undercroft}.`, main);
+  el('div', 'subtitle', `${speakers.length ? `Spoken by ${speakers.join(', ')}.` : 'No NPC uses this yet (set an NPC\'s "talk" to this id).'} Entries are tried top to bottom; the first whose "when" holds is what they say. A choice can say something back and open its own menu, as deep as you like. Flags: world (shared), quest and player (per player, saved), dialogue (cleared when the talk ends). Text can use tokens like {npcs:foreman} or {area:undercroft}.`, main);
   const box = el('div', '', '', main);
   if (!dialogue.entries) dialogue.entries = [];
   const draw = () => {
+    flagDatalist();
     box.innerHTML = '';
     dialogue.entries.forEach((entry, i) => {
       const card = el('div', 'card', '', box);
