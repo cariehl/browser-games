@@ -63,7 +63,7 @@ test('a pet follows you, through hatches too, and goes back in your pack', () =>
   assert.ok(pet, 'the pet is out');
   assert.equal(pet.def.attackable, false);
   // Somewhere else entirely: it catches up.
-  player.teleport({ x: 5, y: 64 });
+  player.teleport({ x: 5, y: 224 });
   runUntil(world, () => world.areaIdAt(pet.tile) === world.areaIdAt(player.tile), 5);
   assert.equal(world.areaIdAt(pet.tile), world.areaIdAt(player.tile));
   // Nobody can fight it.

@@ -102,10 +102,22 @@ export class Grid {
     const start = from.y * w + from.x;
     const goal = to.y * w + to.x;
     if (start === goal) return [{ x: from.x, y: from.y }];
+    // Search buffers are kept between searches (the world is mostly void
+    // between areas, so allocating them per search is costly); a tile's
+    // entries count only when its stamp matches this search's.
     const n = w * this.height;
-    const g = new Float64Array(n).fill(Infinity);
-    const parent = new Int32Array(n).fill(-1);
-    const closed = new Uint8Array(n);
+    if (!this._g || this._g.length !== n) {
+      this._g = new Float64Array(n);
+      this._parent = new Int32Array(n);
+      this._seen = new Uint32Array(n);
+      this._closed = new Uint32Array(n);
+      this._search = 0;
+    }
+    const search = ++this._search;
+    const g = this._g;
+    const parent = this._parent;
+    const seen = this._seen;
+    const closed = this._closed;
     const heap = new MinHeap();
     const h = (i) => {
       const dx = Math.abs((i % w) - to.x);
@@ -113,12 +125,14 @@ export class Grid {
       return Math.max(dx, dy) + (SQRT2 - 1) * Math.min(dx, dy);
     };
     g[start] = 0;
+    parent[start] = -1;
+    seen[start] = search;
     heap.push(start, h(start));
     while (heap.size) {
       const cur = heap.pop();
       if (cur === goal) break;
-      if (closed[cur]) continue;
-      closed[cur] = 1;
+      if (closed[cur] === search) continue;
+      closed[cur] = search;
       const cx = cur % w;
       const cy = (cur - cx) / w;
       for (const [dx, dy] of DIRS) {
@@ -131,16 +145,17 @@ export class Grid {
           if (!step(cx, cy, cx + dx, cy) || !step(cx + dx, cy, nx, ny) || !step(cx, cy, cx, cy + dy) || !step(cx, cy + dy, nx, ny)) continue;
         }
         const ni = ny * w + nx;
-        if (closed[ni]) continue;
+        if (closed[ni] === search) continue;
         const cost = g[cur] + (dx !== 0 && dy !== 0 ? SQRT2 : 1);
-        if (cost < g[ni] - 1e-9) {
+        if (seen[ni] !== search || cost < g[ni] - 1e-9) {
+          seen[ni] = search;
           g[ni] = cost;
           parent[ni] = cur;
           heap.push(ni, cost + h(ni));
         }
       }
     }
-    if (parent[goal] === -1) return [];
+    if (seen[goal] !== search) return [];
     const path = [];
     for (let i = goal; i !== -1; i = parent[i]) {
       path.push({ x: i % w, y: Math.floor(i / w) });

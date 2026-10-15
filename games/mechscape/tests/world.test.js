@@ -60,7 +60,7 @@ test('snapshots only hold your own area', () => {
   const world = world0();
   const up = world.spawnPlayer('Up');
   const down = world.spawnPlayer('Down');
-  down.teleport({ x: 5, y: 64 });
+  down.teleport({ x: 5, y: 224 });
   world.runTick();
   const snap = takeSnapshot(world, up.id);
   const ids = new Set(snap.entities.map((e) => e.id));

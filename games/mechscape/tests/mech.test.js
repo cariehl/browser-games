@@ -48,14 +48,27 @@ function deployed(world, player) {
   return mech;
 }
 
-test('components are made from the existing skills at level 10 or below', () => {
+test('components are made from the existing skills, all at level 15', () => {
   const recipes = Object.values(Content.recipes);
   for (const { item: it } of def().components) {
     const recipe = recipes.find((r) => r.output === it);
     assert.ok(recipe, `a recipe for ${it.id}`);
-    assert.ok(recipe.level_required <= 10, `${it.id} at level ${recipe.level_required}`);
+    assert.equal(recipe.level_required, 15, `${it.id} at level ${recipe.level_required}`);
     const stations = Object.values(Content.stations).filter((s) => (s.recipes || []).includes(recipe));
     assert.ok(stations.length, `${it.id} is made somewhere`);
+  }
+});
+
+test('components need refined sub-parts, and refined metal takes ten scrap', () => {
+  const recipes = Object.values(Content.recipes);
+  const made = (id) => recipes.find((r) => r.output === item(id));
+  assert.deepEqual(made('refined_metal').inputs.map((i) => [i.item.id, i.count]), [['scrap_metal', 10]]);
+  for (const { item: it } of def().components) {
+    assert.ok(made(it.id).inputs.some((i) => i.item.id === 'refined_metal'), `${it.id} uses refined metal`);
+  }
+  for (const id of ['refined_metal', 'control_board', 'servo_assembly']) {
+    assert.ok(made(id).level_required < 15, `${id} comes before the parts`);
+    assert.ok(Object.values(Content.stations).some((s) => (s.recipes || []).includes(made(id))), `${id} is made somewhere`);
   }
 });
 

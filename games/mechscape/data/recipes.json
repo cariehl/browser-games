@@ -566,18 +566,72 @@
   "output": "coolant_bloom",
   "action_ticks": 4
  },
+ "refined_metal": {
+  "id": "refined_metal",
+  "skill": "engineering",
+  "level_required": 12,
+  "inputs": [
+   {
+    "item": "scrap_metal",
+    "count": 10
+   }
+  ],
+  "output": "refined_metal",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "control_board": {
+  "id": "control_board",
+  "skill": "engineering",
+  "level_required": 13,
+  "inputs": [
+   {
+    "item": "relic_circuitry",
+    "count": 3
+   },
+   {
+    "item": "refined_metal",
+    "count": 1
+   }
+  ],
+  "output": "control_board",
+  "output_count": 1,
+  "action_ticks": 5
+ },
+ "servo_assembly": {
+  "id": "servo_assembly",
+  "skill": "engineering",
+  "level_required": 14,
+  "inputs": [
+   {
+    "item": "servo_actuator",
+    "count": 1
+   },
+   {
+    "item": "refined_metal",
+    "count": 2
+   }
+  ],
+  "output": "servo_assembly",
+  "output_count": 1,
+  "action_ticks": 5
+ },
  "mech_frame": {
   "id": "mech_frame",
   "skill": "engineering",
-  "level_required": 8,
+  "level_required": 15,
   "inputs": [
+   {
+    "item": "refined_metal",
+    "count": 5
+   },
    {
     "item": "alloy_plating",
     "count": 4
    },
    {
-    "item": "scrap_metal",
-    "count": 6
+    "item": "control_board",
+    "count": 1
    }
   ],
   "output": "mech_frame",
@@ -587,18 +641,18 @@
  "mech_leg": {
   "id": "mech_leg",
   "skill": "engineering",
-  "level_required": 6,
+  "level_required": 15,
   "inputs": [
    {
-    "item": "alloy_plating",
-    "count": 2
+    "item": "refined_metal",
+    "count": 3
    },
    {
-    "item": "relic_circuitry",
+    "item": "servo_assembly",
     "count": 1
    },
    {
-    "item": "scrap_metal",
+    "item": "alloy_plating",
     "count": 2
    }
   ],
@@ -609,7 +663,7 @@
  "power_core": {
   "id": "power_core",
   "skill": "engineering",
-  "level_required": 7,
+  "level_required": 15,
   "inputs": [
    {
     "item": "canister",
@@ -617,10 +671,14 @@
    },
    {
     "item": "vent_gas",
-    "count": 40
+    "count": 50
    },
    {
-    "item": "relic_circuitry",
+    "item": "control_board",
+    "count": 1
+   },
+   {
+    "item": "refined_metal",
     "count": 2
    }
   ],
@@ -631,23 +689,23 @@
  "cockpit_shell": {
   "id": "cockpit_shell",
   "skill": "splicing",
-  "level_required": 5,
+  "level_required": 15,
   "inputs": [
    {
     "item": "ichor",
-    "count": 10
+    "count": 15
    },
    {
     "item": "coolant",
-    "count": 10
+    "count": 15
+   },
+   {
+    "item": "refined_metal",
+    "count": 2
    },
    {
     "item": "relic_circuitry",
     "count": 1
-   },
-   {
-    "item": "scrap_metal",
-    "count": 3
    }
   ],
   "output": "cockpit_shell",
@@ -657,18 +715,22 @@
  "cockpit_interior": {
   "id": "cockpit_interior",
   "skill": "engineering",
-  "level_required": 4,
+  "level_required": 15,
   "inputs": [
    {
-    "item": "relic_circuitry",
+    "item": "control_board",
+    "count": 1
+   },
+   {
+    "item": "sentry_eye",
     "count": 1
    },
    {
     "item": "ichor",
-    "count": 3
+    "count": 5
    },
    {
-    "item": "sentry_eye",
+    "item": "refined_metal",
     "count": 1
    }
   ],
@@ -679,7 +741,7 @@
  "weapon_mount": {
   "id": "weapon_mount",
   "skill": "engineering",
-  "level_required": 10,
+  "level_required": 15,
   "inputs": [
    {
     "item": "relic_pistol",
@@ -687,10 +749,14 @@
    },
    {
     "item": "gas_cartridge",
-    "count": 20
+    "count": 30
    },
    {
-    "item": "alloy_plating",
+    "item": "refined_metal",
+    "count": 2
+   },
+   {
+    "item": "control_board",
     "count": 1
    }
   ],
@@ -701,11 +767,15 @@
  "armor_plate": {
   "id": "armor_plate",
   "skill": "engineering",
-  "level_required": 9,
+  "level_required": 15,
   "inputs": [
    {
+    "item": "refined_metal",
+    "count": 2
+   },
+   {
     "item": "alloy_plating",
-    "count": 3
+    "count": 2
    }
   ],
   "output": "armor_plate",

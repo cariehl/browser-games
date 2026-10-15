@@ -170,6 +170,11 @@ export const SaveGame = {
   playerFromDict(world, entry, id = entry.id) {
     const player = world.spawn(id, entry.tile);
     applyEntity(player, entry);
+    // Saved somewhere that's no longer part of the map (an area moved): back to spawn.
+    if (world.areaIdAt(player.tile) < 0) {
+      player.teleport(world.spawn_point);
+      player.spawn_tile = { ...world.spawn_point };
+    }
     player.display_name = entry.display_name || '';
     player.inventory = new Inventory();
     entry.inventory.forEach((line, i) => {

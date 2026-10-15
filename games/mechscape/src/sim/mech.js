@@ -802,7 +802,8 @@ Features.register({
       build.deployed = !!saved.deployed;
       if (saved.mech) {
         const mech = Mechs.assemble(world, def, build);
-        mech.teleport(saved.mech.tile);
+        // Off the map (an area moved since the save): back on its pad.
+        mech.teleport(world.areaIdAt(saved.mech.tile) >= 0 ? saved.mech.tile : Mechs.spot(world, def.pad) || world.spawn_point);
         mech.hp = Math.min(saved.mech.hp, mech.maxHp());
         mech.fuel = saved.mech.fuel;
         mech.ammo = saved.mech.ammo;

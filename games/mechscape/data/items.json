@@ -1218,6 +1218,48 @@
   "kind": "trinket",
   "description": "A party in a sword. Hits for nothing, every time, and celebrates it."
  },
+ "refined_metal": {
+  "id": "refined_metal",
+  "display_name": "Refined metal",
+  "stackable": false,
+  "color": [
+   0.66,
+   0.68,
+   0.72,
+   1
+  ],
+  "abbreviation": "Refined",
+  "craft_xp": 45,
+  "description": "Ten pieces of scrap pressed and pressed again until only the good metal is left."
+ },
+ "control_board": {
+  "id": "control_board",
+  "display_name": "Control board",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.62,
+   0.45,
+   1
+  ],
+  "abbreviation": "Board",
+  "craft_xp": 70,
+  "description": "Three relic circuits soldered to a refined-metal backplate. A mech's nerves."
+ },
+ "servo_assembly": {
+  "id": "servo_assembly",
+  "display_name": "Servo assembly",
+  "stackable": false,
+  "color": [
+   0.86,
+   0.68,
+   0.32,
+   1
+  ],
+  "abbreviation": "S.Assy",
+  "craft_xp": 90,
+  "description": "A servo actuator in a refined-metal housing, strong enough to swing a walker's knee."
+ },
  "mech_frame": {
   "id": "mech_frame",
   "display_name": "Mech frame",
@@ -1230,7 +1272,7 @@
   ],
   "abbreviation": "Frame",
   "kind": "component",
-  "description": "The walker's spine and hips: alloy girders bolted around a scrap-metal core."
+  "description": "The walker's spine and hips: refined girders around a control board."
  },
  "mech_leg": {
   "id": "mech_leg",
@@ -1244,7 +1286,7 @@
   ],
   "abbreviation": "Leg",
   "kind": "component",
-  "description": "One of a walker's two legs, with a relic circuit in the knee to keep it steady."
+  "description": "One of a walker's two legs, swung by a servo assembly in the knee."
  },
  "power_core": {
   "id": "power_core",
@@ -1258,7 +1300,7 @@
   ],
   "abbreviation": "Core",
   "kind": "component",
-  "description": "A canister reactor packed with vent gas. It hums when you hold it."
+  "description": "A canister reactor packed with vent gas and run by a control board. It hums when you hold it."
  },
  "cockpit_shell": {
   "id": "cockpit_shell",

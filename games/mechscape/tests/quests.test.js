@@ -44,7 +44,7 @@ test('Ignition: from the foreman to the vault and back', () => {
   talk(world, player, foreman, 'blueprint');
   assert.equal(Quests.stageOf(player, 'ignition'), 'find_hatch');
   // Going down the hatch moves it on.
-  player.teleport({ x: 5, y: 64 });
+  player.teleport({ x: 5, y: 224 });
   world.runTick();
   assert.equal(Quests.stageOf(player, 'ignition'), 'find_blueprint');
   // The vault won't open while the warden stands.

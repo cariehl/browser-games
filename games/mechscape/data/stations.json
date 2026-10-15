@@ -61,6 +61,8 @@
    "recycle_wire",
    "recycle_lenses",
    "recycle_chips",
+   "refined_metal",
+   "servo_assembly",
    "mech_frame",
    "mech_leg",
    "power_core",
@@ -106,6 +108,7 @@
    "alloy_pistol",
    "servo_blade",
    "servo_pistol",
+   "control_board",
    "weapon_mount"
   ],
   "model": "weapons_bench.glb",
@@ -281,12 +284,15 @@
    "recycle_wire",
    "recycle_lenses",
    "recycle_chips",
+   "refined_metal",
+   "servo_assembly",
    "mech_frame",
    "mech_leg",
    "power_core",
    "armor_plate",
    "weapon_mount",
-   "cockpit_interior"
+   "cockpit_interior",
+   "control_board"
   ],
   "color": [
    0.5,
