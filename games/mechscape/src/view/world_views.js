@@ -18,6 +18,7 @@ import { buildGrid } from './grid_view.js';
 import { WorldLabel } from '../ui/screen.js';
 import { buildWalker, showInstalled, WalkerAnimator } from './mech_view.js';
 import { Mechs } from '../sim/mech.js';
+import { HazardViews } from './hazard_view.js';
 
 export const PLAYER_MODEL = 'player.glb';
 /** Ground one Walk and one Run cycle of the player model cover, in metres. */
@@ -68,6 +69,7 @@ export class WorldViews {
     for (const state of world.entities.values()) this._addEntity(state);
     this._syncNodes();
     this.bursts = new Bursts(this.root);
+    this.hazards = new HazardViews(this.root);
     ClientState.onTick(() => {
       for (const event of ClientState.world.events) {
         if (event.type === 'attack' || event.type === 'mech_powerup') {
@@ -79,6 +81,11 @@ export class WorldViews {
               this.bursts.spawn(view.position.clone().setY(view.position.y + 3.5), 'confetti');
             }
           }
+          continue;
+        }
+        if (event.type === 'shield_down' || event.type === 'hazard_resolve' && event.data.kind === 'soak') {
+          const view = this.entities.get(event.entity);
+          if (view) this.bursts.spawn(view.position.clone().setY(view.position.y + 2), 'paint', [1, 0.3, 0.65]);
           continue;
         }
         if (event.type === 'fun_hit') {
@@ -104,6 +111,7 @@ export class WorldViews {
   update(delta) {
     const world = ClientState.world;
     this.bursts.update(delta);
+    this.hazards.update();
     for (const state of world.entities.values()) if (!this.entities.has(state.id)) this._addEntity(state);
     // Players who logged out (online only: NPCs never leave the world).
     for (const [id, view] of this.entities) {
@@ -124,6 +132,16 @@ export class WorldViews {
       if (view.walker) view.walker.update(delta, view.position);
       // Crew are inside their mech.
       if (view.state.riding) view.visible = false;
+      // A boss's shield: a bubble round it.
+      if (view.state.shield !== undefined) {
+        if (!view.shieldBubble) {
+          view.shieldBubble = new THREE.Mesh(new THREE.SphereGeometry(1.6, 20, 14), new THREE.MeshStandardMaterial({ color: color([0.5, 0.85, 1]), emissive: color([0.3, 0.6, 1]), emissiveIntensity: 0.8, transparent: true, opacity: 0.25, depthWrite: false }));
+          view.shieldBubble.position.y = 1.4;
+          view.add(view.shieldBubble);
+        }
+        view.shieldBubble.visible = view.state.shield && !view.state.isDead();
+        if (view.shieldBubble.visible) view.shieldBubble.rotation.y += delta;
+      }
       // Other players' names float over them.
       if (!view.nameLabel && !view.state.isNpc() && view.state.id !== ClientState.localPlayerId) view.nameLabel = new WorldLabel('player-label');
       if (view.nameLabel) {

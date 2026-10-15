@@ -219,3 +219,13 @@ input.number { width: 110px; }
 .mech-stats { display: flex; gap: 14px; font-size: 14px; }
 .mech-stats .warn { color: var(--warn); }
 .mech-hud { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); display: flex; flex-direction: column; gap: 6px; min-width: 260px; z-index: 20; background: var(--panel-solid); }
+
+/* The pilot boss */
+.arena-window { min-width: 300px; max-width: 380px; display: flex; flex-direction: column; gap: 8px; z-index: 30; }
+.arena-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.boss-bar { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); width: min(460px, 70vw); z-index: 20; text-align: center; text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8); }
+.boss-name { font-size: 17px; font-weight: 600; color: #ffd0ea; }
+.boss-track { height: 14px; background: rgba(40, 10, 20, 0.85); border: 1px solid rgba(0, 0, 0, 0.7); border-radius: 3px; overflow: hidden; margin-top: 3px; }
+.boss-fill { height: 100%; background: linear-gradient(#e94a8f, #b8226a); transition: width 0.25s; }
+.boss-fill.shielded { background: linear-gradient(#7fd3ff, #3a8fd0); }
+.boss-tag { font-size: 13px; color: #cfe8ff; margin-top: 2px; min-height: 16px; }
