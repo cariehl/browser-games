@@ -16,6 +16,8 @@ import { GatherNodeView } from './gather_node_view.js';
 import { StationView } from './station_view.js';
 import { buildGrid } from './grid_view.js';
 import { WorldLabel } from '../ui/screen.js';
+import { buildWalker, showInstalled, WalkerAnimator } from './mech_view.js';
+import { Mechs } from '../sim/mech.js';
 
 export const PLAYER_MODEL = 'player.glb';
 /** Ground one Walk and one Run cycle of the player model cover, in metres. */
@@ -25,7 +27,6 @@ const GROUND_BLOCK = [0.26, 0.14, 0.26];
 const TICK_SECONDS = 0.6;
 /** How long a chat line floats over whoever said it. */
 const CHAT_SECONDS = 5;
-/** Each player's own colour, by id, so friends can tell each other apart. Player 1 keeps the original orange. */
 
 /** Every model file the world's content refers to, to preload. */
 export function modelFiles(content) {
@@ -69,6 +70,17 @@ export class WorldViews {
     this.bursts = new Bursts(this.root);
     ClientState.onTick(() => {
       for (const event of ClientState.world.events) {
+        if (event.type === 'attack' || event.type === 'mech_powerup') {
+          const view = this.entities.get(event.entity);
+          if (view && view.walker) {
+            if (event.type === 'attack') view.walker.fire();
+            else {
+              view.walker.powerUp();
+              this.bursts.spawn(view.position.clone().setY(view.position.y + 3.5), 'confetti');
+            }
+          }
+          continue;
+        }
         if (event.type === 'fun_hit') {
           const target = this.entities.get(event.data.target);
           if (target) this.bursts.spawn(target.position.clone().setY(target.position.y + target.headHeight * 0.6), event.data.effect, event.data.color);
@@ -104,9 +116,18 @@ export class WorldViews {
     }
     for (const view of this.entities.values()) {
       view.update(delta);
+      // Mechs are 2 × 2: their tile is the top-left one.
+      if (view.state.size > 1) {
+        view.position.x += (view.state.size - 1) / 2;
+        view.position.z += (view.state.size - 1) / 2;
+      }
+      if (view.walker) view.walker.update(delta, view.position);
+      // Crew are inside their mech.
+      if (view.state.riding) view.visible = false;
       // Other players' names float over them.
       if (!view.nameLabel && !view.state.isNpc() && view.state.id !== ClientState.localPlayerId) view.nameLabel = new WorldLabel('player-label');
       if (view.nameLabel) {
+        view.nameLabel.visible = view.visible;
         view.nameLabel.text = view.state.display_name;
         view.nameLabel.point.copy(view.position).y += view.headHeight + 0.2;
         view.nameLabel.update();
@@ -123,10 +144,37 @@ export class WorldViews {
         }
       }
     }
+    this._syncMechBuild();
     this._syncNodes();
     for (const view of this._nodes.values()) view.update(delta);
     this._syncGround();
     this._syncWrecks();
+  }
+
+  /** The mech taking shape on the gantry pad, part by part, until it stands up as an NPC. */
+  _syncMechBuild() {
+    const world = ClientState.world;
+    const def = Mechs.defaultDef();
+    const build = def && world.mech_builds && world.mech_builds[def.id];
+    const standing = build && build.mech_id >= 0 && world.entities.has(build.mech_id);
+    const any = build && Object.values(build.installed).some((n) => n > 0);
+    if (!this._mechBuild) {
+      if (!any || standing) return;
+      const pad = Mechs.spot(world, def.pad);
+      if (!pad) return;
+      this._mechBuild = buildWalker();
+      tileToWorld(pad, 0, this._mechBuild.root.position);
+      this._mechBuild.root.position.x += 0.5;
+      this._mechBuild.root.position.z += 0.5;
+      this.root.add(this._mechBuild.root);
+      this._mechBuildKey = '';
+    }
+    this._mechBuild.root.visible = !!any && !standing;
+    const key = JSON.stringify(build ? build.installed : {});
+    if (key !== this._mechBuildKey) {
+      this._mechBuildKey = key;
+      showInstalled(this._mechBuild, build ? build.installed : {});
+    }
   }
 
   // --- Entities -------------------------------------------------------------
@@ -262,10 +310,23 @@ function makePlayerView(state) {
   return view;
 }
 
+/** A mech: the procedural walker, animated by how it moves and fires. */
+function makeMechView(state) {
+  const view = new EntityView(state);
+  const walker = buildWalker();
+  view.add(walker.root);
+  view.walker = new WalkerAnimator(walker);
+  view.lunges = false;
+  view.headHeight = 4.5;
+  view.add(new Hitbox(HitboxKind.NPC, state.id, new THREE.Vector3(2, 4.2, 2), new THREE.Vector3(0, 2.1, 0)));
+  return view;
+}
+
 /** An NPC: its imported model when its def has one, otherwise a gray box with one red eye. */
 function makeNpcView(state) {
-  const view = new EntityView(state);
   const def = state.def;
+  if (def.shape === 'walker') return makeMechView(state);
+  const view = new EntityView(state);
   if (def.model && Models.has(def.model)) {
     const { model, animations } = Models.instance(def.model, def.model_scale);
     view.add(model);

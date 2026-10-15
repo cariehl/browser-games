@@ -24,12 +24,17 @@ export class CombatOverlay {
 
   _onTick() {
     const perTarget = new Map();
+    // Hits that did nothing because only a mech can hurt the target.
+    const immune = new Set();
+    for (const event of ClientState.world.events) {
+      if (event.type === 'no_effect') immune.add(`${event.data.attacker}>${event.data.target}`);
+    }
     for (const event of ClientState.world.events) {
       if (event.type !== 'hit') continue;
       const target = event.data.target;
       const stacked = perTarget.get(target) || 0;
       perTarget.set(target, stacked + 1);
-      this._addSplat(target, event.data.damage, stacked);
+      this._addSplat(target, event.data.damage, stacked, immune.has(`${event.data.attacker}>${target}`));
     }
   }
 
@@ -44,7 +49,7 @@ export class CombatOverlay {
     for (const [id, view] of this.views) {
       const state = world.entities.get(id);
       const bar = this._barFor(id);
-      const show = !!state && !state.isDead() && (state.inCombat(world.tick) || state.hp < state.maxHp());
+      const show = !!state && view.visible && !state.isDead() && (state.inCombat(world.tick) || state.hp < state.maxHp());
       let visible = false;
       if (show) {
         view.getWorldPosition(_head);
@@ -86,8 +91,10 @@ export class CombatOverlay {
     return bar;
   }
 
-  _addSplat(entityId, damage, stacked) {
-    const node = el('div', damage > 0 ? 'hitsplat hit' : 'hitsplat miss', String(damage), this.layer);
+  _addSplat(entityId, damage, stacked, immune = false) {
+    const node = immune
+      ? el('div', 'hitsplat immune', 'No effect', this.layer)
+      : el('div', damage > 0 ? 'hitsplat hit' : 'hitsplat miss', String(damage), this.layer);
     // Several hits on one target in one tick fan out instead of stacking.
     const offset = [[0, -18, 18, 0][stacked % 4], [0, 10, 10, 20][stacked % 4]];
     this._splats.push({ node, entity: entityId, age: 0, offset });

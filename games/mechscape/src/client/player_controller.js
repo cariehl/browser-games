@@ -20,6 +20,7 @@ import { worldToTile } from '../view/tile_math.js';
 import { isTyping } from '../view/camera_rig.js';
 import { Screen } from '../ui/screen.js';
 import { TalkAction } from '../sim/quests.js';
+import { BoardAction, LeaveMechAction } from '../sim/mech.js';
 import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 
@@ -100,6 +101,7 @@ export class PlayerController {
       const npc = world.entities.get(hitbox.targetId);
       if (!npc || npc.isDead()) return [];
       const name = npc.def.display_name;
+      if (npc.def.brain === 'mech') return this._mechOptions(npc);
       if (!npc.def.attackable) {
         if (!npc.def.talk) return [];
         return [{ verb: 'Talk-to', target: name, color: NPC_COLOR, action: () => this._talk(npc.id) }];
@@ -148,6 +150,28 @@ export class PlayerController {
       return options;
     }
     return [];
+  }
+
+  /** Climb in (either seat), swap seats, or climb out. */
+  _mechOptions(mech) {
+    const me = ClientState.me();
+    const name = mech.def.display_name;
+    const send = (action) => () => this.link.send(ClientState.localPlayerId, action);
+    const seatName = { pilot: "Pilot's seat", gunner: "Gunner's seat" };
+    if (me && me.riding && me.riding.mech === mech.id) {
+      const other = me.riding.seat === 'pilot' ? 'gunner' : 'pilot';
+      return [
+        { verb: 'Climb out of', target: name, color: NPC_COLOR, action: send(new LeaveMechAction()) },
+        { verb: `Move to the ${other}'s seat of`, target: name, color: NPC_COLOR, action: send(new BoardAction(mech.id, other)) },
+      ];
+    }
+    return ['pilot', 'gunner'].map((seat) => ({
+      verb: 'Board', target: `${name} (${seatName[seat]})`, color: NPC_COLOR,
+      action: () => {
+        this.marker.showAt(mech.tile, false);
+        this.link.send(ClientState.localPlayerId, new BoardAction(mech.id, seat));
+      },
+    }));
   }
 
   _talk(npcId) {

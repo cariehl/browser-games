@@ -269,7 +269,24 @@ export class DialogueCloseAction extends Action {
   }
 }
 
-registerActions(TalkAction, DialogueChoiceAction, DialogueCloseAction);
+/** Debug: set (or clear) a world flag, to test what comes after a quest step. */
+export class DebugFlagAction extends Action {
+  static TYPE = 'debug_flag';
+  static FIELDS = { flag: 'id', value: 'bool' };
+  constructor(flag, value = true) {
+    super();
+    this.flag = flag;
+    this.value = value;
+  }
+  slot() { return `debug_flag_${this._unique}`; }
+  isDebug() { return true; }
+  apply(world) {
+    if (this.value) world.flags[this.flag] = true;
+    else delete world.flags[this.flag];
+  }
+}
+
+registerActions(TalkAction, DialogueChoiceAction, DialogueCloseAction, DebugFlagAction);
 
 // --- Stations: vaults and landmarks --------------------------------------
 

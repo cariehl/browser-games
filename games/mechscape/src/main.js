@@ -37,6 +37,7 @@ import { SkillGuide } from './ui/skill_guide.js';
 import { CraftMenu } from './ui/craft_menu.js';
 import { StorageMenu } from './ui/storage_menu.js';
 import { ReconfigureWindow } from './ui/reconfigure_window.js';
+import { MechWindow, MechHud } from './ui/mech_window.js';
 import { DebugHud } from './ui/debug_hud.js';
 import { DialogueBox } from './ui/dialogue_box.js';
 import { QuestJournal } from './ui/quest_journal.js';
@@ -227,6 +228,8 @@ async function main() {
   const craft = new CraftMenu(ui, link);
   const storage = new StorageMenu(ui, link, menu);
   new ReconfigureWindow(ui, link);
+  new MechWindow(ui, link);
+  const mechHud = new MechHud(ui, link);
   const trade = new TradeWindow(ui, link, menu);
   const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
   const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector });
@@ -276,6 +279,7 @@ async function main() {
     trade.update();
     dialogue.update();
     hud.update();
+    mechHud.update();
     renderer.render(scene, rig.camera);
     requestAnimationFrame(frame);
   };
