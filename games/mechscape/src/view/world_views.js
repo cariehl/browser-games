@@ -242,7 +242,12 @@ function makePlayerView(state) {
   }
   view.appearance = new PlayerAppearance(model, state);
   view.appearance.primary = PLAYER_COLOURS[(Math.max(state.id, 1) - 1) % PLAYER_COLOURS.length];
-  view.headHeight = Models.bounds(model).max.y + 0.15;
+  const box = Models.bounds(model);
+  view.headHeight = box.max.y + 0.15;
+  // Other players can be clicked (trade); your own model never is.
+  if (state.id !== ClientState.localPlayerId) {
+    view.add(new Hitbox(HitboxKind.PLAYER, state.id, box.getSize(new THREE.Vector3()).multiply(new THREE.Vector3(0.8, 1, 0.8)), box.getCenter(new THREE.Vector3())));
+  }
   return view;
 }
 

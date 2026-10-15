@@ -169,3 +169,11 @@ input.number { width: 110px; }
 .cell .swatch { width: 16px; height: 16px; }
 .cell-name { font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
 .cell:hover { background: var(--hover); }
+.trade-window { z-index: 24; display: flex; flex-direction: column; gap: 8px; }
+.trade-window .columns { display: flex; gap: 16px; align-items: flex-start; }
+.trade-col { display: flex; flex-direction: column; gap: 4px; }
+.trade-list { display: flex; flex-direction: column; gap: 4px; width: 190px; min-height: 120px; max-height: 300px; overflow-y: auto; background: rgba(0, 0, 0, 0.18); border-radius: 4px; padding: 4px; }
+.trade-status { min-height: 18px; color: rgb(140, 230, 140); }
+.trade-window button.accept:disabled { opacity: 0.5; }
+.message-log .line.request { color: rgb(255, 140, 220); cursor: pointer; }
+.message-log .line.request:hover { text-decoration: underline; }

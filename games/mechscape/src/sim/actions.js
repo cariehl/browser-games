@@ -8,6 +8,8 @@ import { Skills } from './skills.js';
 import { AttackTask, CraftTask, GatherTask, StationTask, TakeTask, WreckTask } from './tasks.js';
 import { GatherNode, Station, Wreck } from './objects.js';
 import { TICK_SECONDS } from './constants.js';
+import { Trading, TRADE_RANGE, REQUEST_TICKS } from './trade.js';
+import { chebyshev } from './grid.js';
 
 let nextUnique = 1;
 
@@ -32,6 +34,11 @@ export class Action {
    * something cancels; inventory changes, toggles and injecting don't.
    */
   cancelsTask() {
+    return false;
+  }
+
+  /** Whether an open trade survives this. Anything else calls it off (it might change the inventory). */
+  keepsTrade() {
     return false;
   }
 
@@ -229,6 +236,7 @@ export class SetRunAction extends Action {
     this.run = run;
   }
   slot() { return 'run'; }
+  keepsTrade() { return true; }
   apply(_world, entity) {
     entity.running = this.run;
   }
@@ -243,6 +251,7 @@ export class SetCombatStyleAction extends Action {
     this.train_endurance = trainEndurance;
   }
   slot() { return 'style'; }
+  keepsTrade() { return true; }
   apply(_world, entity) {
     entity.train_endurance = this.train_endurance;
   }
@@ -493,6 +502,7 @@ export class ChatAction extends Action {
     this.text = text;
   }
   slot() { return `chat_${this._unique}`; }
+  keepsTrade() { return true; }
   apply(world, entity) {
     const text = cleanText(this.text);
     if (entity.isNpc() || !text) return;
@@ -505,6 +515,102 @@ export class ChatAction extends Action {
     recent.push(world.tick);
     entity._chatTicks = recent;
     world.emitEvent(entity.id, 'chat', { entity: entity.id, name: entity.display_name, text });
+  }
+}
+
+/**
+ * Ask another player to trade, or say yes to their asking. A trade opens
+ * when both have asked each other.
+ */
+export class TradeRequestAction extends Action {
+  static TYPE = 'trade_request';
+  static FIELDS = { target_id: 'int' };
+  constructor(targetId) {
+    super();
+    this.target_id = targetId;
+  }
+  slot() { return 'trade_request'; }
+  apply(world, entity) {
+    const target = world.entities.get(this.target_id);
+    if (!target || target === entity || !target.isPlayer() || !entity.isPlayer()) return;
+    if (Trading.of(world, entity)) return;
+    if (chebyshev(target.tile, entity.tile) > TRADE_RANGE || world.areaIdAt(target.tile) !== world.areaIdAt(entity.tile)) {
+      world.message(entity.id, `${target.display_name} is too far away to trade with.`);
+      return;
+    }
+    if (Trading.of(world, target)) {
+      world.message(entity.id, `${target.display_name} is busy trading.`);
+      return;
+    }
+    const theirs = target.trade_request;
+    if (theirs && theirs.target === entity.id && world.tick <= theirs.until) {
+      Trading.open(world, target, entity);
+      return;
+    }
+    entity.trade_request = { target: target.id, until: world.tick + REQUEST_TICKS };
+    world.message(entity.id, `Sending a trade offer to ${target.display_name}...`);
+    world.emitEvent(target.id, 'trade_request', { from: entity.id, name: entity.display_name });
+  }
+}
+
+/** Offer [count] of the item in inventory slot [slot_index] (-1 = all of it). */
+export class TradeOfferAction extends Action {
+  static TYPE = 'trade_offer';
+  static FIELDS = { slot_index: 'int', count: 'int' };
+  constructor(slotIndex, count = -1) {
+    super();
+    this.slot_index = slotIndex;
+    this.count = count;
+  }
+  slot() { return `trade_offer_${this._unique}`; }
+  keepsTrade() { return true; }
+  apply(world, entity) {
+    Trading.offer(world, entity, this.slot_index, this.count);
+  }
+}
+
+/** Take back [count] of an item from your offer (-1 = all of it). */
+export class TradeRemoveAction extends Action {
+  static TYPE = 'trade_remove';
+  static FIELDS = { item_id: 'id', count: 'int' };
+  constructor(itemId, count = -1) {
+    super();
+    this.item_id = itemId;
+    this.count = count;
+  }
+  slot() { return `trade_remove_${this._unique}`; }
+  keepsTrade() { return true; }
+  apply(world, entity) {
+    Trading.withdraw(world, entity, this.item_id, this.count);
+  }
+}
+
+/** Accept the trade as it stands at [stage] (1: the offer, 2: the final check). */
+export class TradeAcceptAction extends Action {
+  static TYPE = 'trade_accept';
+  static FIELDS = { stage: 'int' };
+  constructor(stage) {
+    super();
+    this.stage = stage;
+  }
+  slot() { return 'trade_accept'; }
+  keepsTrade() { return true; }
+  apply(world, entity) {
+    Trading.accept(world, entity, this.stage);
+  }
+}
+
+/** Decline: close the trade window for both. */
+export class TradeCancelAction extends Action {
+  static TYPE = 'trade_cancel';
+  static FIELDS = {};
+  slot() { return 'trade_cancel'; }
+  keepsTrade() { return true; }
+  apply(world, entity) {
+    const trade = Trading.of(world, entity);
+    if (!trade) return;
+    world.message(trade.partnerOf(entity.id), `${entity.display_name} declined the trade.`);
+    Trading.cancel(world, trade);
   }
 }
 
@@ -527,5 +633,6 @@ export class DebugGrantXpAction extends Action {
 export const ACTION_TYPES = Object.fromEntries([
   MoveAction, AttackAction, InteractAction, CraftAction, TakeAction, SetRunAction, SetCombatStyleAction,
   SwapItemsAction, DropAction, EquipAction, UnequipAction, UseItemAction, DepositAction, DepositAllAction,
-  WithdrawAction, ChatAction, DebugGrantXpAction,
+  WithdrawAction, ChatAction, TradeRequestAction, TradeOfferAction, TradeRemoveAction, TradeAcceptAction,
+  TradeCancelAction, DebugGrantXpAction,
 ].map((cls) => [cls.TYPE, cls]));

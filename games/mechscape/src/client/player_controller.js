@@ -13,14 +13,14 @@
 
 import * as THREE from 'three';
 import { ClientState } from './client_state.js';
-import { MoveAction, AttackAction, InteractAction, TakeAction, SetRunAction } from '../sim/actions.js';
+import { MoveAction, AttackAction, InteractAction, TakeAction, SetRunAction, TradeRequestAction } from '../sim/actions.js';
 import { GatherNode, Station, Wreck } from '../sim/objects.js';
 import { capitalize } from '../sim/skills.js';
 import { Hitbox, HitboxKind } from '../view/hitbox.js';
 import { worldToTile } from '../view/tile_math.js';
 import { isTyping } from '../view/camera_rig.js';
 import { Screen } from '../ui/screen.js';
-import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR } from '../ui/common.js';
+import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 
 const GROUND = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0);
@@ -47,7 +47,7 @@ export class PlayerController {
       // Clicking the world takes focus away from any text box, so keys (arrows, R) go back to the game.
       if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
       if (e.button === 0) {
-        const first = this.allOptions(e.clientX, e.clientY)[0];
+        const first = this.allOptions(e.clientX, e.clientY).find((o) => !o.rightOnly);
         if (first.action) first.action();
       } else if (e.button === 2) {
         this.menu.open(this.allOptions(e.clientX, e.clientY), e.clientX, e.clientY);
@@ -78,7 +78,8 @@ export class PlayerController {
     }
     const options = this.targetOptions(x, y);
     // Walk here and Cancel are always there; they don't count as "more".
-    if (options.length) this.hover.show(options[0], options.length - 1, x, y);
+    if (options.length && options[0].rightOnly) this.hover.show({ verb: 'Walk here' }, options.length, x, y);
+    else if (options.length) this.hover.show(options[0], options.length - 1, x, y);
     else this.hover.hide();
   }
 
@@ -103,6 +104,15 @@ export class PlayerController {
       return [
         { verb: 'Attack', target: name, color: NPC_COLOR, action: () => this._attack(npc.id) },
         { verb: 'Inspect', target: name, color: NPC_COLOR, action: () => this._inspect(() => InspectInfo.npc(ClientState.world, npc, ClientState.me()), x, y) },
+      ];
+    }
+    if (hitbox.kind === HitboxKind.PLAYER) {
+      const other = world.entities.get(hitbox.targetId);
+      if (!other || other.id === ClientState.localPlayerId) return [];
+      const name = other.display_name;
+      // Right-click only: a left click on a player walks, like OSRS.
+      return [
+        { verb: 'Trade with', target: name, color: PLAYER_COLOR, action: () => this._trade(other.id), rightOnly: true },
       ];
     }
     if (hitbox.kind === HitboxKind.OBJECT) {
@@ -135,6 +145,10 @@ export class PlayerController {
       return options;
     }
     return [];
+  }
+
+  _trade(playerId) {
+    this.link.send(ClientState.localPlayerId, new TradeRequestAction(playerId));
   }
 
   _inspect(source, x, y) {

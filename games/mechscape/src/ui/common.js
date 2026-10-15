@@ -6,6 +6,7 @@ import { cssColor } from '../view/tile_math.js';
 export const NPC_COLOR = cssColor([1, 0.85, 0.25]);
 export const OBJECT_COLOR = cssColor([0.4, 0.85, 1]);
 export const ITEM_COLOR = cssColor([1, 0.6, 0.3]);
+export const PLAYER_COLOR = cssColor([1, 1, 1]);
 export const MUTED = cssColor([0.72, 0.75, 0.8]);
 
 /**

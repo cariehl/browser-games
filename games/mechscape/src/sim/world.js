@@ -12,6 +12,7 @@ import { Combat } from './combat.js';
 import { AttackTask } from './tasks.js';
 import { StationKind } from './defs.js';
 import { TICK_SECONDS } from './constants.js';
+import { Trading } from './trade.js';
 
 export const DEFAULT_MAP = 'data/maps/scrapyard.map';
 const USE_DEFAULT = '<default>';
@@ -53,6 +54,9 @@ export class World {
     this.ground_items = new Map();
     /** Committed attacks waiting to land (see Combat.commit). */
     this.pending_hits = [];
+    /** Open trades by id (see trade.js). Not saved. */
+    this.trades = new Map();
+    this._nextTradeId = 1;
     /** Everything that happened during the latest tick, for views: { entity, type, data } */
     this.events = [];
     this.rng = new Rng();
@@ -112,6 +116,10 @@ export class World {
       for (const i of order) {
         const action = queued[i];
         try {
+          if (entity.trade_id >= 0 && !action.keepsTrade()) {
+            const trade = Trading.of(this, entity);
+            if (trade) Trading.cancel(this, trade, 'The trade was called off.');
+          }
           if (action.cancelsTask()) entity.clearTask();
           action.apply(this, entity);
         } catch (err) {
@@ -121,6 +129,8 @@ export class World {
         entity.last_action_seq = Math.max(entity.last_action_seq, action.seq);
       }
     }
+
+    Trading.check(this);
 
     // 2. NPC brains: respawns, aggression, idle wandering.
     for (const entity of this.entities.values()) {
@@ -244,6 +254,8 @@ export class World {
   removePlayer(id) {
     const player = this.entities.get(id);
     if (!player || player.isNpc()) return null;
+    const trade = Trading.of(this, player);
+    if (trade) Trading.cancel(this, trade, `${player.display_name} has left.`);
     this.entities.delete(id);
     this.pending_hits = this.pending_hits.filter((h) => h.target_id !== id && h.attacker_id !== id);
     for (const other of this.entities.values()) {
@@ -269,7 +281,7 @@ export class World {
 
   /** Every player (not NPCs), lowest id first. */
   players() {
-    return [...this.entities.values()].filter((e) => !e.isNpc()).sort((a, b) => a.id - b.id);
+    return [...this.entities.values()].filter((e) => e.isPlayer()).sort((a, b) => a.id - b.id);
   }
 
   spawnNpc(def, tile) {
@@ -322,6 +334,8 @@ export class World {
     entity.hp = 0;
     entity.clearTask();
     entity.path = [];
+    const trade = Trading.of(this, entity);
+    if (trade) Trading.cancel(this, trade, 'The trade was called off.');
     let huskTile = NO_TARGET;
     if (entity.isNpc() && entity.def.husk) huskTile = this.freeTileNear(entity.tile, World.HUSK_RADIUS);
     this.emitEvent(entity.id, 'death', { entity: entity.id, killer: killer ? killer.id : -1, husk_tile: huskTile });
@@ -483,6 +497,11 @@ export class World {
       }
     }
     return NO_TARGET;
+  }
+
+  /** Which area (map) a tile belongs to. One area until the world has several. */
+  areaIdAt(_tile) {
+    return 0;
   }
 
   inBounds(tile) {

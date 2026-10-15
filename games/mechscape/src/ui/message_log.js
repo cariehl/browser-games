@@ -10,7 +10,7 @@
 // stop typing. While the box has focus, keys go to it, not the game.
 
 import { ClientState } from '../client/client_state.js';
-import { ChatAction, MAX_CHAT } from '../sim/actions.js';
+import { ChatAction, TradeRequestAction, MAX_CHAT } from '../sim/actions.js';
 import { el } from './screen.js';
 import { isTyping } from '../view/camera_rig.js';
 
@@ -34,7 +34,9 @@ export class MessageLog {
       for (const event of ClientState.world.events) {
         if (event.type === 'chat') this.pushChat(event.data.name, event.data.text, event.entity === ClientState.localPlayerId);
         else if (event.type === 'broadcast') this.push(event.data.text, 'broadcast');
-        else if (event.entity === ClientState.localPlayerId && event.type === 'message') this.push(event.data.text);
+        else if (event.entity !== ClientState.localPlayerId) continue;
+        else if (event.type === 'message') this.push(event.data.text);
+        else if (event.type === 'trade_request') this._tradeRequest(event.data.from, event.data.name);
       }
     });
     window.addEventListener('keydown', (e) => {
@@ -52,6 +54,14 @@ export class MessageLog {
         this.input.value = '';
         this.input.blur();
       }
+    });
+  }
+
+  /** "Bo wishes to trade with you.": click it to say yes. */
+  _tradeRequest(from, name) {
+    const line = this.push(`${name} wishes to trade with you. (Click here to accept.)`, 'request');
+    line.addEventListener('click', () => {
+      if (this.link) this.link.send(ClientState.localPlayerId, new TradeRequestAction(from));
     });
   }
 

@@ -17,9 +17,11 @@
 import { Content } from './defs.js';
 import { ItemStack, Inventory, Storage } from './inventory.js';
 import { NO_TARGET } from './grid.js';
+import { Trading } from './trade.js';
 
 /** Event types only the entity they belong to is told about. */
-const PRIVATE_EVENTS = new Set(['message', 'xp', 'level_up', 'open_station', 'open_storage', 'wreck', 'boost']);
+const PRIVATE_EVENTS = new Set(['message', 'xp', 'level_up', 'open_station', 'open_storage', 'wreck', 'boost',
+  'trade_request', 'open_trade', 'close_trade', 'traded']);
 
 /** The world as [viewerId] may see it. */
 export function takeSnapshot(world, viewerId) {
@@ -52,6 +54,7 @@ export function takeSnapshot(world, viewerId) {
         out.seq = e.last_action_seq;
         out.next_use = e.next_use_tick;
         out.next_attack = e.next_attack_tick;
+        out.trade = Trading.view(world, e);
       }
     }
     entities.push(out);
@@ -128,6 +131,7 @@ export function applySnapshot(world, snap, viewerId) {
       e.last_action_seq = data.seq;
       e.next_use_tick = data.next_use;
       e.next_attack_tick = data.next_attack;
+      e.trade_view = data.trade || null;
     }
   }
   for (const e of [...world.entities.values()]) {

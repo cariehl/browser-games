@@ -9,7 +9,7 @@
 
 import * as THREE from 'three';
 
-export const HitboxKind = { NPC: 'npc', OBJECT: 'object', ITEM: 'item' };
+export const HitboxKind = { NPC: 'npc', PLAYER: 'player', OBJECT: 'object', ITEM: 'item' };
 
 const all = new Set();
 const DEBUG_COLOR = 0xffd933;

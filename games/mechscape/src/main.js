@@ -10,6 +10,7 @@
 
 import * as THREE from 'three';
 import { Content, CONTENT_FILES } from './sim/defs.js';
+import * as actions from './sim/actions.js';
 import { MapData } from './sim/map_data.js';
 import { World, DEFAULT_MAP } from './sim/world.js';
 import { ClientState } from './client/client_state.js';
@@ -35,6 +36,7 @@ import { SkillGuide } from './ui/skill_guide.js';
 import { CraftMenu } from './ui/craft_menu.js';
 import { StorageMenu } from './ui/storage_menu.js';
 import { DebugHud } from './ui/debug_hud.js';
+import { TradeWindow } from './ui/trade_window.js';
 
 const MAPS = [DEFAULT_MAP];
 /** Longest frame fed to the game, so a hidden tab doesn't come back to a burst of ticks. */
@@ -190,6 +192,7 @@ async function main() {
   const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide });
   const craft = new CraftMenu(ui, link);
   const storage = new StorageMenu(ui, link, menu);
+  const trade = new TradeWindow(ui, link, menu);
   const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
   const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector });
 
@@ -228,6 +231,7 @@ async function main() {
     panel.update();
     craft.update();
     storage.update();
+    trade.update();
     hud.update();
     renderer.render(scene, rig.camera);
     requestAnimationFrame(frame);
@@ -235,7 +239,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // For poking at the game from the browser console.
-  window.mechscape = { ClientState, views, link, saves, rig, renderer, scene, room: net && net.room };
+  window.mechscape = { ClientState, actions, Content, views, link, saves, rig, renderer, scene, room: net && net.room };
 }
 
 main().catch((error) => {

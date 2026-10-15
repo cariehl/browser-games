@@ -54,6 +54,10 @@ export class EntityState {
     this.activity = '';
     /** Tile to face while working on something, or NO_TARGET. */
     this.face_target = NO_TARGET;
+    /** The open trade's id, or -1. Not saved. */
+    this.trade_id = -1;
+    /** A trade asked for: { target, until }, or null. Not saved. */
+    this.trade_request = null;
 
     for (const [skill, level] of Object.entries(Skills.STARTING_LEVELS)) this.xp[skill] = Skills.xpForLevel(level);
     this.hp = this.level(TOUGHNESS);
@@ -104,6 +108,11 @@ export class EntityState {
 
   isNpc() {
     return false;
+  }
+
+  /** A player (not an NPC, a pet or a mech). */
+  isPlayer() {
+    return !this.isNpc();
   }
 
   /** What decides its behaviour when no one gives it orders. Null for players. */
