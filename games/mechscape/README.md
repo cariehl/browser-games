@@ -223,6 +223,8 @@ The server is authoritative and built on [Colyseus](https://colyseus.io) 0.18. I
 
 Hosting for friends: run `npm start` on the host and give friends `http://<address>:2567`. On one network that's the host's LAN address (`ipconfig` on Windows). Over the internet, the easiest is a Cloudflare quick tunnel (`cloudflared tunnel --url http://localhost:2567` prints a public https address), with no port forwarding; forwarding TCP port 2567 or Tailscale also work. There are no accounts or passwords, so anyone who can reach the port can join under any free name; only share the address with friends.
 
+On Windows, `start-server.cmd` (double-click it, or run `start-server.cmd --new`) does all of that in one go: it pulls the latest code if the folder is a git checkout with a remote, runs `npm install`, opens a Cloudflare quick tunnel and prints its URL (and copies it to the clipboard), then runs the server in that window. Server options like `--new`, `--xp-rate 1.5` or `--port` pass straight through. It looks for `cloudflared` on the PATH, then in a `cloudflared` folder next to this one; `-Cloudflared <path>` points it elsewhere, and `-SkipPull`, `-SkipInstall` and `-NoTunnel` skip steps. Ctrl+C saves the world and closes the tunnel. The PowerShell script itself is `start-server.ps1`.
+
 ## Differences from the Godot version
 
 - **Saves** live in the browser's local storage, not in a file. The save format is new (version 1 of the three.js format) and doesn't read Godot saves.
