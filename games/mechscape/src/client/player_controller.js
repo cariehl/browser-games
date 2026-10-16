@@ -24,8 +24,9 @@ import { BoardAction, LeaveMechAction } from '../sim/mech.js';
 import { HabPiece, EditPieceAction } from '../sim/hab.js';
 import { bedStage } from '../view/piece_view.js';
 import { DismissPetAction } from '../sim/appearance.js';
-import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR } from '../ui/common.js';
+import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR, withIds } from '../ui/common.js';
 import { InspectInfo } from '../ui/inspect_info.js';
+import { lookOptions } from '../ui/examine.js';
 
 
 export class PlayerController {
@@ -94,39 +95,51 @@ export class PlayerController {
     else this.hover.hide();
   }
 
-  /** Every option at a screen position: the target's own, then "Walk here" (over the map) and "Cancel". */
+  /**
+   * Every option at a screen position: the target's own, then "Walk here"
+   * (over the map), then Inspect and Examine, then "Cancel".
+   */
   allOptions(x, y) {
-    const options = this.targetOptions(x, y);
+    const all = this.targetOptions(x, y);
+    const options = all.filter((o) => !o.look);
     const tile = this._groundTile(x, y);
     if (tile) options.push({ verb: 'Walk here', action: () => this._walk(tile) });
+    options.push(...all.filter((o) => o.look));
     options.push({ verb: 'Cancel', action: null });
     return options;
   }
 
-  /** Options for whatever hitbox is under the mouse, or [] for none. */
+  /** Inspect and Examine for a target (see ui/examine.js). */
+  _look(target, color, x, y, extra) {
+    return lookOptions({ link: this.link, inspector: this.inspector, target, color, x, y, ...extra });
+  }
+
+  /** Options for whatever hitbox is under the mouse, or [] for none (with ids, when the debug window shows them). */
   targetOptions(x, y) {
     const hitbox = Hitbox.pick(Screen.ray(x, y));
     if (!hitbox) return [];
+    return withIds(this._optionsFor(hitbox, x, y), debugId(hitbox, ClientState.world));
+  }
+
+  _optionsFor(hitbox, x, y) {
     const world = ClientState.world;
     if (hitbox.kind === HitboxKind.NPC) {
       const npc = world.entities.get(hitbox.targetId);
       if (!npc || npc.isDead()) return [];
       const name = npc.def.display_name;
-      const inspectPerson = { verb: 'Inspect', target: name, color: NPC_COLOR, action: () => this._inspect(() => InspectInfo.person(ClientState.world, npc), x, y) };
-      if (npc.def.brain === 'mech') return [...this._mechOptions(npc), inspectPerson];
+      const examine = { kind: 'npc', defId: npc.def.id };
+      if (npc.def.brain === 'mech') return [...this._mechOptions(npc), ...this._look(name, NPC_COLOR, x, y, examine)];
       if (!npc.def.attackable) {
         const options = [];
         if (npc.def.talk) options.push({ verb: 'Talk-to', target: name, color: NPC_COLOR, action: () => this._talk(npc.id) });
         // Your own pet can go back in your pack.
         const me = ClientState.me();
         if (me && me.pet && me.pet_npc_id === npc.id) options.push({ verb: 'Pick up', target: name, color: NPC_COLOR, action: () => this._pickUpPet(npc) });
-        // Nothing else to do with it: a left click still walks.
-        options.push({ ...inspectPerson, rightOnly: options.length === 0 });
-        return options;
+        return [...options, ...this._look(name, NPC_COLOR, x, y, examine)];
       }
       return [
         { verb: 'Attack', target: name, color: NPC_COLOR, action: () => this._attack(npc.id) },
-        { verb: 'Inspect', target: name, color: NPC_COLOR, action: () => this._inspect(() => InspectInfo.npc(ClientState.world, npc, ClientState.me()), x, y) },
+        ...this._look(name, NPC_COLOR, x, y, { ...examine, source: () => InspectInfo.npc(ClientState.world, npc, ClientState.me()) }),
       ];
     }
     if (hitbox.kind === HitboxKind.PLAYER) {
@@ -142,29 +155,29 @@ export class PlayerController {
       const object = world.getObject(hitbox.targetId);
       if (!object) return [];
       const name = object.displayName();
+      if (object instanceof HabPiece) return [...this._pieceOptions(object), ...this._look(name, OBJECT_COLOR, x, y, { kind: 'item', defId: object.item.id })];
       let verb = 'Use';
-      let inspect = null;
+      let look = {};
       if (object instanceof GatherNode) {
         verb = capitalize(object.def.verb);
-        inspect = () => InspectInfo.gatherNode(ClientState.world, object, ClientState.me());
+        look = { kind: 'node', defId: object.def.id, source: () => InspectInfo.gatherNode(ClientState.world, object, ClientState.me()) };
       } else if (object instanceof Wreck) {
         verb = 'Salvage';
-        inspect = () => InspectInfo.wreck(ClientState.world, object);
+        look = { source: () => InspectInfo.wreck(ClientState.world, object) };
       } else if (object instanceof Station) {
-        inspect = () => InspectInfo.station(ClientState.world, object);
+        look = { kind: 'station', defId: object.def.id };
       }
-      if (object instanceof HabPiece) return this._pieceOptions(object);
       return [
         { verb, target: name, color: OBJECT_COLOR, action: () => this._interact(object.id) },
-        { verb: 'Inspect', target: name, color: OBJECT_COLOR, action: () => this._inspect(inspect, x, y) },
+        ...this._look(name, OBJECT_COLOR, x, y, look),
       ];
     }
     if (hitbox.kind === HitboxKind.SCENERY) {
       const { def, tile, terrain } = hitbox.targetId;
       // Terrain a puzzle has cleared since is gone.
       if (terrain && world.terrainAt(tile) !== def) return [];
-      // Scenery only has Inspect: a left click still walks.
-      return [{ verb: 'Inspect', target: def.display_name, color: OBJECT_COLOR, rightOnly: true, action: () => this.inspector.open(() => InspectInfo.scenery(def), x, y, false) }];
+      // Scenery only has Examine: a left click still walks.
+      return this._look(def.display_name, OBJECT_COLOR, x, y, { kind: terrain ? 'terrain' : 'decor', defId: def.id });
     }
     if (hitbox.kind === HitboxKind.ITEM) {
       const picked = world.ground_items.get(hitbox.targetId);
@@ -172,7 +185,7 @@ export class PlayerController {
       // The one under the mouse first, then everything else on the tile, like OSRS listing a whole pile.
       const pile = [picked, ...world.groundItemsAt(picked.tile).filter((g) => g !== picked)];
       const options = pile.map((ground) => ({ verb: 'Take', target: groundName(ground), color: ITEM_COLOR, action: () => this._take(ground.id) }));
-      options.push({ verb: 'Inspect', target: picked.item.display_name, color: ITEM_COLOR, action: () => this.inspector.open(() => InspectInfo.item(picked.item, ClientState.me()), x, y, false) });
+      options.push(...this._look(picked.item.display_name, ITEM_COLOR, x, y, { kind: 'item', defId: picked.item.id, live: false, source: () => InspectInfo.item(picked.item, ClientState.me()) }));
       return options;
     }
     return [];
@@ -238,10 +251,6 @@ export class PlayerController {
     this.link.send(ClientState.localPlayerId, new TradeRequestAction(playerId));
   }
 
-  _inspect(source, x, y) {
-    if (source) this.inspector.open(source, x, y);
-  }
-
   _take(groundId) {
     const ground = ClientState.world.ground_items.get(groundId);
     if (!ground) return;
@@ -278,6 +287,31 @@ export class PlayerController {
     if (!hit) return null;
     const tile = worldToTile(hit);
     return ClientState.world.inBounds(tile) ? tile : null;
+  }
+}
+
+/** What the debug window's "Ids" shows for a hitbox: def id and instance id ("foreman #12"). */
+function debugId(hitbox, world) {
+  switch (hitbox.kind) {
+    case HitboxKind.NPC: {
+      const npc = world.entities.get(hitbox.targetId);
+      return npc && `${npc.def.id} #${npc.id}`;
+    }
+    case HitboxKind.PLAYER: return `#${hitbox.targetId}`;
+    case HitboxKind.OBJECT: {
+      const object = world.getObject(hitbox.targetId);
+      const def = object && (object.def || object.item);
+      return object && `${def && def.id ? `${def.id} ` : ''}#${object.id}`;
+    }
+    case HitboxKind.SCENERY: {
+      const { def, tile } = hitbox.targetId;
+      return `${def.id} ${tile.x},${tile.y}`;
+    }
+    case HitboxKind.ITEM: {
+      const ground = world.ground_items.get(hitbox.targetId);
+      return ground && `${ground.item.id} #${ground.id}`;
+    }
+    default: return '';
   }
 }
 

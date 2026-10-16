@@ -549,7 +549,7 @@ registerActions(BoardAction, LeaveMechAction, InstallComponentAction, MechComman
 /** What a seated crew member's clicks do. Anything with no use from a seat is refused. */
 const PASS_THROUGH = new Set(['chat', 'equip', 'unequip', 'drop', 'swap_items', 'use_item', 'set_combat_style', 'set_run',
   'board_mech', 'leave_mech', 'dialogue_choice', 'dialogue_close', 'debug_grant_xp', 'debug_give', 'call_pet', 'dismiss_pet',
-  'trade_offer', 'trade_remove', 'trade_accept', 'trade_cancel']);
+  'trade_offer', 'trade_remove', 'trade_accept', 'trade_cancel', 'examine']);
 
 function routeSeated(world, player, action) {
   const type = action.constructor.TYPE;

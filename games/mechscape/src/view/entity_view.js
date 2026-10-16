@@ -126,7 +126,8 @@ export class EntityView extends THREE.Group {
     if (pts.length < 2) {
       tileToWorld(state.tile, 0, this.position);
       if (state.hasFaceTarget()) _dir.subVectors(tileToWorld(state.face_target, 0, _to), this.position);
-      if (state.activity !== '') this.position.y = Math.sin(ClientState.tickAlpha * Math.PI) * WORK_BOB;
+      // A bob while working, on top of the ground (raised tiles included).
+      if (state.activity !== '') this.position.y += Math.sin(ClientState.tickAlpha * Math.PI) * WORK_BOB;
     } else {
       // Walk along the polyline of this tick's steps.
       const progress = ClientState.tickAlpha * (pts.length - 1);

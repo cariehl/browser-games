@@ -19,7 +19,7 @@ The page has no build step. three.js 0.170.0 is vendored in `vendor/three/` (onl
 
 Controls:
 - **Mouse:** hover over an NPC, node or station to see what a left click does ("Attack Loader mech", "Salvage Crashed drone"). Left-click does it; left-click open ground to walk there.
-- **Right-click:** anything for its options: the action, **Inspect** (a card of its stats and your odds against it), Walk here and Cancel. Right-click an inventory item for Wield or Wear, Drop and Inspect; hovering an item shows its left-click action and stats.
+- **Right-click:** anything for its options: the action, Walk here, **Inspect** (a card of its stats and your odds against it, for things that have stats), **Examine** (its description, in the chat box on the next tick) and Cancel. Right-click an inventory item for Wield or Wear, Drop, Inspect and Examine, and a recipe in a crafting station's menu to make it or Inspect and Examine what it makes; hovering an item shows its left-click action and stats.
 - **Keys:** **R** toggles run; middle-drag or the arrow keys orbit the camera; scroll to zoom.
 
 Clicks land on what's drawn: NPCs, nodes and stations have hitboxes that move with their models, so you click the mech, not the tile under it. **F5** shows the hitboxes.
@@ -107,6 +107,7 @@ The debug window (top left, **F4** or click its header to collapse) has:
 - **True tile** (**F2**): an outline on the tile the simulation has the player on.
 - **Tick metronome** (**F3**): a click on every tick.
 - **Hitboxes** (**F5**): wireframes of what's clickable.
+- **Ids in menus** (**F6**): right-click menus and hover text name each thing's id (`foreman #12`, `crashed_drone #40`, scenery with its tile).
 - **Tick speed** (**[** and **]**, offline only): 0.25x to 8x. It scales the game's clock, so the simulation and everything animated speed up together; the camera and simulated latency stay at real time.
 - **Simulated input delay**: base and fuzz in milliseconds. Each action is turned into JSON and held for base ± fuzz before it's sent, in order, like a reliable network channel. Online this is on top of the real network.
 - **Grant XP**: pick a skill and an amount; it arrives on the next tick as a normal XP drop (and level-up), e.g. 1,154 XP for Salvaging 10. Online it only shows when the server runs with `npm run dev`; otherwise the server refuses it.
@@ -130,7 +131,7 @@ npm run check-text    # node tools/check_text.js
 `npm run editor` opens the content editor at <http://localhost:8090>: a page for editing everything in `data/` without touching JSON or code. It runs on your computer only and saves straight into `data/`, so restart the game server to play with the changes, and commit them with git like any other edit.
 
 - **Maps**: paint the things layer (terrain, nodes, stations, NPCs, decor, the spawn), heights and ground with a brush, rectangle or flood fill; drag out zones; add legend entries; resize. Right-click picks up what's under the cursor, and the bar shows each tile's world coordinates and links.
-- **Quests** as stages (journal, goal, next), **dialogue** as a conversation (when it's said, the lines, the choices and what each does), and **messages** (`data/text.json`).
+- **Quests** as stages (journal, goal, next), **dialogue** as a conversation (when it's said, the lines, and a menu of choices; each choice can have its own condition, effects, response lines and a sub-menu, or go back to a menu; flags can be world, quest, player or dialogue flags), and **messages** (`data/text.json`).
 - **Items, NPCs, gather nodes, recipes, stations, loot tables, mechs, skills, weapon types, terrain, decor, ground**, and the **game rules** (`data/rules.json`): every field the game reads, with its default and the note from `src/sim/defs.js`. Ids that name other content are checked as you type.
 - **Rename id** updates everything that uses it (other data, map legends, text tokens). Every page lists what uses the entry.
 - **Save** (Ctrl+S) writes only what changed, keeping the rest of each file byte for byte, then runs every check (content loads, maps parse, messages and tokens resolve, economy loops, reachability) and lists any problems.

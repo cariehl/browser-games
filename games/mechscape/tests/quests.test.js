@@ -133,3 +133,71 @@ test('quest progress survives a save, and walking away closes a dialogue', () =>
   world.runTick();
   assert.equal(player.dialogue, null);
 });
+
+test('dialogue trees: sub-menus, going back, and the three flag scopes', async () => {
+  const { DialogueDef } = await import('../src/sim/defs.js');
+  const saved = Content.dialogue.foreman;
+  Content.dialogue.foreman = new DialogueDef({
+    id: 'foreman',
+    entries: [{
+      lines: [{ who: 'npc', text: 'Hello.' }],
+      choices: [
+        {
+          text: 'Tell me things.',
+          lines: [{ who: 'npc', text: 'About what?' }],
+          choices: [
+            { text: 'The yard.', lines: [{ who: 'npc', text: 'It holds.' }], do: [{ flag: 'asked_yard', scope: 'dialogue' }], after: 'menu' },
+            { text: 'Secret.', if: { flags: [{ flag: 'asked_yard', scope: 'dialogue' }] }, do: [{ flag: 'knows_secret', scope: 'player' }, { flag: 'heard', scope: 'quest', quest: 'ignition' }], after: 'top' },
+            { text: 'Never mind.', after: 'parent' },
+          ],
+        },
+        { text: 'Bye.', if: { flags: [{ flag: 'knows_secret', scope: 'player', not: true }] } },
+      ],
+    }],
+  });
+  try {
+    const world = fresh();
+    const player = world.spawnPlayer('Ann');
+    const foreman = npcOf(world, 'foreman');
+    let d = talk(world, player, foreman, 'Tell me');
+    assert.deepEqual(d.lines.map((l) => l.text), ['About what?']);
+    assert.deepEqual(d.choices, ['The yard.', 'Never mind.'], 'the secret is hidden until the yard is asked about');
+    d = talk(world, player, foreman, 'Tell me');
+    act(world, player, new DialogueChoiceAction(0));
+    d = player.dialogue;
+    assert.deepEqual(d.lines.map((l) => l.text), ['It holds.']);
+    assert.deepEqual(d.choices, ['The yard.', 'Secret.', 'Never mind.'], 'back at the same menu, with the dialogue flag set');
+    act(world, player, new DialogueChoiceAction(1));
+    d = player.dialogue;
+    assert.equal(d.lines.length, 0);
+    assert.deepEqual(d.choices, ['Tell me things.'], 'at the first menu; the player flag hides Bye');
+    assert.equal(player.flags.knows_secret, true);
+    assert.equal(player.quest_flags.ignition.heard, true);
+    // Closing clears dialogue flags: the secret is hidden again next time.
+    act(world, player, new (await import('../src/sim/quests.js')).DialogueCloseAction());
+    d = talk(world, player, foreman, 'Tell me');
+    assert.deepEqual(d.choices, ['The yard.', 'Never mind.']);
+    act(world, player, new DialogueChoiceAction(1));
+    assert.deepEqual(player.dialogue.choices, ['Tell me things.'], 'Never mind goes up a menu');
+    // Player and quest flags are saved.
+    const loaded = SaveGame.fromJSON(SaveGame.toJSON(world), DEFAULT_MAP);
+    const again = [...loaded.entities.values()].find((e) => e.isPlayer());
+    assert.equal(again.flags.knows_secret, true);
+    assert.equal(again.quest_flags.ignition.heard, true);
+  } finally {
+    Content.dialogue.foreman = saved;
+  }
+});
+
+test('an NPC stays put while someone talks to it', () => {
+  const world = fresh();
+  const player = world.spawnPlayer('Ann');
+  const foreman = npcOf(world, 'foreman');
+  talk(world, player, foreman);
+  const at = { ...foreman.tile };
+  for (let i = 0; i < 200; i++) {
+    world.runTick();
+    assert.ok(player.dialogue, 'still talking');
+    assert.deepEqual(foreman.tile, at);
+  }
+});

@@ -43,6 +43,7 @@ import { DebugHud } from './ui/debug_hud.js';
 import { BuildMode } from './ui/build_mode.js';
 import { BoardWindow } from './ui/board_window.js';
 import { DialogueBox } from './ui/dialogue_box.js';
+import { ScreenFade } from './ui/screen_fade.js';
 import { QuestJournal } from './ui/quest_journal.js';
 import { TradeWindow } from './ui/trade_window.js';
 
@@ -201,6 +202,7 @@ async function main() {
   rig.snap();
   Screen.camera = rig.camera;
   Screen.layer = el('div', 'labels', '', ui);
+  new ScreenFade(ui);
 
   const marker = new ClickMarker();
   scene.add(marker);
@@ -229,7 +231,7 @@ async function main() {
   const build = new BuildMode(ui, link, views.ghost);
   const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide, build, extraTabs: [new QuestJournal()] });
   const dialogue = new DialogueBox(ui, link);
-  const craft = new CraftMenu(ui, link);
+  const craft = new CraftMenu(ui, link, { menu, inspector });
   const storage = new StorageMenu(ui, link, menu);
   new ReconfigureWindow(ui, link);
   new MechWindow(ui, link);

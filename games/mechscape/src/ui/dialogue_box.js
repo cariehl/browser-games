@@ -3,7 +3,8 @@
 // when you talk to someone and clears when you walk off.
 //
 // Click or Space for the next line; 1-9 or click to pick a choice. When the
-// lines run out with no choices, continuing closes it.
+// lines run out with no choices, continuing closes it. A choice can lead to
+// more lines and another menu (the server walks the tree; see sim/quests.js).
 
 import { ClientState } from '../client/client_state.js';
 import { DialogueChoiceAction, DialogueCloseAction } from '../sim/quests.js';
@@ -71,7 +72,9 @@ export class DialogueBox {
     const npc = ClientState.world.entities.get(d.npc_id);
     this._speaker.textContent = line.who === 'player' ? (me ? me.display_name : 'You') : (npc ? npc.def.display_name : '');
     this._speaker.classList.toggle('mine', line.who === 'player');
-    this._text.textContent = line.text;
+    // Back at a menu with nothing new said: just the choices.
+    this._text.textContent = d.lines.length ? line.text : 'Choose an answer.';
+    this._text.classList.toggle('muted', !d.lines.length);
     this._choices.innerHTML = '';
     const last = this._line >= d.lines.length - 1;
     if (last && d.choices.length) {

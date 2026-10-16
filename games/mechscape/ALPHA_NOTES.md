@@ -47,6 +47,15 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 - **Hardcoded content moved into data.** Tuning numbers (wreck time, regen, trade range, hab comfort and resting, puzzle XP, rig range, paint) are in `data/rules.json`; skill names, guide text and starting levels in `data/skills.json`; messages that name people and places in `data/text.json`; the Splatterpress's lines in its script in `data/npcs.json`. Hab sets now come from each piece's `"set"`; the specimen case lost its `"set": "greenhouse"`, which the old code ignored, so the greenhouse still needs the same three pieces.
 - **Area names** are in `data/maps/world.json` ("Deadfields", not "The Deadfields") so messages can say "in the {area:deadfields}".
 
+## Second round of feedback
+
+- **Dialogue is a tree.** A choice can have its own "if", effects, response lines, and its own choices (a sub-menu, any depth); without a sub-menu its "after" says what's next: close, this menu again, the menu above, or the first menu. The old `say` effect still works, but the data now uses response lines. "Who built the Scrapyard?" goes back to the foreman's menu, as an example.
+- **Flags have scopes:** world (shared and public, what the mech uses; the default, so old data is unchanged), quest (per player, filed under a quest), player (per player), dialogue (cleared when the conversation closes). Quest and player flags are saved with the player. A quest's flag goal takes a scope too (quest flags default to that quest). There's no general variable system: flags are true or unset.
+- **The menu changed shape:** actions, Walk here, Inspect, Examine, Cancel. Inspect only appears where there are stats (hostiles, nodes, wrecks, items); people, scenery and stations only have Examine. Examine is an action (`examine`), so the server answers with a chat line on the next tick and nothing stops. Gather nodes have a "TODO" description for Cooper to write.
+- **Hatches and lifts take one tick to step through** (a `transition` event, then the move), so the screen fades out before you arrive and fades back after. Other jumps between areas cut to black and fade in.
+- **The pilot moonwalked:** `player.glb`'s Walk and Run step towards -Z while the model faces +Z. The loader now checks each Walk and Run clip and plays any that step backwards in reverse (`src/view/models.js`), so a fixed re-export won't be flipped back. The fix belongs in the Blender file too.
+- **Sinking into raised ground while working** (salvaging drones on the height-1 plateau) was the work bob setting the height instead of adding to it.
+
 ## Known rough edges
 
 - **The browser asks for `/favicon.ico` and gets a 404.** It's harmless.

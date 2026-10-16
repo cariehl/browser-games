@@ -19,7 +19,7 @@ html, body { margin: 0; height: 100%; overflow: hidden; background: rgb(140, 158
 canvas#game { position: fixed; inset: 0; width: 100vw; height: 100vh; display: block; outline: none; }
 #ui { position: fixed; inset: 0; pointer-events: none; user-select: none; }
 #ui > * { pointer-events: auto; }
-#ui > .labels, #ui > .combat-layer, #ui > .hover-text { pointer-events: none; }
+#ui > .labels, #ui > .combat-layer, #ui > .hover-text, #ui > .screen-fade { pointer-events: none; }
 
 #loading {
   position: fixed; inset: 0; display: flex; align-items: center; justify-content: center;
@@ -245,3 +245,6 @@ input.number { width: 110px; }
 .board-form input, .board-form select { min-width: 0; flex: 1 1 120px; }
 .board-form input.count { flex: 0 0 56px; }
 .board-form input.bad { outline: 1px solid #e05a5a; }
+
+/* Fade to black between areas (ui/screen_fade.js): over the world and its labels, under the panels. */
+.screen-fade { position: fixed; inset: 0; background: #000; opacity: 0; pointer-events: none; }

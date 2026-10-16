@@ -48,6 +48,13 @@ export class NpcBrain {
         return;
       }
     }
+    // Someone's talking to it: it stays put and faces them.
+    const listener = world.players().find((p) => p.dialogue && p.dialogue.npc_id === npc.id);
+    if (listener) {
+      if (npc.isMoving()) npc.path = [];
+      npc.face_target = { ...listener.tile };
+      return;
+    }
     if (!npc.isMoving() && world.rng.randf() < Content.rules.world.npc_wander_chance) {
       const r = npc.def.wander_radius;
       const dest = {

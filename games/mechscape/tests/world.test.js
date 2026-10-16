@@ -48,6 +48,10 @@ test('a hatch takes you down to the Undercroft and the ladder brings you back', 
   const hatch = station(world, 'undercroft_hatch');
   const player = world.spawn(1, { x: hatch.tile.x, y: hatch.tile.y + 1 });
   act(world, player, new InteractAction(hatch.id));
+  // A tick stepping through (the screen fades out), then you're there.
+  assert.ok(world.events.some((e) => e.type === 'transition' && e.entity === player.id));
+  assert.equal(world.areaAt(player.tile).id, 'scrapyard');
+  world.runTick();
   assert.equal(world.areaAt(player.tile).id, 'undercroft');
   assert.ok(world.events.some((e) => e.type === 'teleport' && e.entity === player.id));
   const ladder = station(world, 'undercroft_ladder');

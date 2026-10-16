@@ -9,6 +9,15 @@ export const ITEM_COLOR = cssColor([1, 0.6, 0.3]);
 export const PLAYER_COLOR = cssColor([1, 1, 1]);
 export const MUTED = cssColor([0.72, 0.75, 0.8]);
 
+/** Debug view settings the debug window toggles. showIds: menus and hover text name things' ids too. */
+export const DebugView = { showIds: false };
+
+/** [options] with [id] after each target's name, when the debug window's "Ids" is on. */
+export function withIds(options, id) {
+  if (!DebugView.showIds || !id) return options;
+  return options.map((o) => (o.target ? { ...o, target: `${o.target} [${id}]` } : o));
+}
+
 /**
  * An option, OSRS-style: { verb, target, color, action }. The verb in white,
  * the target in its colour. action may be null (Cancel).

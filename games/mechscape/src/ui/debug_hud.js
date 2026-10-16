@@ -12,6 +12,7 @@ import { DebugGrantXpAction } from '../sim/actions.js';
 import { Hitbox } from '../view/hitbox.js';
 import { isTyping } from '../view/camera_rig.js';
 import { el } from './screen.js';
+import { DebugView } from './common.js';
 
 export class DebugHud {
   /** [saves]: the SaveManager, or null online. [cheats]: whether to offer debug actions. */
@@ -34,6 +35,7 @@ export class DebugHud {
       ['True tile (F2)', () => overlay.showTrueTile, (on) => { overlay.showTrueTile = on; }],
       ['Tick metronome (F3)', () => overlay.metronome, (on) => { overlay.metronome = on; }],
       ['Hitboxes (F5)', () => Hitbox.debugVisible, (on) => Hitbox.setDebugVisible(on)],
+      ['Ids in menus (F6)', () => DebugView.showIds, (on) => { DebugView.showIds = on; }],
     ].map(([text, get, set]) => {
       const label = el('label', 'check', '', toggles);
       const box = el('input', '', '', label);
@@ -98,6 +100,7 @@ export class DebugHud {
       if (e.repeat || isTyping(e)) return;
       if (e.key === 'F4') this._toggle();
       else if (e.key === 'F5') Hitbox.setDebugVisible(!Hitbox.debugVisible);
+      else if (e.key === 'F6') DebugView.showIds = !DebugView.showIds;
       else if (e.key === '[' && saves) this._stepSpeed(-1);
       else if (e.key === ']' && saves) this._stepSpeed(1);
       else return;

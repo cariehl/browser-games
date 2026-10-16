@@ -10,7 +10,7 @@ const GOALS = {
   talk: { help: 'Moved on by a dialogue choice ({ "stage": [quest, stage] } or "complete").', start: {} },
   visit: { help: 'Be in an area.', start: { area: '' } },
   have: { help: 'Carry one of each item.', start: { items: [''] } },
-  flag: { help: 'A world flag is set (mech_complete, blueprint_loaded...).', start: { flag: '' } },
+  flag: { help: 'A flag is set. scope: world (shared: mech_complete...), quest (this quest\'s own, or name another in "quest") or player.', start: { flag: '', scope: 'quest' } },
   kill: { help: 'Help kill this many (any damage counts).', start: { npc: '', count: 1 } },
   scan: { help: 'Landmarks in the survey log.', start: { count: 1 } },
   all: { help: 'Every one of these.', start: { goals: [{ type: 'visit', area: '' }] } },
@@ -20,14 +20,16 @@ const GOALS = {
 function movedOnBy(questId, stageId, first) {
   const out = [];
   for (const [talkId, d] of Object.entries(Store.data(COLLECTIONS.dialogue.file) || {})) {
-    for (const entry of d.entries || []) {
-      for (const choice of entry.choices || []) {
+    const walk = (node) => {
+      for (const choice of node.choices || []) {
         for (const effect of choice.do || []) {
           const hit = (first && effect.start === questId) || (Array.isArray(effect.stage) && effect.stage[0] === questId && effect.stage[1] === stageId);
           if (hit) out.push(`${nameOf('dialogue', talkId)}: “${choice.text}”`);
         }
+        walk(choice);
       }
-    }
+    };
+    for (const entry of d.entries || []) walk(entry);
   }
   return out;
 }

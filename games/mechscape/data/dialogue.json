@@ -36,11 +36,13 @@
      },
      {
       "text": "Who built the Scrapyard?",
-      "do": [
+      "lines": [
        {
-        "say": "The fleet did, a long time ago. The relay mast's last order was \"Hold\". Everything here has been holding ever since."
+        "who": "npc",
+        "text": "The fleet did, a long time ago. The relay mast's last order was \"Hold\". Everything here has been holding ever since."
        }
-      ]
+      ],
+      "after": "menu"
      },
      {
       "text": "Not right now."
@@ -102,9 +104,12 @@
          "ignition",
          "build_mech"
         ]
-       },
+       }
+      ],
+      "lines": [
        {
-        "say": "There. The console will tell you every part it needs. Engineers, salvagers, siphoners, splicers: you'll all be on the hook for something."
+        "who": "npc",
+        "text": "There. The console will tell you every part it needs. Engineers, salvagers, siphoners, splicers: you'll all be on the hook for something."
        }
       ]
      }
@@ -206,9 +211,10 @@
      },
      {
       "text": "That sounds dangerous and pointless.",
-      "do": [
+      "lines": [
        {
-        "say": "Yes! That's art."
+        "who": "npc",
+        "text": "Yes! That's art."
        }
       ]
      }
@@ -259,9 +265,12 @@
          "found_art",
          "press"
         ]
-       },
+       }
+      ],
+      "lines": [
        {
-        "say": "Now it needs paint. Real paint, from the old paint press in the Undercroft. It's a bit lively. Bring me its reservoir."
+        "who": "npc",
+        "text": "Now it needs paint. Real paint, from the old paint press in the Undercroft. It's a bit lively. Bring me its reservoir."
        }
       ]
      }
@@ -303,9 +312,12 @@
        },
        {
         "complete": "found_art"
-       },
+       }
+      ],
+      "lines": [
        {
-        "say": "A paintball cannon! Harmless, mostly. Go and make the yard prettier. Oh, and I think I hear that paint press still stomping around down there, louder than ever. Might want to check it out."
+        "who": "npc",
+        "text": "A paintball cannon! Harmless, mostly. Go and make the yard prettier. Oh, and I think I hear that paint press still stomping around down there, louder than ever. Might want to check it out."
        }
       ]
      }
@@ -368,9 +380,12 @@
        },
        {
         "give": "survey_drone_pet"
-       },
+       }
+      ],
+      "lines": [
        {
-        "say": "Here's the drone. Use it from your pack to call it out. Off you go!"
+        "who": "npc",
+        "text": "Here's the drone. Use it from your pack to call it out. Off you go!"
        }
       ]
      },
@@ -421,9 +436,12 @@
        },
        {
         "complete": "survey"
-       },
+       }
+      ],
+      "lines": [
        {
-        "say": "Splendid work. The seeds you find up there grow nicely in the hab's grow beds, by the way."
+        "who": "npc",
+        "text": "Splendid work. The seeds you find up there grow nicely in the hab's grow beds, by the way."
        }
       ]
      }

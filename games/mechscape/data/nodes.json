@@ -2,6 +2,7 @@
  "breacher_husk": {
   "id": "breacher_husk",
   "display_name": "Breacher husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 15,
@@ -34,6 +35,7 @@
  "coolant_leak": {
   "id": "coolant_leak",
   "display_name": "Coolant leak",
+  "description": "TODO",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 10,
@@ -58,6 +60,7 @@
  "crashed_drone": {
   "id": "crashed_drone",
   "display_name": "Crashed drone",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -82,6 +85,7 @@
  "derelict_hull": {
   "id": "derelict_hull",
   "display_name": "Derelict mech hull",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 10,
@@ -107,6 +111,7 @@
  "gas_vent": {
   "id": "gas_vent",
   "display_name": "Gas vent",
+  "description": "TODO",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 1,
@@ -131,6 +136,7 @@
  "glowroot_tangle": {
   "id": "glowroot_tangle",
   "display_name": "Glowroot tangle",
+  "description": "TODO",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 15,
@@ -157,6 +163,7 @@
  "ichor_seep": {
   "id": "ichor_seep",
   "display_name": "Ichor seep",
+  "description": "TODO",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 5,
@@ -180,6 +187,7 @@
  "ichor_wellspring": {
   "id": "ichor_wellspring",
   "display_name": "Ichor wellspring",
+  "description": "TODO",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 15,
@@ -204,6 +212,7 @@
  "loader_husk": {
   "id": "loader_husk",
   "display_name": "Loader husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 10,
@@ -242,6 +251,7 @@
  "rustcap_cluster": {
   "id": "rustcap_cluster",
   "display_name": "Rustcap cluster",
+  "description": "TODO",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 10,
@@ -268,6 +278,7 @@
  "seep_moss_patch": {
   "id": "seep_moss_patch",
   "display_name": "Seep moss patch",
+  "description": "TODO",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 5,
@@ -294,6 +305,7 @@
  "sentry_husk": {
   "id": "sentry_husk",
   "display_name": "Sentry husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -332,6 +344,7 @@
  "ventbloom_patch": {
   "id": "ventbloom_patch",
   "display_name": "Ventbloom patch",
+  "description": "TODO",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 1,
@@ -359,6 +372,7 @@
  "wrecked_hauler": {
   "id": "wrecked_hauler",
   "display_name": "Wrecked hauler",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 5,
@@ -386,6 +400,7 @@
  "foundry_cache": {
   "id": "foundry_cache",
   "display_name": "Foundry cache",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 8,
@@ -411,6 +426,7 @@
  "titan_hulk": {
   "id": "titan_hulk",
   "display_name": "Titan hulk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -441,6 +457,7 @@
  "crawler_husk": {
   "id": "crawler_husk",
   "display_name": "Crawler husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -473,6 +490,7 @@
  "foundry_drone_husk": {
   "id": "foundry_drone_husk",
   "display_name": "Foundry drone husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 5,
@@ -505,6 +523,7 @@
  "warden_husk": {
   "id": "warden_husk",
   "display_name": "Warden husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -537,6 +556,7 @@
  "splatterpress_husk": {
   "id": "splatterpress_husk",
   "display_name": "Splatterpress husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -577,6 +597,7 @@
  "colossus_husk": {
   "id": "colossus_husk",
   "display_name": "Colossus husk",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -609,6 +630,7 @@
  "glowcap_cluster": {
   "id": "glowcap_cluster",
   "display_name": "Glowcap cluster",
+  "description": "TODO",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -634,6 +656,7 @@
  "skyfern_patch": {
   "id": "skyfern_patch",
   "display_name": "Skyfern patch",
+  "description": "TODO",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -659,6 +682,7 @@
  "ruin_orchid": {
   "id": "ruin_orchid",
   "display_name": "Ruin orchid",
+  "description": "TODO",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -684,6 +708,7 @@
  "mech_wreckage": {
   "id": "mech_wreckage",
   "display_name": "Mech wreckage",
+  "description": "TODO",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
