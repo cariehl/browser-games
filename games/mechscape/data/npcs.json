@@ -2,6 +2,7 @@
  "breacher_mech": {
   "id": "breacher_mech",
   "display_name": "Breacher mech",
+  "description": "A wall-breaching assault mech, still running a siege that ended forty years ago.",
   "hitpoints": 34,
   "attack_level": 18,
   "accuracy": 16,
@@ -31,6 +32,7 @@
  "loader_mech": {
   "id": "loader_mech",
   "display_name": "Loader mech",
+  "description": "A cargo loader, still taking the yard apart. It isn't picky about what counts as cargo.",
   "hitpoints": 24,
   "attack_level": 14,
   "accuracy": 10,
@@ -60,6 +62,7 @@
  "relic_sentry": {
   "id": "relic_sentry",
   "display_name": "Relic sentry",
+  "description": "Its last order was HOLD. It's still holding.",
   "hitpoints": 12,
   "attack_level": 4,
   "accuracy": 0,
@@ -113,7 +116,7 @@
   "cosmetics": {
    "hat": "traffic_cone"
   },
-  "description": "TODO"
+  "description": "Ada runs what's left of the gantry, and has never once looked idle."
  },
  "scrap_artist": {
   "id": "scrap_artist",
@@ -142,7 +145,7 @@
   "cosmetics": {
    "decal": "flame_decal"
   },
-  "description": "TODO"
+  "description": "Juno, the yard's only artist. Probably its only critic, too."
  },
  "surveyor": {
   "id": "surveyor",
@@ -171,11 +174,12 @@
   "cosmetics": {
    "hat": "surveyor_hat"
   },
-  "description": "TODO"
+  "description": "Pell, a retired surveyor, unretiring to map the Quiet Reach."
  },
  "scrap_crawler": {
   "id": "scrap_crawler",
   "display_name": "Scrap crawler",
+  "description": "A skittering heap of scrap on legs. It thinks it's a predator.",
   "hitpoints": 14,
   "attack_level": 7,
   "accuracy": 6,
@@ -205,6 +209,7 @@
  "foundry_drone": {
   "id": "foundry_drone",
   "display_name": "Foundry drone",
+  "description": "A foundry maintenance drone. It treats pilots as defects to be removed.",
   "hitpoints": 20,
   "attack_level": 11,
   "accuracy": 10,
@@ -234,6 +239,7 @@
  "undercroft_warden": {
   "id": "undercroft_warden",
   "display_name": "Undercroft warden",
+  "description": "Built to guard the last blueprint until a crew came back for it. It doesn't believe we're that crew.",
   "hitpoints": 60,
   "attack_level": 16,
   "accuracy": 14,
@@ -263,6 +269,7 @@
  "splatterpress": {
   "id": "splatterpress",
   "display_name": "Splatterpress",
+  "description": "The old paint press, painting the same nothing for forty years. Now it has something new to paint.",
   "hitpoints": 80,
   "attack_level": 8,
   "accuracy": 8,
@@ -393,6 +400,7 @@
  "scrap_colossus": {
   "id": "scrap_colossus",
   "display_name": "Scrap colossus",
+  "description": "A walking mountain of fused scrap. Small arms do nothing to it. That's what the mechs were for.",
   "hitpoints": 400,
   "attack_level": 30,
   "accuracy": 28,
@@ -450,7 +458,7 @@
    1.0
   ],
   "size": 0.5,
-  "description": "TODO"
+  "description": "A tiny drone that has decided its home is a pilot."
  },
  "pet_loader_pup": {
   "hitpoints": 10,
@@ -481,7 +489,7 @@
    1.0
   ],
   "size": 0.5,
-  "description": "TODO"
+  "description": "A loader barely bigger than a crate, desperate to carry something."
  },
  "pet_mini_press": {
   "hitpoints": 10,
@@ -512,7 +520,7 @@
    1.0
   ],
   "size": 0.5,
-  "description": "TODO"
+  "description": "A pocket Splatterpress. It paints the floor wherever it goes."
  },
  "pet_survey_drone": {
   "hitpoints": 10,
@@ -552,7 +560,7 @@
    "specimen": "Ooh, a specimen. Into the jar it goes.",
    "puzzle": "You fixed it! I was going to suggest that. Eventually."
   },
-  "description": "TODO"
+  "description": "Pell's survey drone. It has opinions, and it shares them."
  },
  "walker_mech": {
   "id": "walker_mech",
@@ -581,11 +589,12 @@
   ],
   "size": 2.4,
   "shape": "walker",
-  "description": "TODO"
+  "description": "The crew's two-seat walker, built from the foundry's last blueprint. Pilot up front, gunner behind."
  },
  "press_drone": {
   "id": "press_drone",
   "display_name": "Patch drone",
+  "description": "A little drone that patches the Splatterpress back together. Squash it first.",
   "hitpoints": 4,
   "attack_level": 1,
   "accuracy": 0,
