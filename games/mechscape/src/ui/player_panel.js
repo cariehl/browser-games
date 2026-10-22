@@ -1,4 +1,4 @@
-// OSRS-style side panel with three tabs:
+// OSRS-style side panel (bottom-right, tabs along its bottom) with three tabs:
 //   Inventory: HP and the 28 slots. Click a weapon or armor to equip it, an
 //     injector to inject it; drag to move; shift-click or right-click an
 //     item to drop it.
@@ -411,7 +411,8 @@ export class PlayerPanel {
       button.title = item ? `+${item.defence_bonus} defence\nClick to take off` : '';
     }
     const p = Combat.profile(me);
-    setText(this._statsLabel, `Attack: ${Skills.displayName(p.skill)} ${p.attack_level}, +${p.accuracy} accuracy\n`
+    setText(this._statsLabel, `Combat level: ${Combat.level(me)}\n`
+      + `Attack: ${Skills.displayName(p.skill)} ${p.attack_level}, +${p.accuracy} accuracy\n`
       + `Max hit ${p.max_hit}, every ${p.speed} ticks, range ${p.reach}\n`
       + `Defence: Endurance ${me.level(ENDURANCE)}, +${me.armorBonus()} from armor`);
     if (me.weapon) {
@@ -480,7 +481,7 @@ export class PlayerPanel {
         parts.tile.title = `${Skills.displayName(skill)}\nXP: ${commas(xp)}\nNext level at: ${commas(next)}\nRemaining: ${commas(next - xp)}\nClick for the skill guide`;
       }
     }
-    setText(this._totalLabel, `Total level: ${total}`);
+    setText(this._totalLabel, `Total level: ${total}   ·   Combat level: ${Combat.level(me)}`);
   }
 
   // --- Shared -------------------------------------------------------------

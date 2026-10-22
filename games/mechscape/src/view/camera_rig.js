@@ -59,6 +59,16 @@ export class CameraRig {
     window.addEventListener('blur', () => this._keys.clear());
   }
 
+  /** Which way the camera faces, radians: 0 looks north (towards smaller tile y). */
+  get yaw() {
+    return this._yaw;
+  }
+
+  /** Turns to look north (the minimap's compass). */
+  faceNorth() {
+    this._yaw = 0;
+  }
+
   /** Jumps straight to the target (on start). */
   snap() {
     if (this.target) this.position.copy(this.target.position);

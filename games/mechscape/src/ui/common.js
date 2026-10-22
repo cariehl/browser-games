@@ -25,7 +25,25 @@ export function withIds(options, id) {
 export function optionHtml(option) {
   const verb = escapeHtml(option.verb || '');
   if (!option.target) return verb;
-  return `${verb} <span style="color:${option.color || '#fff'}">${escapeHtml(option.target)}</span>`.trim();
+  let html = `${verb} <span style="color:${option.color || '#fff'}">${escapeHtml(option.target)}</span>`;
+  if (option.level) html += `  <span style="color:${option.level.color}">(level-${option.level.value})</span>`;
+  return html.trim();
+}
+
+/**
+ * An option's combat level tag, { value, color }: coloured against yours like
+ * OSRS, green for weaker, yellow for an even fight, red for stronger.
+ */
+export function levelTag(theirs, mine) {
+  return { value: theirs, color: levelColor(theirs - (mine || theirs)) };
+}
+
+/** [diff]: their level minus yours. Fades from yellow to green or red over ten levels. */
+export function levelColor(diff) {
+  const t = Math.min(Math.abs(diff), 10) / 10;
+  if (diff > 0) return cssColor([1, 1 - 0.75 * t, 0.15 * (1 - t)]);
+  if (diff < 0) return cssColor([1 - 0.75 * t, 1, 0.15 * (1 - t)]);
+  return cssColor([1, 1, 0.15]);
 }
 
 export function escapeHtml(text) {

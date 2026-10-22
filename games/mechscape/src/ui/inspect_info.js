@@ -25,6 +25,7 @@ export const InspectInfo = {
     } else {
       rows.push(['Hitpoints', `${npc.hp} / ${npc.maxHp()}`]);
     }
+    rows.push(['Combat level', String(Combat.level(npc))]);
     rows.push(['Attack', `level ${def.attack_level}, +${def.accuracy} accuracy, max hit ${def.max_hit}`]);
     rows.push(['Attack speed', `every ${ticks(def.attack_speed)}`]);
     rows.push(['Range', def.attack_range <= 1 ? 'melee' : `${def.attack_range} tiles`]);

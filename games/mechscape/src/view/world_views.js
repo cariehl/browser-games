@@ -19,6 +19,7 @@ import { WorldLabel } from '../ui/screen.js';
 import { buildWalker, showInstalled, WalkerAnimator } from './mech_view.js';
 import { Mechs } from '../sim/mech.js';
 import { Content } from '../sim/defs.js';
+import { Combat } from '../sim/combat.js';
 import { HazardViews } from './hazard_view.js';
 import { PieceView, PieceGhost } from './piece_view.js';
 
@@ -156,7 +157,7 @@ export class WorldViews {
       if (!view.nameLabel && !view.state.isNpc() && view.state.id !== ClientState.localPlayerId) view.nameLabel = new WorldLabel('player-label');
       if (view.nameLabel) {
         view.nameLabel.visible = view.visible;
-        view.nameLabel.text = view.state.display_name;
+        view.nameLabel.text = `${view.state.display_name}  (level-${Combat.level(view.state)})`;
         view.nameLabel.point.copy(view.position).y += view.headHeight + 0.2;
         view.nameLabel.update();
       }

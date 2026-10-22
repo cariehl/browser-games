@@ -89,7 +89,11 @@ Combat: relic sentries patrol the ruins east of the wall, and **loader mechs** g
 
 Terrain: walls and rocks block both walking and shooting. The chain fence west of the sentries blocks walking but not shooting, so with a pistol you can fire over it while they walk around. Big mech hulls block shots too; drones, vents and the weapons bench don't.
 
-The top-right panel has three tabs:
+**Combat levels:** every player and hostile shows a combat level, OSRS-style, in the hover text, the right-click menu ("Attack Relic sentry (level-6)"), Inspect, and over other players' heads. It's coloured against yours: green is weaker, yellow even, red stronger. The formula is OSRS's without Prayer: `floor(0.25 × (Toughness + Endurance) + 0.65 × best of Melee and Firearms)`, so a new pilot is 3 and a maxed one 113. NPCs put their hitpoints, defence level and attack level in the same slots; `combat_level` on an NPC in `data/npcs.json` overrides that. The two weights are in `data/rules.json` (`combat.level_defence_weight`, `level_attack_weight`). Your own is in the Gear and Skills tabs.
+
+**Minimap** (top right): the area around you, turning with the camera, with yellow dots for NPCs, white for players, red for items on the ground and blue for stations. Click it to walk there, scroll on it to zoom, and click the compass to face north. The area's name is under it.
+
+The bottom-right panel has its tabs along its bottom edge:
 
 - **Inventory:** HP and 28 slots. Click a weapon or armor to equip it, or an injector to inject it; drag an item onto another slot to move or swap it; shift-click to drop; right-click for options. Canisters show how full they are. Moves, drops and equips show the moment you click and are confirmed on the next tick. You can chain them as fast as you like, even under simulated lag, without the display jumping. The slot under a dragged item lights up.
 - **Gear:** your weapon, your four armor slots (click to take off), where combat XP goes, and your attack and defence numbers.

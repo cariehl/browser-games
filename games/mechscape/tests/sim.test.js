@@ -7,6 +7,7 @@ import { Skills } from '../src/sim/skills.js';
 import { MapData } from '../src/sim/map_data.js';
 import { Grid } from '../src/sim/grid.js';
 import { Combat } from '../src/sim/combat.js';
+import { NpcState } from '../src/sim/entity.js';
 import { SaveGame } from '../src/sim/save_game.js';
 import { ItemStack } from '../src/sim/inventory.js';
 import {
@@ -23,6 +24,21 @@ test('the XP curve matches RuneScape', () => {
   assert.equal(Skills.xpForLevel(99), 13034431);
   assert.equal(Skills.levelForXp(82), 1);
   assert.equal(Skills.levelForXp(83), 2);
+});
+
+test('combat levels: 3 for a new pilot, OSRS-like at the top, and NPCs ordered by toughness', () => {
+  const { world, player } = makeWorld();
+  assert.equal(Combat.level(player), 3);
+  for (const skill of Skills.ALL) player.xp[skill] = Skills.xpForLevel(99);
+  assert.equal(Combat.level(player), 113);
+  // Boosts don't count.
+  player.boosts.melee = { amount: 10, until: 1e9 };
+  assert.equal(Combat.level(player), 113);
+  const npc = (id) => NpcState.create(-1, Content.npcs[id], { x: 0, y: 0 });
+  const sentry = Combat.level(npc('relic_sentry'));
+  const loader = Combat.level(npc('loader_mech'));
+  const breacher = Combat.level(npc('breacher_mech'));
+  assert.ok(sentry < loader && loader < breacher, `${sentry} < ${loader} < ${breacher}`);
 });
 
 test('a new player starts with 10 HP at the spawn', () => {

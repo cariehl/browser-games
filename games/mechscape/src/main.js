@@ -46,6 +46,7 @@ import { DialogueBox } from './ui/dialogue_box.js';
 import { ScreenFade } from './ui/screen_fade.js';
 import { QuestJournal } from './ui/quest_journal.js';
 import { TradeWindow } from './ui/trade_window.js';
+import { Minimap } from './ui/minimap.js';
 
 /** Longest frame fed to the game, so a hidden tab doesn't come back to a burst of ticks. */
 const MAX_FRAME_SECONDS = 0.25;
@@ -242,6 +243,7 @@ async function main() {
   const trade = new TradeWindow(ui, link, menu);
   const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
   const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector, build });
+  const minimap = new Minimap(ui, { rig, views, controller });
 
   // Through a hatch or a lift: the camera jumps with you instead of sweeping across the map.
   ClientState.onTick(() => {
@@ -283,6 +285,7 @@ async function main() {
     controller.update();
     inspector.update();
     panel.update();
+    minimap.update();
     craft.update();
     storage.update();
     trade.update();
@@ -296,7 +299,7 @@ async function main() {
   requestAnimationFrame(frame);
 
   // For poking at the game from the browser console.
-  window.mechscape = { ClientState, actions, Content, views, link, saves, rig, renderer, scene, build, room: net && net.room };
+  window.mechscape = { ClientState, actions, Content, views, link, saves, rig, renderer, scene, build, minimap, room: net && net.room };
 }
 
 main().catch((error) => {

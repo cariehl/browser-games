@@ -10,13 +10,17 @@
 //   a successful hit deals 1..max hit; a failed one is a 0 (a blue splat)
 //   XP           = 4 per damage to the weapon's skill (or Endurance), plus
 //                  1.33 per damage to Toughness
+//   combat level = floor(defence weight * (Toughness + Endurance)
+//                        + attack weight * best of Melee and Firearms),
+//                  OSRS's formula without Prayer (weights in data/rules.json);
+//                  NPCs use hitpoints, defence level and attack level
 //
 // Timing: an attack is committed the tick before it strikes (see commit()).
 // Damage, ammo and XP are settled then; the hit lands on the strike tick
 // (see impact()) whatever either side does in between, so the wind-up can
 // play before the hitsplat.
 
-import { MELEE, ENDURANCE, TOUGHNESS } from './skills.js';
+import { MELEE, FIREARMS, ENDURANCE, TOUGHNESS } from './skills.js';
 import { PendingHit } from './objects.js';
 import { AttackTask } from './tasks.js';
 import { Features } from './features.js';
@@ -50,6 +54,24 @@ export const Combat = {
       max_hit: Combat.maxHit(attackLevel, w ? w.power : 0),
       fun: w ? w.fun_effect : '',
     };
+  },
+
+  /**
+   * How tough something is at a glance, OSRS-style: 3 for a new pilot, about
+   * 113 for a maxed one. Base levels only (boosts don't count). An NPC's
+   * def can set combat_level to override the formula.
+   */
+  level(entity) {
+    const rules = Content.rules.combat || {};
+    const defW = rules.level_defence_weight ?? 0.25;
+    const atkW = rules.level_attack_weight ?? 0.65;
+    if (entity.isNpc()) {
+      const def = entity.stats();
+      if (def.combat_level > 0) return def.combat_level;
+      return Math.max(1, Math.floor(defW * (entity.maxHp() + def.defence_level) + atkW * def.attack_level));
+    }
+    const attack = Math.max(entity.level(MELEE), entity.level(FIREARMS));
+    return Math.floor(defW * (entity.level(TOUGHNESS) + entity.level(ENDURANCE)) + atkW * attack);
   },
 
   hitChance(attackLevel, accuracy, defenceLevel, defenceBonus) {

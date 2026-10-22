@@ -56,6 +56,11 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 - **The pilot moonwalked:** `player.glb`'s Walk and Run step towards -Z while the model faces +Z. The loader now checks each Walk and Run clip and plays any that step backwards in reverse (`src/view/models.js`), so a fixed re-export won't be flipped back. The fix belongs in the Blender file too.
 - **Sinking into raised ground while working** (salvaging drones on the height-1 plateau) was the work bob setting the height instead of adding to it.
 
+## Third round of feedback
+
+- **Combat levels** for players and hostiles (see README). People, pets and the walker have none, since nobody can fight them. The Scrap colossus comes out at 125 from its 400 HP, which suits "only a mech can touch it".
+- **A minimap in the top-right**, and the side panel moved to the bottom-right with its tabs along the bottom, so they stay put when the pages change height. The minimap draws only your own area (the snapshot only sends that area's things anyway); there are no map icons yet beyond station dots.
+
 ## Known rough edges
 
 - **The browser asks for `/favicon.ico` and gets a 404.** It's harmless.

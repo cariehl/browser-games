@@ -24,7 +24,8 @@ import { BoardAction, LeaveMechAction } from '../sim/mech.js';
 import { HabPiece, EditPieceAction } from '../sim/hab.js';
 import { bedStage } from '../view/piece_view.js';
 import { DismissPetAction } from '../sim/appearance.js';
-import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR, withIds } from '../ui/common.js';
+import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR, withIds, levelTag } from '../ui/common.js';
+import { Combat } from '../sim/combat.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 import { lookOptions } from '../ui/examine.js';
 
@@ -137,8 +138,9 @@ export class PlayerController {
         if (me && me.pet && me.pet_npc_id === npc.id) options.push({ verb: 'Pick up', target: name, color: NPC_COLOR, action: () => this._pickUpPet(npc) });
         return [...options, ...this._look(name, NPC_COLOR, x, y, examine)];
       }
+      const level = levelTag(Combat.level(npc), myLevel());
       return [
-        { verb: 'Attack', target: name, color: NPC_COLOR, action: () => this._attack(npc.id) },
+        { verb: 'Attack', target: name, level, color: NPC_COLOR, action: () => this._attack(npc.id) },
         ...this._look(name, NPC_COLOR, x, y, { ...examine, source: () => InspectInfo.npc(ClientState.world, npc, ClientState.me()) }),
       ];
     }
@@ -148,7 +150,7 @@ export class PlayerController {
       const name = other.display_name;
       // Right-click only: a left click on a player walks, like OSRS.
       return [
-        { verb: 'Trade with', target: name, color: PLAYER_COLOR, action: () => this._trade(other.id), rightOnly: true },
+        { verb: 'Trade with', target: name, level: levelTag(Combat.level(other), myLevel()), color: PLAYER_COLOR, action: () => this._trade(other.id), rightOnly: true },
       ];
     }
     if (hitbox.kind === HitboxKind.OBJECT) {
@@ -275,6 +277,11 @@ export class PlayerController {
     this.link.send(ClientState.localPlayerId, new InteractAction(objectId));
   }
 
+  /** Walks to [tile], as clicking it would (the minimap). */
+  walkTo(tile) {
+    this._walk(tile);
+  }
+
   _walk(tile) {
     // Yellow for walking, red for a tile you can't walk onto.
     this.marker.showAt(tile, ClientState.world.isWalkable(tile));
@@ -318,4 +325,10 @@ function debugId(hitbox, world) {
 function groundName(ground) {
   if (ground.item.container) return `${ground.item.display_name} (${ground.count}/${ground.item.capacity})`;
   return ground.item.display_name + (ground.count > 1 ? ` ×${ground.count}` : '');
+}
+
+/** The local player's combat level, to colour others' against (0 before joining). */
+function myLevel() {
+  const me = ClientState.me();
+  return me ? Combat.level(me) : 0;
 }
