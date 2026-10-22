@@ -167,6 +167,8 @@ export class NpcDef {
       id: '', display_name: '',
       hitpoints: 10, attack_level: 1, accuracy: 0, max_hit: 1, attack_speed: 5, attack_range: 1,
       defence_level: 1, defence_bonus: 0,
+      /** Shown next to its name; 0 works it out from its stats (see Combat.level). */
+      combat_level: 0,
       /** What drives it; null for the standard brain. */
       brain: null,
       /** False for people you talk to (and pets): nobody can attack them, and they never fight. */
