@@ -1,0 +1,12 @@
+# Arm jams mid-travel: firmware stall detection must cut the motor before
+# the PDM eFuse trips (150 ms firmware vs 250 ms eFuse).
+@0      ignition on
+@300    press arm
+@1500   fault jam on
+@2500   expect uart "fault=stall"
+@2500   expect arm.current < 0.5
+@2500   expect pdm.3.tripped == 0
+@2600   fault jam off
+@2700   press aux                           # clear fault
+@2900   press arm                           # stopped mid-travel -> stows
+@9000   expect arm.angle < 1

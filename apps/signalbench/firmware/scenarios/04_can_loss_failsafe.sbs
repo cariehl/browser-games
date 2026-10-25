@@ -1,0 +1,12 @@
+# Controller drops off the CAN bus: the PDM must fail safe within 500 ms,
+# the firmware must notice, and everything must recover on reconnect.
+@0      ignition on
+@200    press scene
+@1000   expect pdm.2.current > 5
+@1000   fault can_ctrl on
+@1700   expect pdm.failsafe == 1
+@1700   expect pdm.2.current == 0
+@1700   expect uart "pdm: OFFLINE"
+@1800   fault can_ctrl off
+@2600   expect pdm.failsafe == 0
+@2600   expect pdm.2.current > 5

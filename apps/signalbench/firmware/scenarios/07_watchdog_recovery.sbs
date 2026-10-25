@@ -1,0 +1,13 @@
+# A firmware hang (stuck loop) must be caught by the independent watchdog;
+# the MCU reboots, reports the reset cause, and the bench recovers.
+@0      ignition on
+@200    press scene
+@1000   expect pdm.2.current > 5
+@1100   uart hang
+@1200   expect uart "simulating a stuck loop"
+@3000   expect fw.resets == 1
+@3000   expect uart "reset: WATCHDOG"
+@3000   expect fw.connected == 1
+@3500   expect pdm.failsafe == 0                # rebooted firmware drives the PDM again
+@3600   press scene
+@4500   expect pdm.2.current > 5

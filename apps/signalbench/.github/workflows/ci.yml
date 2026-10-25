@@ -1,0 +1,75 @@
+name: CI
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  firmware-and-sil:
+    name: Firmware unit tests + SIL scenarios (Linux)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Configure firmware (with coverage)
+        run: cmake -S firmware -B firmware/build -DSB_ENABLE_COVERAGE=ON
+
+      - name: Build firmware, examples and tests
+        run: cmake --build firmware/build -j
+
+      - name: Unit tests (Unity)
+        run: ctest --test-dir firmware/build --output-on-failure
+
+      - name: Coverage summary
+        run: |
+          pip install --quiet gcovr
+          gcovr -r firmware --filter firmware/app --exclude 'firmware/app/main.c' firmware/build --print-summary
+
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: sim
+
+      - name: Simulator tests
+        run: cargo test --manifest-path sim/Cargo.toml --release
+
+      - name: Software-in-the-loop scenarios (firmware vs. plant model)
+        run: |
+          cargo build --manifest-path sim/Cargo.toml --release
+          args=()
+          for f in firmware/scenarios/*.sbs; do args+=(--script "$f"); done
+          sim/target/release/sbsim --firmware firmware/build/bin/app --quiet "${args[@]}"
+
+  firmware-windows:
+    name: Firmware build (Windows, MinGW)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build + test with MinGW
+        shell: pwsh
+        run: |
+          cmake -S firmware -B firmware/build -G "MinGW Makefiles"
+          cmake --build firmware/build -j
+          ctest --test-dir firmware/build --output-on-failure
+
+  app:
+    name: Desktop app type-check + build (Windows)
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+        with:
+          workspaces: app/src-tauri
+      - name: Frontend
+        working-directory: app
+        run: |
+          npm ci
+          npm run build
+      - name: Tauri shell
+        run: cargo check --manifest-path app/src-tauri/Cargo.toml

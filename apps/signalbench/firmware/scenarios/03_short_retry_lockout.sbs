@@ -1,0 +1,14 @@
+# A shorted scene-light harness: the PDM trips, firmware retries with
+# back-off, then locks the channel out. AUX clears it once repaired.
+@0      ignition on
+@200    press scene
+@1000   expect pdm.2.current > 5
+@1100   fault short 2 on
+@1300   expect pdm.2.tripped == 1
+@10000  expect uart "LOCKED OUT"
+@10000  expect pdm.2.duty == 0
+@10000  expect pdm.5.current > 3            # other channels unaffected
+@10100  fault short 2 off
+@10200  press aux
+@11500  expect pdm.2.tripped == 0
+@11500  expect pdm.2.current > 5
