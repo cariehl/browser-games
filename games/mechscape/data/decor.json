@@ -25,5 +25,12 @@
  "skull": { "id": "skull", "display_name": "TODO", "shape": "skull", "color": [0.55, 0.5, 0.42, 1], "accent": [0.9, 0.2, 0.1, 1], "scale": 1.3, "description": "TODO" },
  "rock_small": { "id": "rock_small", "display_name": "TODO", "shape": "stones", "color": [0.4, 0.38, 0.35, 1], "description": "TODO", "blocks_movement": true },
  "flower": { "id": "flower", "display_name": "Bloomstalk", "shape": "flower", "color": [0.3, 0.5, 0.3, 1], "accent": [0.95, 0.5, 0.7, 1], "inspect": false },
- "antenna": { "id": "antenna", "display_name": "TODO", "shape": "antenna", "color": [0.45, 0.45, 0.48, 1], "accent": [1, 0.2, 0.15, 1], "scale": 1.3, "description": "TODO" }
+ "antenna": { "id": "antenna", "display_name": "TODO", "shape": "antenna", "color": [0.45, 0.45, 0.48, 1], "accent": [1, 0.2, 0.15, 1], "scale": 1.3, "description": "TODO" },
+ "boulder": { "id": "boulder", "display_name": "TODO", "shape": "boulder", "color": [0.42, 0.4, 0.37, 1], "description": "TODO", "blocks_movement": true },
+ "rock_spire": { "id": "rock_spire", "display_name": "TODO", "shape": "rock_spire", "color": [0.4, 0.37, 0.34, 1], "description": "TODO", "blocks_movement": true },
+ "scrub_tree": { "id": "scrub_tree", "display_name": "TODO", "shape": "scrub_tree", "color": [0.33, 0.42, 0.24, 1], "accent": [0.34, 0.27, 0.2, 1], "description": "TODO", "blocks_movement": true },
+ "pine": { "id": "pine", "display_name": "TODO", "shape": "pine", "color": [0.22, 0.36, 0.25, 1], "accent": [0.32, 0.25, 0.18, 1], "description": "TODO", "blocks_movement": true },
+ "titan_skull": { "id": "titan_skull", "display_name": "TODO", "shape": "titan_skull", "color": [0.5, 0.47, 0.42, 1], "accent": [0.55, 0.12, 0.08, 1], "description": "TODO", "blocks_movement": true },
+ "titan_ribs": { "id": "titan_ribs", "display_name": "TODO", "shape": "titan_ribs", "color": [0.45, 0.4, 0.35, 1], "description": "TODO", "blocks_movement": true },
+ "titan_arm": { "id": "titan_arm", "display_name": "TODO", "shape": "titan_arm", "color": [0.44, 0.38, 0.33, 1], "description": "TODO", "blocks_movement": true }
  }

@@ -287,7 +287,7 @@ export class MapData {
 
 /**
  * A world layout: which maps make up the world and where each sits.
- * { name, areas: [{ id, name, map, at: [x, y], dark, zones }], links: [{ from: [area, x, y], to: [area, x, y], text }] }
+ * { name, areas: [{ id, name, map, at: [x, y], level, dark, zones }], links: [{ from: [area, x, y], to: [area, x, y], text }] }
  * Returns null (after logging why) if it can't be read.
  */
 export function loadLayout(path) {

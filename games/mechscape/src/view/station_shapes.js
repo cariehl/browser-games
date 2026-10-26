@@ -220,47 +220,69 @@ export function buildShape(def) {
   return group;
 }
 
-/** How far the lift cable runs (tiles), and over how many of the last it fades out. */
-const CABLE_TILES = 9;
-const CABLE_FADE = 4;
+/** How far an elevator's tower stands from its station, and its half-width (metres). */
+const TOWER_OUT = 1.2;
+const TOWER_HALF = 0.62;
+/** Metres between the tower's cross-beams. */
+const TOWER_BAY = 1.5;
 
 /**
- * The cable a lift rides out on: from an arm on top of the lift tower,
- * level and away across [dir] ([dx, dy] on the map), out over the edge
- * into nothing, fading as it goes. It reads as "out there", not "up".
+ * An elevator's tower and walkway: a lattice tower just behind the station
+ * (the cage you click), the way [def].shaft points, up to the height of the
+ * other end of its link, with a headframe and wheel on top and a walkway
+ * from there across to the far landing. [rise] is how far above the station
+ * the far end is, [reach] how far along the shaft (both metres). It's built
+ * along +z and turned to face the shaft.
  */
-export function buildCable(def, dir) {
-  const group = new THREE.Group();
-  const steel = new THREE.MeshStandardMaterial({ color: color(darkened(def.color, 0.5)), roughness: 0.6, metalness: 0.5 });
-  const arm = mergeGeometries([
-    box(1.2, 0.1, 0.1, -0.35, 3.15, -0.48),
-    box(0.1, 0.1, 0.9, -0.85, 3.15, -0.1),
-    cyl(0.14, 0.14, 0.06, -0.85, 3.05, -0.4, Math.PI / 2, 0, 0, 12),
-    cyl(0.14, 0.14, 0.06, -0.85, 3.05, 0.2, Math.PI / 2, 0, 0, 12),
-  ]);
-  arm.computeVertexNormals();
-  const armMesh = new THREE.Mesh(arm, steel);
-  armMesh.castShadow = true;
-  group.add(armMesh);
-  // Two strands, in pieces a tile long, the last few each fainter than the one before.
-  const strand = new THREE.CylinderGeometry(0.022, 0.022, 1, 5).rotateZ(Math.PI / 2);
-  for (let i = 0; i < CABLE_TILES; i++) {
-    const left = CABLE_TILES - i;
-    const fade = left <= CABLE_FADE ? (left - 0.5) / (CABLE_FADE + 0.5) : 1;
-    const material = new THREE.MeshStandardMaterial({ color: color([0.1, 0.1, 0.11]), roughness: 0.5, metalness: 0.4 });
-    if (fade < 1) {
-      material.transparent = true;
-      material.opacity = fade;
-      material.depthWrite = false;
-    }
-    for (const z of [-0.4, 0.2]) {
-      const piece = new THREE.Mesh(strand, material);
-      piece.position.set(-1.35 - i, 2.97 - 0.015 * i, z);
-      piece.castShadow = fade === 1;
-      group.add(piece);
-    }
+export function buildShaft(def, rise, reach) {
+  const top = rise + 3;
+  const base = [];
+  const dark = [];
+  const accent = [];
+  const glow = [];
+  const c = TOWER_OUT + TOWER_HALF;
+  for (const [x, z] of [[-1, -1], [1, -1], [-1, 1], [1, 1]]) base.push(box(0.1, top + 1, 0.1, x * TOWER_HALF, (top - 1) / 2, TOWER_OUT + z * TOWER_HALF));
+  const w = TOWER_HALF * 2;
+  const diagonal = Math.hypot(w, TOWER_BAY);
+  const lean = Math.atan2(w, TOWER_BAY);
+  for (let y = 0, k = 0; y < top; y += TOWER_BAY, k++) {
+    base.push(box(w, 0.07, 0.07, 0, y, TOWER_OUT - TOWER_HALF), box(w, 0.07, 0.07, 0, y, c), box(0.07, 0.07, w, -TOWER_HALF, y, TOWER_OUT), box(0.07, 0.07, w, TOWER_HALF, y, TOWER_OUT));
+    if (y + TOWER_BAY > top) break;
+    const s = k % 2 ? 1 : -1;
+    const mid = y + TOWER_BAY / 2;
+    dark.push(box(0.05, diagonal, 0.05, -TOWER_HALF, mid, TOWER_OUT, s * lean, 0, 0), box(0.05, diagonal, 0.05, TOWER_HALF, mid, TOWER_OUT, -s * lean, 0, 0),
+      box(0.05, diagonal, 0.05, 0, mid, c, 0, 0, s * lean));
   }
-  // Built running along -x; turn it to face [dir].
-  group.rotation.y = Math.atan2(dir[1], -dir[0]);
+  // The headframe: a roof, the wheel, a lamp.
+  base.push(box(w + 0.4, 0.12, w + 0.4, 0, top, TOWER_OUT));
+  dark.push(torus(0.42, 0.06, 0, top + 0.5, TOWER_OUT - 0.3), box(0.08, 0.6, 0.08, -0.15, top + 0.3, TOWER_OUT - 0.3), box(0.08, 0.6, 0.08, 0.15, top + 0.3, TOWER_OUT - 0.3));
+  glow.push(box(0.16, 0.12, 0.16, TOWER_HALF, top + 0.12, TOWER_OUT - TOWER_HALF));
+  // The cables down to the cage.
+  const drop = top + 0.5 - 2.5;
+  for (const x of [-0.2, 0.2]) dark.push(cyl(0.02, 0.02, Math.hypot(drop, TOWER_OUT - 0.3), x, 2.5 + drop / 2, (TOWER_OUT - 0.3) / 2, Math.atan2(TOWER_OUT - 0.3, drop), 0, 0, 4));
+  // The walkway from the tower to the far landing, railed both sides.
+  const from = TOWER_OUT - TOWER_HALF;
+  const to = Math.max(reach - 1.3, c + 0.5);
+  const length = to - from;
+  base.push(box(0.95, 0.08, length, 0, rise + 0.04, from + length / 2));
+  for (let z = from; z <= to + 0.01; z += 0.8) for (const x of [-0.45, 0.45]) base.push(box(0.05, 1, 0.05, x, rise + 0.5, z));
+  for (const x of [-0.45, 0.45]) accent.push(box(0.05, 0.05, length, x, rise + 1, from + length / 2), box(0.04, 0.04, length, x, rise + 0.55, from + length / 2));
+  const group = new THREE.Group();
+  const steel = def.color;
+  const materials = {
+    base: new THREE.MeshStandardMaterial({ color: color(darkened(steel, 0.3)), roughness: 0.6, metalness: 0.5 }),
+    dark: new THREE.MeshStandardMaterial({ color: color(darkened(steel, 0.6)), roughness: 0.6, metalness: 0.5 }),
+    accent: new THREE.MeshStandardMaterial({ color: color(def.accent || [0.95, 0.72, 0.15, 1]), roughness: 0.5, metalness: 0.2 }),
+    glow: new THREE.MeshStandardMaterial({ color: color([1, 0.3, 0.2]), emissive: color([1, 0.3, 0.2]), emissiveIntensity: 1.8 }),
+  };
+  for (const [key, geometries] of Object.entries({ base, dark, accent, glow })) {
+    if (!geometries.length) continue;
+    const geometry = mergeGeometries(geometries);
+    geometry.computeVertexNormals();
+    const mesh = new THREE.Mesh(geometry, materials[key]);
+    mesh.castShadow = key !== 'glow';
+    mesh.receiveShadow = true;
+    group.add(mesh);
+  }
   return group;
 }

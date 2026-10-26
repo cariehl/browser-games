@@ -266,8 +266,8 @@ export class StationDef {
       model: null, model_scale: 1, color: [0.45, 0.38, 0.3, 1],
       /** Procedural model when there's no model file (see view/shapes.js), and its accent colour (null: amber). */
       shape: '', accent: null,
-      /** Lifts: the way their cable runs out, [dx, dy] on the map, or null for none. */
-      cable: null,
+      /** Elevators: the way the shaft stands from the station, [dx, dy] on the map, up to its link's far end; null for none. */
+      shaft: null,
       // Puzzles (survey): what it takes ({item, count}) or a scan, and the terrain it clears.
       needs: null, scan: false, opens: '', done_text: '',
       /** Landmarks: the survey log entry. */
@@ -520,7 +520,7 @@ export const CONTENT_FILES = {
   weaponTypes: 'weapon_types', items: 'items', nodes: 'nodes', npcs: 'npcs',
   recipes: 'recipes', stations: 'stations', terrain: 'terrain', decor: 'decor', ground: 'ground',
   lootTables: 'loot_tables', quests: 'quests', dialogue: 'dialogue', mechs: 'mechs',
-  skills: 'skills', rules: 'rules', text: 'text',
+  skills: 'skills', rules: 'rules', text: 'text', scenery: 'scenery',
 };
 
 /** Items whose id changed: old id -> new id, so old saves still find them. */
@@ -537,11 +537,14 @@ export const Content = {
   rules: {},
   /** Message templates by key (data/text.json); see sim/text.js. */
   text: {},
+  /** The sky and the land beyond the maps' edges (data/scenery.json); only the client draws it. */
+  scenery: {},
 
   /** [bundle]: kind -> { id -> raw data }, kinds as in CONTENT_FILES. */
   load(bundle) {
     this.rules = bundle.rules || {};
     this.text = bundle.text || {};
+    this.scenery = bundle.scenery || {};
     for (const [kind, cls] of Object.entries(KINDS)) {
       this[kind] = Object.create(null); // Ids come from saves and clients; no inherited keys.
       for (const [id, raw] of Object.entries(bundle[kind] || {})) this[kind][id] = new cls(raw);

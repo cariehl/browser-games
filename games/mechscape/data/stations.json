@@ -165,8 +165,8 @@
  },
  "reach_lift": {
   "id": "reach_lift",
-  "display_name": "Survey lift",
-  "description": "A lift that will take me to the Quiet Reach.",
+  "display_name": "Survey elevator",
+  "description": "An elevator that will take me up the cliff to the Quiet Reach.",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -176,15 +176,15 @@
    1
   ],
   "shape": "lift",
-  "cable": [
-   -1,
-   0
+  "shaft": [
+   0,
+   1
   ]
  },
  "reach_return": {
   "id": "reach_return",
-  "display_name": "Survey lift",
-  "description": "A lift back to the Scrapyard.",
+  "display_name": "Survey elevator",
+  "description": "An elevator back down to the Scrapyard.",
   "skill": "",
   "kind": "portal",
   "color": [
@@ -193,11 +193,7 @@
    0.55,
    1
   ],
-  "shape": "lift",
-  "cable": [
-   -1,
-   0
-  ]
+  "shape": "lift"
  },
  "deadfields_gate": {
   "id": "deadfields_gate",

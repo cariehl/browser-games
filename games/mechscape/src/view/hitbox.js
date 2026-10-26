@@ -28,19 +28,30 @@ export class Hitbox extends THREE.Object3D {
     this.box = new THREE.Box3().setFromCenterAndSize(center, size);
     /** Off while the thing can't be clicked (an NPC playing its collapse). */
     this.enabled = true;
-    const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(size.x, size.y, size.z));
-    this._wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: DEBUG_COLOR, depthTest: false, transparent: true }));
-    this._wire.position.copy(center);
-    this._wire.renderOrder = 10;
-    this._wire.visible = Hitbox.debugVisible;
-    this.add(this._wire);
+    /** The debug wireframe, made the first time it's shown (there are thousands of boxes). */
+    this._wire = null;
     all.add(this);
+    if (Hitbox.debugVisible) this._showWire(true);
+  }
+
+  _showWire(on) {
+    if (on && !this._wire) {
+      const size = this.box.getSize(new THREE.Vector3());
+      const edges = new THREE.EdgesGeometry(new THREE.BoxGeometry(size.x, size.y, size.z));
+      this._wire = new THREE.LineSegments(edges, new THREE.LineBasicMaterial({ color: DEBUG_COLOR, depthTest: false, transparent: true }));
+      this.box.getCenter(this._wire.position);
+      this._wire.renderOrder = 10;
+      this.add(this._wire);
+    }
+    if (this._wire) this._wire.visible = on;
   }
 
   dispose() {
     all.delete(this);
-    this._wire.geometry.dispose();
-    this._wire.material.dispose();
+    if (this._wire) {
+      this._wire.geometry.dispose();
+      this._wire.material.dispose();
+    }
     if (this.parent) this.parent.remove(this);
   }
 
@@ -75,7 +86,7 @@ export class Hitbox extends THREE.Object3D {
 
   static setDebugVisible(on) {
     Hitbox.debugVisible = on;
-    for (const hitbox of all) hitbox._wire.visible = on;
+    for (const hitbox of all) hitbox._showWire(on);
   }
 }
 

@@ -6,6 +6,7 @@ import * as THREE from 'three';
 import { ClientState } from '../client/client_state.js';
 import { tileToWorld, color, darkened, setGroundSource } from './tile_math.js';
 import { buildDecor } from './decor_view.js';
+import { buildBackdrop } from './backdrop_view.js';
 import { Models } from './models.js';
 import { Hitbox, HitboxKind } from './hitbox.js';
 import { EntityView } from './entity_view.js';
@@ -56,7 +57,11 @@ export class WorldViews {
     this.groundMesh = grid.ground;
     const decor = buildDecor(world);
     this.root.add(decor.group);
-    this.decorLights = decor.lights;
+    /** The land and scenery beyond the areas' edges (see backdrop_view.js). */
+    this.backdrop = buildBackdrop(world);
+    this.root.add(this.backdrop.group);
+    const pools = [decor.lights, this.backdrop.lights];
+    this.decorLights = { update: (focus) => { for (const pool of pools) pool.update(focus); } };
     /** entity id -> EntityView */
     this.entities = new Map();
     /** node id -> GatherNodeView */
@@ -67,7 +72,7 @@ export class WorldViews {
     /** wreck id -> { view, label } */
     this._wrecks = new Map();
     for (const station of world.stations.values()) {
-      const view = new StationView(station);
+      const view = new StationView(station, world);
       this.root.add(view);
       this._stations.push(view);
     }

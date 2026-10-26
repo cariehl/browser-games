@@ -167,7 +167,7 @@ Everything drawn uses the Godot project's models unchanged: three.js loads the s
 
 `src/view/player_appearance.js` tints the `PL_*` materials by armor and player colour and puts the held weapon on the `hand_R` bone, as in Godot.
 
-Lighting matches the Godot scene: the sun at (-55°, 35°, 0°) with shadows, the same ambient and sky colours, and no tone mapping. Three.js divides diffuse light by π where Godot doesn't, so the sun is intensity π and the ambient 0.6π.
+Lighting matches the Godot scene: the sun at (-55°, 35°, 0°) with shadows, the same ambient, and no tone mapping. Three.js divides diffuse light by π where Godot doesn't, so the sun is intensity π and the ambient 0.6π. The sky, fog and the land round the maps are in `data/scenery.json` (see Scenery, below).
 
 ### Maps
 
@@ -208,6 +208,18 @@ Things are placed in a fixed order (terrain, then objects, then NPCs, each row b
 
 The headless tests use their own small map, `tests/maps/test_yard.map` (the original 32 × 32 layout), set through `World.defaultMap`, so the game map can change without moving the tests' coordinates. A map test checks that everything on the game map can be reached from spawn. A save from a different map moves you to the new spawn, keeping everything else.
 
+### Scenery
+
+The maps are the only ground anyone walks on, but they don't float in the sky: `data/scenery.json` puts land round them, OSRS-style, with real (if unreachable) things on it. Only the client draws it; the sim and the server never see it. `src/view/backdrop_terrain.js` works it out and `backdrop_view.js` draws it; `environment.js` draws the sky.
+
+- **`sky`:** `day` and `dark` (underground areas): the horizon colour (also the fog's), the zenith, the far ridges' colour (`null` for none), fog near and far (metres), and the ambient and sun strength.
+- **`regions`:** each is one or more areas (`areas`, by id) and the land round them out to `margin` tiles. Next to each area the land starts at its edge height and ground colour, then settles over that area's `falloff` (tiles) to `base_level`, with `noise` and `hills` rising out of it once it's a few tiles clear. Two areas in one region (the Commons and the Quiet Reach) get a cliff between them. Coordinates are tiles from the first area's top-left corner.
+- **`ground`:** the far ground (a ground id), a `patch` ground mixed in by noise, the `rock` colour of steep slopes, and how many tiles the area's own ground carries on (`edge_blend`).
+- **`scatter`:** rules that sprinkle a decor prop over the land: one chance in each `every` × `every` cell, between `from` and `to` tiles from the areas (or from one `area`), at sizes in `scale`, on slopes no steeper than `max_slope` (metres per tile). **`props`:** one prop at a time, `at` a tile, with a `scale` and a `turn` in degrees. **`clear`:** rectangles kept free of scatter (under the elevator).
+- **`fences`:** a tall sheet-metal fence round an area, a post every `spacing` tiles, its sheets drawn from the `panels` colours, with `gaps` (rectangles of tiles) left open.
+
+Big props within 30 tiles of an area can be examined (their decor's description). A world area's `level` in `data/maps/world.json` raises all its ground, which is how the Quiet Reach stands on its hill.
+
 ### The tick
 
 `GameLoop` accumulates frame time and runs a fixed 0.6s tick. Each tick, `World.runTick()` runs in a fixed order: apply queued actions (in the order the client sent them) → NPC brains (respawns, aggression, wandering) → movement → tasks (hits committed last tick land first, then gathering, crafting and new attacks; damage and deaths resolve here) → regeneration → husk, wreck and ground-item cleanup. Views interpolate between the last two tick states using `ClientState.tickAlpha`, so rendering runs at any frame rate. The random number generator is seeded and saved, so a loaded world carries on exactly as the original would have.
@@ -219,7 +231,7 @@ Input is queued: clicking sends an action as JSON, and the latest action per slo
 The alpha plan (`plans/alpha-plan.md` in the project) is built. Each piece of it is a feature module in `src/sim/` that hooks into the world through `features.js`, so the core rules didn't have to know about any of them. `ALPHA_NOTES.md` lists where the build took a shortcut or differs from the plan.
 
 - **Chat and trade:** Enter to chat (text floats over you); right-click a player to trade, accepted twice.
-- **The world:** four areas in one world (`data/maps/world.json`): the Commons and camp, the Undercroft dungeon under the hatch, the Deadfields (mechs only past the drop point) and the Quiet Reach up the lift. Maps have heights, ramps, ground types, decor and zones.
+- **The world:** four areas in one world (`data/maps/world.json`): the Commons and camp, the Undercroft dungeon under the hatch, the Deadfields (mechs only past the drop point) and the Quiet Reach on the hilltop up the elevator. Maps have heights, ramps, ground types, decor and zones.
 - **Quests** (`quests.js`): Ignition (the main story: the blueprint in the Undercroft, then the mech), Found Art (the silly side quest that ends with the paintball cannon and the easy Splatterpress) and the Quiet Reach survey. Talk to anyone with a Talk-to option.
 - **Your look** (`appearance.js`): picked on the connect screen with a turntable, changed at the manufactory after a respawn. Cosmetics, pets and fun weapons (the paintball cannon, the confetti blade) are drops and rewards.
 - **The mech** (`mech.js`): components from every skill chain, installed at the gantry console in camp; the walker stands up on the pad when the last one goes in. Board it as pilot or gunner, deploy it to the Deadfields, salvage wreckage only a mech can reach, and fight the scrap colossus, which only a mech can hurt. It burns vent gas and cartridges and is repaired with alloy plating, at the gantry or the rig in the Deadfields.

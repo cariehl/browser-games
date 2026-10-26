@@ -12,7 +12,7 @@ const LONG = new Set(['description', 'lore', 'journal', 'text', 'done_text', 'sa
 /** Fields whose default is null, and what they hold when set. */
 const NULL_KINDS = {
   boss: {}, light: { color: [1, 0.8, 0.5], intensity: 4, distance: 8 }, needs: { item: '', count: 1 }, look: {},
-  cable: [0, 0], pad: ['', 0, 0], drop: ['', 0, 0], accent: [1, 0.6, 0.2, 1], brain: '', model: '', depleted_model: '',
+  shaft: [0, 0], pad: ['', 0, 0], drop: ['', 0, 0], accent: [1, 0.6, 0.2, 1], brain: '', model: '', depleted_model: '',
 };
 /** What a new element of a list starts as, by the list's key. */
 const TEMPLATES = {

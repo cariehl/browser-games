@@ -3,13 +3,14 @@
 // screen).
 
 import * as THREE from 'three';
-import { tileToWorld, color } from './tile_math.js';
+import { tileToWorld, groundY, color } from './tile_math.js';
+import { key } from '../sim/grid.js';
 import { Models } from './models.js';
 import { Hitbox, HitboxKind } from './hitbox.js';
-import { hasShape, buildShape, buildCable } from './station_shapes.js';
+import { hasShape, buildShape, buildShaft } from './station_shapes.js';
 
 export class StationView extends THREE.Group {
-  constructor(station) {
+  constructor(station, world) {
     super();
     this.station = station;
     tileToWorld(station.tile, 0, this.position);
@@ -26,8 +27,15 @@ export class StationView extends THREE.Group {
       this.add(model);
       const box = new THREE.Box3().setFromObject(model);
       this.add(new Hitbox(HitboxKind.OBJECT, station.id, box.getSize(new THREE.Vector3()), box.getCenter(new THREE.Vector3())));
-      // Added after the hitbox, so the cable out over the void isn't clickable.
-      if (def.cable) this.add(buildCable(def, def.cable));
+      // Added after the hitbox, so only the cage is clickable, not the tower.
+      const link = def.shaft && world && world.links.get(key(station.tile));
+      if (link) {
+        const [dx, dy] = def.shaft;
+        const reach = (link.to.x - station.tile.x) * dx + (link.to.y - station.tile.y) * dy;
+        const shaft = buildShaft(def, groundY(link.to) - groundY(station.tile), reach);
+        shaft.rotation.y = Math.atan2(dx, dy);
+        this.add(shaft);
+      }
       return;
     }
     this.scale.setScalar(1.35);

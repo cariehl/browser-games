@@ -24,7 +24,7 @@ import { WorldViews, modelFiles } from './view/world_views.js';
 import { CameraRig } from './view/camera_rig.js';
 import { ClickMarker } from './view/click_marker.js';
 import { DebugOverlay } from './view/debug_overlay.js';
-import { color } from './view/tile_math.js';
+import { Environment } from './view/environment.js';
 import { Screen, el } from './ui/screen.js';
 import { HoverText } from './ui/hover_text.js';
 import { ContextMenu } from './ui/context_menu.js';
@@ -78,59 +78,6 @@ function makeRenderer(canvas) {
   renderer.shadowMap.enabled = true;
   renderer.shadowMap.type = THREE.PCFSoftShadowMap;
   return renderer;
-}
-
-/**
- * Light to match the Godot scene: a sun at rotation (-55°, 35°, 0°) with
- * shadows, a flat ambient, and a flat sky colour. Godot's light energy 1 is
- * three.js intensity π (three divides diffuse light by π; Godot doesn't).
- */
-const SKY = [0.55, 0.62, 0.68];
-/** Underground (dark areas): a dim, close, blue-black world lit by its lamps. */
-const DARK_SKY = [0.04, 0.045, 0.06];
-
-function addEnvironment(scene) {
-  scene.background = color(SKY);
-  const ambient = new THREE.AmbientLight(color([0.6, 0.62, 0.66]), 0.6 * Math.PI);
-  scene.add(ambient);
-  const sun = new THREE.DirectionalLight(0xffffff, Math.PI);
-  // The direction the light travels: Godot's -Z after its rotation.
-  const travel = new THREE.Vector3(0, 0, -1).applyEuler(new THREE.Euler(
-    THREE.MathUtils.degToRad(-55), THREE.MathUtils.degToRad(35), 0, 'YXZ',
-  ));
-  sun.castShadow = true;
-  sun.shadow.mapSize.set(2048, 2048);
-  const s = sun.shadow.camera;
-  s.left = -22;
-  s.right = 22;
-  s.top = 22;
-  s.bottom = -22;
-  s.near = 1;
-  s.far = 120;
-  sun.shadow.bias = -0.0005;
-  sun.shadow.normalBias = 0.02;
-  scene.add(sun);
-  scene.add(sun.target);
-  scene.fog = new THREE.Fog(color(SKY), 60, 140);
-  let dark = null;
-  /**
-   * Keeps the shadow box centred on what the camera is looking at, and sets
-   * the mood for the area the player is in.
-   */
-  return (focus, area) => {
-    sun.target.position.copy(focus);
-    sun.position.copy(focus).addScaledVector(travel, -50);
-    const isDark = !!(area && area.dark);
-    if (isDark === dark) return;
-    dark = isDark;
-    const sky = color(isDark ? DARK_SKY : SKY);
-    scene.background = sky;
-    scene.fog.color.copy(sky);
-    scene.fog.near = isDark ? 10 : 60;
-    scene.fog.far = isDark ? 34 : 140;
-    ambient.intensity = (isDark ? 0.16 : 0.6) * Math.PI;
-    sun.intensity = (isDark ? 0.12 : 1) * Math.PI;
-  };
 }
 
 /** Asks for a name if there isn't one, and joins; asks again if the server turns it away. */
@@ -194,9 +141,8 @@ async function main() {
   const ui = document.getElementById('ui');
   const renderer = makeRenderer(canvas);
   const scene = new THREE.Scene();
-  const followSun = addEnvironment(scene);
-
   const views = new WorldViews(scene, world);
+  const environment = new Environment(scene, views.backdrop);
   Screen.groundMesh = views.groundMesh;
   const rig = new CameraRig(canvas);
   rig.target = views.playerView;
@@ -277,7 +223,7 @@ async function main() {
     marker.update(delta);
     rig.update(real);
     const me = ClientState.me();
-    followSun(rig.position, me ? world.areaAt(me.tile) : null);
+    environment.update(rig.camera, rig.position, me ? world.areaAt(me.tile) : null);
     views.decorLights.update(rig.position);
     overlay.update();
     combat.update(delta);
