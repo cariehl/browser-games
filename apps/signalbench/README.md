@@ -56,8 +56,23 @@ Full message definitions: [docs/CAN_PROTOCOL.md](docs/CAN_PROTOCOL.md).
 
 ## Running it
 
-Prerequisites (Windows shown; Linux/macOS work the same with your system
-compiler): CMake ≥ 3.16, a C compiler (MinGW-w64 gcc), Rust (stable), Node 18+.
+Prerequisites: CMake ≥ 3.16, a C compiler (MinGW-w64 gcc on Windows), Rust
+(stable), Node 18+.
+
+The root scripts wrap everything (`.ps1` on Windows, `.sh` elsewhere):
+
+| Script | What it does |
+|---|---|
+| `./build.ps1 [-Only firmware\|sim\|app] [-Bundle]` | Configure and build the firmware, simulator and app; `-Bundle` makes the installer |
+| `./test.ps1 [-Only unit\|sim\|sil] [-Scenario name] [-VerboseLog]` | Unit tests, simulator tests and SIL scenarios; non-zero exit on any failure |
+| `./run.ps1 [-Flash app] [-Scenario 00_demo_tour]` | Open the desktop app, optionally flashing firmware and playing a scenario |
+| `./run.ps1 -Headless [-Firmware blinky] [-Duration ms]` | Firmware + simulator in the terminal, no UI |
+| `./clean.ps1 [-All]` | Delete build outputs (`-All` also removes `node_modules`) |
+
+The bash versions take the same options in lowercase form, e.g.
+`./test.sh sil 03_short_retry_lockout` or `./run.sh --flash app --scenario 00_demo_tour`.
+
+Or by hand:
 
 ```powershell
 # 1. firmware + unit tests
