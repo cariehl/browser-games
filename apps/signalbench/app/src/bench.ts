@@ -22,6 +22,7 @@ const C = {
   dark: 0x1a2430,
 };
 
+const EXIT_CONNECTOR_Y = 0.075; // PDM back-face connector height (world y; PDM sits on the bench)
 const HEAD_COLORS = Array.from({ length: 12 }, (_, i) => (i < 5 ? C.red : i < 7 ? C.white : C.blue));
 const ARM_LEN = 1.05;
 
@@ -48,15 +49,39 @@ function textTexture(draw: (g: CanvasRenderingContext2D, w: number, h: number) =
   return t;
 }
 
+/**
+ * A polyline with rounded corners: straight runs joined by small quadratic
+ * bends. Unlike a spline it never overshoots, so routed wires stay on the
+ * bench and hug the mounts they climb.
+ */
+function routed(pts: THREE.Vector3[], bend = 0.06): THREE.CurvePath<THREE.Vector3> {
+  const path = new THREE.CurvePath<THREE.Vector3>();
+  let cur = pts[0].clone();
+  for (let i = 1; i < pts.length - 1; i++) {
+    const a = pts[i - 1], p = pts[i], b = pts[i + 1];
+    const din = p.clone().sub(a), dout = b.clone().sub(p);
+    const r = Math.min(bend, din.length() / 2, dout.length() / 2);
+    const pIn = p.clone().sub(din.normalize().multiplyScalar(r));
+    const pOut = p.clone().add(dout.normalize().multiplyScalar(r));
+    if (cur.distanceTo(pIn) > 1e-5) path.add(new THREE.LineCurve3(cur, pIn));
+    path.add(new THREE.QuadraticBezierCurve3(pIn, p.clone(), pOut));
+    cur = pOut;
+  }
+  path.add(new THREE.LineCurve3(cur, pts[pts.length - 1].clone()));
+  return path;
+}
+
 class Wire {
   mesh: THREE.Mesh;
   mat: THREE.MeshStandardMaterial;
-  curve: THREE.CatmullRomCurve3;
-  constructor(points: THREE.Vector3[], radius: number, color: number) {
-    this.curve = new THREE.CatmullRomCurve3(points, false, "centripetal");
+  curve: THREE.CurvePath<THREE.Vector3>;
+  constructor(points: THREE.Vector3[], radius: number, color: number, bend = 0.06) {
+    this.curve = routed(points, bend);
     this.mat = std(color, { roughness: 0.45, emissive: 0x000000 });
-    this.mesh = new THREE.Mesh(new THREE.TubeGeometry(this.curve, 64, radius, 8, false), this.mat);
+    const segments = Math.max(64, Math.round(this.curve.getLength() * 140));
+    this.mesh = new THREE.Mesh(new THREE.TubeGeometry(this.curve, segments, radius, 8, false), this.mat);
     this.mesh.castShadow = true;
+    this.mesh.receiveShadow = true;
   }
 }
 
@@ -97,6 +122,7 @@ export class Bench {
   private wires: Wire[] = [];
   private batteryWire!: Wire;
   private canWire!: Wire;
+  private canPdmT = 0.35;
   private pulses: Pulse[] = [];
   private textLabels: Record<string, HTMLElement> = {};
   private raycaster = new THREE.Raycaster();
@@ -286,6 +312,14 @@ export class Bench {
     stud.rotation.z = Math.PI / 2;
     stud.position.set(-0.42, 0.12, 0);
     g.add(stud);
+    const gnd = new THREE.Mesh(new THREE.CylinderGeometry(0.022, 0.022, 0.04, 12), std(0x2a2f36, { metalness: 0.7 }));
+    gnd.rotation.z = Math.PI / 2;
+    gnd.position.set(-0.41, 0.05, 0.17);
+    g.add(gnd);
+    // output and CAN connectors on the back face
+    const conn = box(0.56, 0.05, 0.03, std(0x15191e));
+    conn.position.set(-0.07, EXIT_CONNECTOR_Y, -0.255);
+    g.add(conn);
     this.scene.add(g);
     this.label("pdm", g, new THREE.Vector3(0, 0.42, 0), "PDM");
   }
@@ -547,33 +581,90 @@ export class Bench {
     this.label("mdt", g, new THREE.Vector3(0, 0.62, 0), "MDT / radio");
   }
 
+  /**
+   * Wiring, routed like a real bench harness: every PDM output leaves the
+   * PDM's back face, drops to the bench, runs east or west in its own lane of
+   * a parallel trunk, peels off without crossing another wire, and climbs the
+   * device's mount. (+x is east, -z is toward the back wall.)
+   */
   private buildHarness() {
-    const pdmOut = new THREE.Vector3(-1.05, 0.12, 0.35);
     const V = (x: number, y: number, z: number) => new THREE.Vector3(x, y, z);
-    const routes: THREE.Vector3[][] = [
-      [pdmOut, V(-0.9, 0.03, -0.3), V(-0.3, 0.03, -0.95), V(-0.9, 0.5, -1.05), V(-0.85, 0.98, -1.05)], // lightbar
-      [pdmOut, V(-1.3, 0.03, -0.3), V(-2.0, 0.03, -0.8), V(-2.2, 0.45, -0.95)], // siren
-      [pdmOut, V(-0.6, 0.03, 0.2), V(1.2, 0.03, -0.1), V(1.75, 0.08, -0.45)], // scene light (base)
-      [pdmOut, V(-0.6, 0.03, 0.15), V(1.3, 0.03, -0.2), V(1.85, 0.1, -0.4)], // arm motor
-      [pdmOut, V(-0.6, 0.03, 0.4), V(2.0, 0.03, 0.5), V(2.72, 0.12, 0.38)], // rear
-      [pdmOut, V(-0.6, 0.03, 0.5), V(1.6, 0.03, 1.4), V(2.3, 0.08, 1.15)], // MDT
+    const R = 0.014;          // harness wire radius; wires lie on the bench at y = R
+    const BACK = 0.1;         // PDM back face (z)
+    const EXIT_Y = 0.07;      // height of the PDM output connector
+
+    // Leave the PDM back face, drop to the bench, head out to this wire's lane.
+    const fromPdm = (x: number, lane: number, ...rest: THREE.Vector3[]) => [
+      V(x, EXIT_Y, BACK), V(x, EXIT_Y, 0.03), V(x, R, 0.03), V(x, R, lane), ...rest,
     ];
-    routes.forEach((pts, i) => {
-      const w = new Wire(pts, 0.014, 0x39424e);
-      w.mesh.position.y = 0.002 * i;
+
+    // Lanes: east-bound wires that exit further west take deeper lanes, so
+    // every peel-off turns away from the wires still in the trunk.
+    const routes: THREE.Vector3[][] = [
+      // 0 lightbar: east, then north to the left stand leg and up its front face
+      fromPdm(-1.69, -0.40, V(-0.835, R, -0.40), V(-0.835, R, -0.995), V(-0.835, 0.99, -0.995)),
+      // 1 siren: the only west-bound wire, so it gets the leftmost connector pin
+      fromPdm(-1.78, -0.25, V(-2.2, R, -0.25), V(-2.2, R, -0.9), V(-2.2, 0.45, -0.9)),
+      // 2 scene light and 3 arm motor: into the arm base's west face
+      fromPdm(-1.59, -0.36, V(1.52, R, -0.36), V(1.52, R, -0.6), V(1.70, R, -0.6)),
+      fromPdm(-1.50, -0.32, V(1.58, R, -0.32), V(1.58, R, -0.5), V(1.70, R, -0.5)),
+      // 4 rear flashers: along the trunk, then forward to the bracket
+      fromPdm(-1.41, -0.28, V(2.5, R, -0.28), V(2.5, R, 0.35), V(2.69, R, 0.35)),
+      // 5 MDT: forward early, behind the keypad, to the terminal stand
+      fromPdm(-1.31, -0.24, V(2.2, R, -0.24), V(2.2, R, 1.15), V(2.315, R, 1.15)),
+    ];
+    for (const pts of routes) {
+      const w = new Wire(pts, R, 0x4b5563);
       this.wires.push(w);
       this.scene.add(w.mesh);
-    });
-    this.batteryWire = new Wire([V(-2.35, 0.5, 0.75), V(-2.1, 0.55, 0.6), V(-1.9, 0.12, 0.35)], 0.022, 0x8a1c1c);
-    this.scene.add(this.batteryWire.mesh);
-    // CAN bus: board -> PDM -> lightbar (one cable, twisted pair abstracted)
-    this.canWire = new Wire(
-      [V(0.2, 0.12, 0.9), V(-0.6, 0.03, 0.75), V(-1.45, 0.24, 0.55), V(-1.6, 0.03, -0.2), V(-1.0, 0.03, -0.95), V(-0.6, 0.6, -1.05), V(-0.5, 1.0, -1.08)],
-      0.01,
-      0xc9a227,
+    }
+
+    // Cable ties holding the trunk together
+    for (const x of [-1.05, -0.2, 0.6, 1.3]) {
+      const lanesHere = x < -0.85 ? [-0.42, -0.22] : [-0.38, -0.22];
+      const depth = lanesHere[1] - lanesHere[0];
+      const tie = box(0.018, 0.036, depth + 0.02, std(0x1b1f24, { roughness: 0.7 }));
+      tie.position.set(x, 0.018, (lanesHere[0] + lanesHere[1]) / 2);
+      this.scene.add(tie);
+    }
+
+    // Battery: red feed over the battery top and behind it to the PDM stud,
+    // black ground behind it to a chassis stud. Routed so they never cross.
+    this.batteryWire = new Wire(
+      [V(-2.75, 0.535, 0.75), V(-2.75, 0.6, 0.75), V(-2.75, 0.6, 0.35), V(-2.75, 0.022, 0.35),
+       V(-2.0, 0.022, 0.35), V(-2.0, 0.12, 0.35), V(-1.9, 0.12, 0.35)],
+      0.022, 0x8a1c1c, 0.08,
     );
+    this.scene.add(this.batteryWire.mesh);
+    const ground = new Wire(
+      [V(-2.35, 0.535, 0.75), V(-2.35, 0.6, 0.75), V(-2.35, 0.6, 0.52), V(-2.35, 0.02, 0.52),
+       V(-1.95, 0.02, 0.52), V(-1.95, 0.05, 0.52), V(-1.85, 0.05, 0.52)],
+      0.02, 0x16191d, 0.08,
+    );
+    this.scene.add(ground.mesh);
+
+    // CAN bus: control board -> PDM (in the front face, out the back) ->
+    // over the trunk on a small bridge -> up the lightbar leg beside the power wire.
+    const X = -1.22; // clear of the harness pins (-1.78 .. -1.31)
+    const canPts = [
+      V(-0.70, 0.12, 1.05), V(-0.78, 0.12, 1.05), V(-0.78, 0.01, 1.05),
+      V(X, 0.01, 1.05), V(X, 0.01, 0.66), V(X, 0.08, 0.66), V(X, 0.08, 0.35), // into the PDM
+      V(X, 0.08, 0.0), V(X, 0.055, -0.14), V(X, 0.055, -0.48), V(X, 0.01, -0.58),
+      V(X, 0.01, -0.995), V(-0.866, 0.01, -0.995), V(-0.866, 0.99, -0.995),
+    ];
+    this.canWire = new Wire(canPts, 0.01, 0xc9a227, 0.05);
     this.canWire.mat.emissive.setHex(0x3a2c06);
     this.scene.add(this.canWire.mesh);
+    // where the PDM sits along the cable, for the traffic animation
+    const upTo = (n: number) => canPts.slice(1, n + 1).reduce((s, p, i) => s + p.distanceTo(canPts[i]), 0);
+    this.canPdmT = upTo(6) / upTo(canPts.length - 1);
+
+    // Keypad ribbon to the control board's edge header
+    const ribbon = new Wire(
+      [V(0.20, 0.12, 1.1), V(0.27, 0.12, 1.1), V(0.27, 0.01, 1.1), V(0.42, 0.01, 1.1), V(0.42, 0.01, 1.22), V(0.53, 0.05, 1.22)],
+      0.01, 0x8d99a6, 0.04,
+    );
+    this.scene.add(ribbon.mesh);
     for (let i = 0; i < 24; i++) {
       const m = new THREE.Mesh(new THREE.SphereGeometry(0.022, 10, 8), new THREE.MeshBasicMaterial({ color: 0xffffff }));
       m.visible = false;
@@ -626,7 +717,7 @@ export class Bench {
       if (!p) break;
       p.active = true;
       p.forward = f.src === "CTRL";
-      p.t = p.forward ? 0 : f.src === "PDM" ? 0.35 : 1;
+      p.t = p.forward ? 0 : f.src === "PDM" ? this.canPdmT : 1;
       p.speed = 0.9 + Math.random() * 0.3;
       (p.mesh.material as THREE.MeshBasicMaterial).color.setHex(f.src === "CTRL" ? 0xffd25a : f.src === "PDM" ? 0x9cc3e6 : 0xff7a7a);
       p.mesh.visible = true;
