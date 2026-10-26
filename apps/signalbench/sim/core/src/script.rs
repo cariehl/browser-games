@@ -184,13 +184,17 @@ pub struct Outcome {
 pub fn run(sim: &mut Sim, steps: &[Step], mut on_line: impl FnMut(&str)) -> Result<Outcome, String> {
     // wait (real time) for the firmware to connect
     let start = Instant::now();
+    let mut log = Vec::new();
     while !sim.connected() {
         sim.service();
         for l in sim.snapshot().console {
             on_line(&l);
+            log.push(l);
         }
         if start.elapsed() > Duration::from_secs(20) {
-            return Err("firmware never connected".into());
+            // surface the launch log even in --quiet mode
+            let tail = log.iter().rev().take(5).rev().cloned().collect::<Vec<_>>().join("\n    ");
+            return Err(format!("firmware never connected\n    {tail}"));
         }
         std::thread::sleep(Duration::from_millis(10));
     }

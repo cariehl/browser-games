@@ -47,7 +47,10 @@ impl Supervisor {
         if !exe.is_file() {
             return Err(format!("firmware not found: {}", exe.display()));
         }
-        self.exe = Some(exe.to_path_buf());
+        // Must be absolute: on Unix a relative program path is resolved
+        // against the child's working directory, which we set below.
+        let exe = std::path::absolute(exe).map_err(|e| format!("bad firmware path: {e}"))?;
+        self.exe = Some(exe);
         self.spawn()
     }
 
