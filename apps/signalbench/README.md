@@ -27,9 +27,9 @@ scenarios you watch in the app are the software-in-the-loop tests CI runs.
 
 ```
                  CAN 500 kbit/s
-   ┌──────────┐◄──────────────────────┬─────────────────────┐
-   │ SB-CTRL  │                       │                     │
-   │ your C   │  PWM+DIR   ┌───────┐  │                ┌────┴──────┐
+   ┌──────────┐◄──────────────────────┬──────────────────────┐
+   │ SB-CTRL  │                       │                      │
+   │ your C   │  PWM+DIR   ┌───────┐  │                 ┌────┴──────┐
    │ firmware │───────────►│H-brdg │──┼─► arm motor     │ SB-LB12   │
    │          │◄─ encoder, limit switches, ADC          │ lightbar  │
    │          │─► siren tone, keypad LEDs, beeper       └────▲──────┘

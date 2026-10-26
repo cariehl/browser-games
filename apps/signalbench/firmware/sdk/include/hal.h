@@ -40,7 +40,7 @@ extern "C" {
 
 typedef enum {
     HAL_OK = 0,
-    HAL_ERR = 1,       /**< generic failure                      */
+    HAL_ERR = 1,       /**< generic failure                       */
     HAL_NACK = 2,      /**< I2C: no device acknowledged           */
     HAL_BUSY = 3,      /**< resource full (e.g. CAN TX FIFO)      */
     HAL_TIMEOUT = 4,

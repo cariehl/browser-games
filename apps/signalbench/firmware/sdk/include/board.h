@@ -22,18 +22,18 @@
 /* ---- GPIO --------------------------------------------------------------- */
 typedef enum {
     /* inputs 0..15 */
-    PIN_BTN_LIGHTS   = 0,  /**< keypad 1: warning lights (cycles stages)  */
-    PIN_BTN_SIREN    = 1,  /**< keypad 2: siren tone                       */
-    PIN_BTN_HORN     = 2,  /**< keypad 3: air horn (momentary)             */
-    PIN_BTN_SCENE    = 3,  /**< keypad 4: scene light                      */
-    PIN_BTN_ARM      = 4,  /**< keypad 5: deploy / stow light arm          */
-    PIN_BTN_TAKEDOWN = 5,  /**< keypad 6: takedown (white) lights          */
-    PIN_BTN_REAR     = 6,  /**< keypad 7: rear flashers                    */
-    PIN_BTN_AUX      = 7,  /**< keypad 8: aux / fault reset                */
+    PIN_BTN_LIGHTS   = 0,  /**< keypad 1: warning lights (cycles stages)    */
+    PIN_BTN_SIREN    = 1,  /**< keypad 2: siren tone                        */
+    PIN_BTN_HORN     = 2,  /**< keypad 3: air horn (momentary)              */
+    PIN_BTN_SCENE    = 3,  /**< keypad 4: scene light                       */
+    PIN_BTN_ARM      = 4,  /**< keypad 5: deploy / stow light arm           */
+    PIN_BTN_TAKEDOWN = 5,  /**< keypad 6: takedown (white) lights           */
+    PIN_BTN_REAR     = 6,  /**< keypad 7: rear flashers                     */
+    PIN_BTN_AUX      = 7,  /**< keypad 8: aux / fault reset                 */
     PIN_IN_IGNITION  = 8,  /**< vehicle ignition sense                      */
     PIN_IN_PARK      = 9,  /**< transmission in PARK                        */
-    PIN_LIM_STOWED   = 10, /**< arm limit switch: fully stowed             */
-    PIN_LIM_DEPLOYED = 11, /**< arm limit switch: fully deployed           */
+    PIN_LIM_STOWED   = 10, /**< arm limit switch: fully stowed              */
+    PIN_LIM_DEPLOYED = 11, /**< arm limit switch: fully deployed            */
 
     /* outputs 16..31 */
     PIN_LED_HEARTBEAT = 16, /**< green board LED                            */
@@ -49,8 +49,8 @@ typedef enum {
 
 /* ---- PWM ---------------------------------------------------------------- */
 typedef enum {
-    PWM_ARM_MOTOR = 0, /**< H-bridge enable. Typ. 20 kHz, duty = speed     */
-    PWM_SIREN     = 1, /**< tone into siren amp. freq = pitch, duty 500    */
+    PWM_ARM_MOTOR = 0, /**< H-bridge enable. Typ. 20 kHz, duty = speed      */
+    PWM_SIREN     = 1, /**< tone into siren amp. freq = pitch, duty 500     */
     PWM_BEEPER    = 2, /**< keypad beeper                                   */
     PWM_SPARE     = 3,
     PWM_NUM_CH    = 4,
