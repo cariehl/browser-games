@@ -31,6 +31,19 @@ function Build-Firmware {
         }
         Step "Configure firmware" { cmake -S $src -B $bld @gen }
     }
+    # A firmware image that is running (e.g. flashed in the app) can't be
+    # overwritten on Windows, but it can be renamed: move locked ones aside.
+    $bin = Join-Path $bld "bin"
+    if (Test-Path $bin) {
+        Get-ChildItem $bin -Filter "*.old-*" | Remove-Item -ErrorAction SilentlyContinue
+        foreach ($exe in Get-ChildItem $bin -Filter "*.exe") {
+            try { [IO.File]::Open($exe.FullName, "Open", "Write").Close() }
+            catch {
+                Rename-Item $exe.FullName "$($exe.Name).old-$([DateTimeOffset]::Now.ToUnixTimeMilliseconds())"
+                Write-Host "$($exe.Name) is running; moved it aside" -ForegroundColor Yellow
+            }
+        }
+    }
     Step "Build firmware, examples and tests" { cmake --build $bld -j 8 }
 }
 

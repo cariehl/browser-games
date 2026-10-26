@@ -125,6 +125,41 @@ fn run_streaming(app: &AppHandle, program: &str, args: &[String], cwd: &Path) ->
     ok
 }
 
+/// Windows won't let the linker overwrite an executable that is running (the
+/// firmware currently on the virtual MCU, or one started from a terminal),
+/// but it does allow renaming it. Move the old image aside so the build can
+/// write a fresh one; the old firmware keeps running until the new one is
+/// flashed. Copies left by earlier builds are deleted once nothing runs them.
+fn move_aside_running_image(app: &AppHandle, exe: &Path) {
+    let (Some(dir), Some(name)) = (exe.parent(), exe.file_name().and_then(|n| n.to_str())) else { return };
+    let stale_prefix = format!("{name}.old-");
+    for entry in std::fs::read_dir(dir).into_iter().flatten().flatten() {
+        if entry.file_name().to_string_lossy().starts_with(&stale_prefix) {
+            let _ = std::fs::remove_file(entry.path()); // fails harmlessly if still running
+        }
+    }
+    if !exe.is_file() {
+        return;
+    }
+    // Only needed if the file is locked; a plain overwrite test tells us.
+    if std::fs::OpenOptions::new().write(true).open(exe).is_ok() {
+        return;
+    }
+    let stamp = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map(|d| d.as_millis())
+        .unwrap_or(0);
+    let aside = dir.join(format!("{stale_prefix}{stamp}"));
+    match std::fs::rename(exe, &aside) {
+        Ok(()) => {
+            let _ = app.emit("build-log", format!("{name} is running; moved it aside so the new image can be linked"));
+        }
+        Err(e) => {
+            let _ = app.emit("build-log", format!("warning: {name} is locked and could not be moved aside ({e}); stop the firmware and retry"));
+        }
+    }
+}
+
 /// Configure (first time) and build one firmware target, then report the
 /// path of the produced image. Runs on a worker thread.
 #[tauri::command]
@@ -135,6 +170,8 @@ fn build_firmware(app: AppHandle, dir: String, target: String) -> Result<(), Str
     }
     std::thread::spawn(move || {
         let build = src.join("build");
+        let exe = build.join("bin").join(format!("{target}{}", std::env::consts::EXE_SUFFIX));
+        move_aside_running_image(&app, &exe);
         let mut ok = true;
         if !build.join("CMakeCache.txt").is_file() {
             let mut args = vec!["-S".into(), src.display().to_string(), "-B".into(), build.display().to_string()];
@@ -147,7 +184,6 @@ fn build_firmware(app: AppHandle, dir: String, target: String) -> Result<(), Str
             let args = vec!["--build".into(), build.display().to_string(), "--target".into(), target.clone(), "-j".into(), "8".into()];
             ok = run_streaming(&app, "cmake", &args, &src);
         }
-        let exe = build.join("bin").join(format!("{target}{}", std::env::consts::EXE_SUFFIX));
         let exe = (ok && exe.is_file()).then(|| exe.display().to_string());
         let _ = app.emit("build-log", if exe.is_some() { "build succeeded".to_string() } else { "build FAILED".to_string() });
         let _ = app.emit("build-done", BuildDone { ok: exe.is_some(), exe, target });
