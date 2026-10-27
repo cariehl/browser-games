@@ -2,16 +2,16 @@
 // Resolves when the player leaves the raid or loses the connection for good.
 
 import * as THREE from 'three';
-import { CSS2DRenderer } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { Callbacks, type Room } from '@colyseus/sdk';
-import { ROLE_INFO, type Role } from '../../../shared/roles';
-import type { RaidState } from '../../../shared/state';
-import { el, show } from '../dom';
-import { buildArena } from './arena';
-import { CameraRig } from './camera_rig';
-import { RaiderView } from './raider_view';
+import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
+import { ROLE_INFO, roleCss } from '../../shared/roles.js';
+import { el, show } from '../dom.js';
+import { Callbacks } from '../net.js';
+import { buildArena } from './arena.js';
+import { CameraRig } from './camera_rig.js';
+import { RaiderView } from './raider_view.js';
 
-export function raidScreen(room: Room<any, RaidState>, canvas: HTMLCanvasElement): Promise<{ lost: boolean }> {
+/** [room]: the joined raid room. Resolves to { lost }: true if the connection was lost. */
+export function raidScreen(room, canvas) {
   return new Promise((resolve) => {
     const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
     renderer.setPixelRatio(Math.min(devicePixelRatio, 2));
@@ -31,7 +31,7 @@ export function raidScreen(room: Room<any, RaidState>, canvas: HTMLCanvasElement
     scene.add(sun, buildArena());
 
     const rig = new CameraRig(canvas);
-    const views = new Map<string, RaiderView>();
+    const views = new Map();
 
     // The HTML overlay: party frames and the leave button.
     const hud = el('div', 'hud');
@@ -45,8 +45,8 @@ export function raidScreen(room: Room<any, RaidState>, canvas: HTMLCanvasElement
       if (!room.state.raiders) return;
       frames.replaceChildren(...[...room.state.raiders.entries()].map(([id, r]) => {
         const frame = el('div', `frame${r.connected ? '' : ' away'}${id === room.sessionId ? ' me' : ''}`);
-        const tag = el('span', 'tag', ROLE_INFO[r.role as Role]?.label ?? r.role);
-        tag.style.setProperty('--role', `#${(ROLE_INFO[r.role as Role]?.color ?? 0x888888).toString(16).padStart(6, '0')}`);
+        const tag = el('span', 'tag', ROLE_INFO[r.role]?.label ?? r.role);
+        tag.style.setProperty('--role', roleCss(r.role));
         frame.append(tag, el('span', 'name', r.name), el('span', 'muted small', r.connected ? '' : 'reconnecting…'));
         return frame;
       }));
@@ -88,7 +88,7 @@ export function raidScreen(room: Room<any, RaidState>, canvas: HTMLCanvasElement
     });
 
     let done = false;
-    const finish = (lost: boolean) => {
+    const finish = (lost) => {
       if (done) return;
       done = true;
       renderer.setAnimationLoop(null);

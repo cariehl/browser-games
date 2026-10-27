@@ -1,6 +1,6 @@
 # Starts a raid game server on this machine:
 #   1. pulls the latest code (git pull --ff-only, when this folder has a git upstream)
-#   2. builds: installs npm packages and builds the client
+#   2. installs npm packages
 #   3. with -HostOnline, opens a Cloudflare quick tunnel to port 2567 and prints the
 #      public URL for friends
 #   4. hosts the server in this window (the tunnel goes first so the URL isn't buried
@@ -11,10 +11,10 @@
 #   .\start-server.ps1 --port 8080
 #   start-server.cmd -HostOnline           from cmd or a shortcut (a double-click hosts locally)
 #
-# Anything the script doesn't know is passed to the server (see server/index.ts).
+# Anything the script doesn't know is passed to the server (see server/index.js).
 # The script's own options:
 #   -SkipPull           don't update the code first
-#   -SkipInstall        don't run npm install (or the client build)
+#   -SkipInstall        don't run npm install
 #   -HostOnline         open a Cloudflare tunnel so friends can join over the internet
 #                       (--host-online works too)
 #   -Cloudflared PATH   where cloudflared.exe is. Otherwise: $env:CLOUDFLARED, then
@@ -57,10 +57,7 @@ function Test-Port($p) {
   try { $client.Connect('127.0.0.1', $p); return $true } catch { return $false } finally { $client.Close() }
 }
 
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'Node.js is not installed (version 22.12 or newer): https://nodejs.org/' }
-# npm silently skips Vite's native binding on older Node, and the build then fails.
-$nodeVersion = [version]((& node --version).TrimStart('v'))
-if ($nodeVersion -lt [version]'22.12.0') { Fail "Node.js $nodeVersion is too old: this needs 22.12 or newer (https://nodejs.org/). After upgrading, delete node_modules and run this again." }
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'Node.js is not installed (version 22 or newer): https://nodejs.org/' }
 if (Test-Port $port) { Fail "Something is already listening on port $port. Stop the old server first (or pass --port)." }
 
 # 1. Pull the latest
@@ -85,14 +82,12 @@ if ($skipPull) {
 }
 
 # 2. Build
-Step '2/4 Installing packages and building the client'
+Step '2/4 Installing packages'
 if ($skipInstall) {
   Write-Host 'Skipped (-SkipInstall).'
 } else {
   & npm install --no-audit --no-fund
   if ($LASTEXITCODE -ne 0) { Fail 'npm install failed.' }
-  & npm run build
-  if ($LASTEXITCODE -ne 0) { Fail 'The client build failed.' }
 }
 
 # 3. The tunnel
@@ -165,7 +160,7 @@ Write-Host '  ===========================================================' -Fore
 # 4. Host the server, in this window, so Ctrl+C reaches it.
 Step '4/4 Starting the server'
 try {
-  & node --import tsx (Join-Path $Root 'server/index.ts') @serverArgs
+  & node (Join-Path $Root 'server/index.js') @serverArgs
 } finally {
   if ($tunnel -and -not $tunnel.HasExited) {
     Write-Host 'Closing the tunnel.'

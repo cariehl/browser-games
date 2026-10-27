@@ -4,35 +4,31 @@
 //
 // Lobbies are made on demand (joinOrCreate), so a sixth player, or anyone who
 // arrives while a group is launching, starts the next lobby.
-//
-// Messages, client -> server: setRole { role }, setReady { ready }, start {}.
-// Server -> client: launch { reservation }, notice { text }.
+// Messages: see shared/messages.js.
 
-import { Room, matchMaker, type Client } from '@colyseus/core';
-import { PARTY_MAX, ROOM_RAID, cleanName } from '../../shared/constants';
-import { startBlocker, type LobbyJoinOptions, type RaidCreateOptions } from '../../shared/messages';
-import { isRole } from '../../shared/roles';
-import { LobbyPlayer, LobbyState } from '../../shared/state';
+import { Room, matchMaker } from '@colyseus/core';
+import { PARTY_MAX, ROOM_RAID, cleanName } from '../../shared/constants.js';
+import { startBlocker } from '../../shared/messages.js';
+import { isRole } from '../../shared/roles.js';
+import { LobbyPlayer, LobbyState } from '../state.js';
 
-export class LobbyRoom extends Room<{ state: LobbyState }> {
+export class LobbyRoom extends Room {
   maxClients = PARTY_MAX;
   state = new LobbyState();
 
   onCreate() {
-    this.onMessage('setRole', (client, data: unknown) => {
-      const role = (data as { role?: unknown } | null)?.role;
+    this.onMessage('setRole', (client, data) => {
       const player = this.state.players.get(client.sessionId);
-      if (player && isRole(role) && !this.state.launching) player.role = role;
+      if (player && isRole(data?.role) && !this.state.launching) player.role = data.role;
     });
-    this.onMessage('setReady', (client, data: unknown) => {
-      const ready = (data as { ready?: unknown } | null)?.ready;
+    this.onMessage('setReady', (client, data) => {
       const player = this.state.players.get(client.sessionId);
-      if (player && typeof ready === 'boolean' && !this.state.launching) player.ready = ready;
+      if (player && typeof data?.ready === 'boolean' && !this.state.launching) player.ready = data.ready;
     });
     this.onMessage('start', (client) => this.start(client));
   }
 
-  onJoin(client: Client, options: Partial<LobbyJoinOptions> = {}) {
+  onJoin(client, options = {}) {
     // Throwing turns the join away, with the message shown to the player.
     const name = cleanName(options.name);
     if (!name) throw new Error('Pick a name: up to 12 letters, numbers, spaces, - or _.');
@@ -44,7 +40,7 @@ export class LobbyRoom extends Room<{ state: LobbyState }> {
     if (!this.state.leaderId) this.state.leaderId = client.sessionId;
   }
 
-  onLeave(client: Client) {
+  onLeave(client) {
     this.state.players.delete(client.sessionId);
     if (this.state.leaderId === client.sessionId) {
       // Leadership passes to whoever has been here longest (maps keep insertion order).
@@ -52,7 +48,7 @@ export class LobbyRoom extends Room<{ state: LobbyState }> {
     }
   }
 
-  private async start(client: Client) {
+  async start(client) {
     if (client.sessionId !== this.state.leaderId) return client.send('notice', { text: 'Only the group leader can start.' });
     if (this.state.launching) return;
     const blocker = startBlocker([...this.state.players.values()]);
@@ -63,11 +59,10 @@ export class LobbyRoom extends Room<{ state: LobbyState }> {
     // Everyone in the room at this moment goes; the roster is fixed from here.
     const seats = this.clients
       .map((c) => ({ client: c, player: this.state.players.get(c.sessionId) }))
-      .filter((s): s is { client: Client; player: LobbyPlayer } => !!s.player);
+      .filter((s) => s.player);
     try {
-      const party = seats.map((s) => ({ name: s.player.name, role: s.player.role as LobbyJoinOptions['role'] }));
-      const options: RaidCreateOptions = { party };
-      const raid = await matchMaker.createRoom(ROOM_RAID, options);
+      const party = seats.map((s) => ({ name: s.player.name, role: s.player.role }));
+      const raid = await matchMaker.createRoom(ROOM_RAID, { party });
       for (const [i, seat] of seats.entries()) {
         const reservation = await matchMaker.reserveSeatFor(raid, party[i]);
         seat.client.send('launch', { reservation });

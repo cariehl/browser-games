@@ -19,7 +19,7 @@ export const NAME_MAX = 12;
 const NAME_PATTERN = /^[A-Za-z0-9 _-]+$/;
 
 /** A trimmed, valid display name, or null. */
-export function cleanName(raw: unknown): string | null {
+export function cleanName(raw) {
   if (typeof raw !== 'string') return null;
   const name = raw.trim().replace(/\s+/g, ' ');
   if (name.length < 1 || name.length > NAME_MAX || !NAME_PATTERN.test(name)) return null;

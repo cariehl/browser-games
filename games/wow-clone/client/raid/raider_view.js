@@ -2,20 +2,19 @@
 // nameplate. Positions come from the server; the view eases toward them.
 
 import * as THREE from 'three';
-import { CSS2DObject } from 'three/examples/jsm/renderers/CSS2DRenderer.js';
-import { ROLE_INFO, type Role } from '../../../shared/roles';
-import type { Raider } from '../../../shared/state';
+import { CSS2DObject } from 'three/addons/renderers/CSS2DRenderer.js';
+import { ROLE_INFO } from '../../shared/roles.js';
 
 const body = new THREE.CapsuleGeometry(0.45, 1.1, 4, 12);
 const nub = new THREE.BoxGeometry(0.25, 0.25, 0.4);
 
 export class RaiderView {
-  readonly root = new THREE.Group();
-  private label: HTMLDivElement;
-  private material: THREE.MeshStandardMaterial;
+  root = new THREE.Group();
 
-  constructor(readonly raider: Raider, isMe: boolean) {
-    const color = ROLE_INFO[raider.role as Role]?.color ?? 0x999999;
+  /** [raider]: the synced Raider state. */
+  constructor(raider, isMe) {
+    this.raider = raider;
+    const color = ROLE_INFO[raider.role]?.color ?? 0x999999;
     this.material = new THREE.MeshStandardMaterial({ color, roughness: 0.6 });
     const mesh = new THREE.Mesh(body, this.material);
     mesh.position.y = 1;
@@ -36,7 +35,7 @@ export class RaiderView {
   }
 
   /** Eases toward the latest server position; [dt] in seconds. */
-  update(dt: number) {
+  update(dt) {
     const k = 1 - Math.exp(-dt * 15);
     this.root.position.x += (this.raider.x - this.root.position.x) * k;
     this.root.position.z += (this.raider.z - this.root.position.z) * k;

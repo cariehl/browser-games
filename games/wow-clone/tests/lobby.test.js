@@ -2,18 +2,18 @@
 
 import { after, before, test } from 'node:test';
 import assert from 'node:assert/strict';
-import { Client, type Room } from '@colyseus/sdk';
-import { ROOM_LOBBY } from '../shared/constants';
-import { startBlocker } from '../shared/messages';
-import { startServer } from '../server/index';
-import { spawnPoint } from '../server/rooms/RaidRoom';
+import { Client } from '@colyseus/sdk';
+import { ROOM_LOBBY } from '../shared/constants.js';
+import { startBlocker } from '../shared/messages.js';
+import { startServer } from '../server/index.js';
+import { spawnPoint } from '../server/rooms/raid_room.js';
 
-let server: Awaited<ReturnType<typeof startServer>>;
+let server;
 let endpoint = '';
-const open: Room[] = [];
+const open = [];
 
 before(async () => {
-  server = await startServer({ port: 0, serveClient: false, quiet: true });
+  server = await startServer({ port: 0 });
   endpoint = `http://localhost:${server.port}`;
 });
 after(async () => {
@@ -21,18 +21,18 @@ after(async () => {
   await server.close();
 });
 
-async function joinLobby(name: string, role = 'dps') {
+async function joinLobby(name, role = 'dps') {
   const room = await new Client(endpoint).joinOrCreate(ROOM_LOBBY, { name, role });
   open.push(room);
   await until(() => room.state.players?.size > 0);
   return room;
 }
 
-function next<T>(room: Room, type: string): Promise<T> {
+function next(room, type) {
   return new Promise((resolve) => room.onMessage(type, resolve));
 }
 
-async function until(check: () => boolean, ms = 2000) {
+async function until(check, ms = 2000) {
   const end = Date.now() + ms;
   while (!check()) {
     if (Date.now() > end) throw new Error('timed out');
@@ -41,10 +41,10 @@ async function until(check: () => boolean, ms = 2000) {
 }
 
 test('the start rules', () => {
-  assert.match(startBlocker([{ ready: true }])!, /at least 2/);
-  assert.match(startBlocker([{ ready: true }, { ready: false }])!, /ready/);
+  assert.match(startBlocker([{ ready: true }]), /at least 2/);
+  assert.match(startBlocker([{ ready: true }, { ready: false }]), /ready/);
   assert.equal(startBlocker([{ ready: true }, { ready: true }]), null);
-  assert.match(startBlocker(Array(6).fill({ ready: true }))!, /At most 5/);
+  assert.match(startBlocker(Array(6).fill({ ready: true })), /At most 5/);
 });
 
 test('spawn points are spread out and distinct', () => {
@@ -69,26 +69,26 @@ test('a group of two readies up, launches and lands in one raid', async () => {
 
   // Not everyone ready: the leader is told why.
   ann.send('start', {});
-  assert.match((await next<{ text: string }>(ann, 'notice')).text, /ready/);
+  assert.match((await next(ann, 'notice')).text, /ready/);
   // Only the leader can start.
   bo.send('start', {});
-  assert.match((await next<{ text: string }>(bo, 'notice')).text, /leader/);
+  assert.match((await next(bo, 'notice')).text, /leader/);
 
   ann.send('setReady', { ready: true });
   bo.send('setRole', { role: 'dps' });
   bo.send('setReady', { ready: true });
-  await until(() => [...ann.state.players.values()].every((p: any) => p.ready));
+  await until(() => [...ann.state.players.values()].every((p) => p.ready));
   assert.equal(ann.state.players.get(bo.sessionId).role, 'dps');
 
-  const launches = Promise.all([next<any>(ann, 'launch'), next<any>(bo, 'launch')]);
+  const launches = Promise.all([next(ann, 'launch'), next(bo, 'launch')]);
   ann.send('start', {});
   const [a, b] = await launches;
-  const annRaid = await new Client(endpoint).consumeSeatReservation<any>(a.reservation);
-  const boRaid = await new Client(endpoint).consumeSeatReservation<any>(b.reservation);
+  const annRaid = await new Client(endpoint).consumeSeatReservation(a.reservation);
+  const boRaid = await new Client(endpoint).consumeSeatReservation(b.reservation);
   open.push(annRaid, boRaid);
   assert.equal(annRaid.roomId, boRaid.roomId);
   await until(() => annRaid.state.raiders?.size === 2);
-  const roles = [...annRaid.state.raiders.values()].map((r: any) => `${r.name}:${r.role}`).sort();
+  const roles = [...annRaid.state.raiders.values()].map((r) => `${r.name}:${r.role}`).sort();
   assert.deepEqual(roles, ['Ann:tank', 'Bo:dps']);
 
   // A stranger can't walk into the raid by its id.
@@ -115,4 +115,16 @@ test('leadership passes on when the leader leaves', async () => {
   await until(() => other.state.players?.size === 2);
   await lead.leave();
   await until(() => other.state.leaderId === other.sessionId);
+});
+
+test('the page and its files are served, private folders are not', async () => {
+  const page = await fetch(`${endpoint}/`);
+  assert.equal(page.status, 200);
+  assert.match(await page.text(), /client\/main\.js/);
+  for (const path of ['/client/main.js', '/shared/roles.js', '/vendor/three/build/three.module.js', '/vendor/colyseus/colyseus.js']) {
+    assert.equal((await fetch(endpoint + path)).status, 200, path);
+  }
+  for (const path of ['/server/index.js', '/package.json/../server/state.js', '/node_modules/three/package.json', '/tests/lobby.test.js']) {
+    assert.equal((await fetch(endpoint + path)).status, 404, path);
+  }
 });
