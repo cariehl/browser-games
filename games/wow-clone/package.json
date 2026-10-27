@@ -1,0 +1,31 @@
+{
+  "name": "raid-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "npm run build && node --import tsx server/index.ts",
+    "serve": "node --import tsx server/index.ts",
+    "dev": "concurrently -k -n server,client \"tsx watch server/index.ts --dev\" \"vite\"",
+    "build": "vite build",
+    "typecheck": "tsc --noEmit",
+    "test": "node --import tsx --test tests/*.test.ts"
+  },
+  "engines": {
+    "node": ">=22.12"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.18.23",
+    "@colyseus/schema": "^5.0.42",
+    "@colyseus/ws-transport": "^0.18.4",
+    "tsx": "^4.23.15"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.18.8",
+    "@types/node": "^22.20.5",
+    "@types/three": "^0.186.0",
+    "concurrently": "^10.0.6",
+    "three": "^0.186.1",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5"
+  }
+}
