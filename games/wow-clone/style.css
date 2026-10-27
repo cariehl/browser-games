@@ -130,6 +130,11 @@ button.quiet { background: transparent; }
 .slot.unusable { filter: saturate(0.3) brightness(0.8); }
 .slot.unusable .icon { color: #ff8a7a; }
 .slot.active { border-color: var(--gold); }
+.slot { transition: background-color 0.3s, filter 0.3s; }
+.slot .icon { transition: opacity 0.3s; }
+.slot.cooling { background: #34333a; filter: grayscale(1); }
+.slot.cooling .icon { opacity: 0.3; }
+.slot.cooling .key { opacity: 0.5; }
 .slot.pressed { animation: press 0.25s; }
 @keyframes press { from { box-shadow: 0 0 0 3px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
 
