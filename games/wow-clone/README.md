@@ -2,7 +2,7 @@
 
 A raids-only take on the MMO: no questing, no levelling. Two to five friends gather in a lobby, pick tank, healer or DPS, and queue straight into a raid instance with two bosses and trash between them. Built with three.js and Colyseus, in plain JavaScript with no build step.
 
-This is the foundation: the lobby, raid instances, hosting and the scene. Combat, the classes and the raid itself come next (see [Where things go](#where-things-go)).
+So far: the lobby, raid instances, hosting, and the combat system with one class per role, tested on practice targets in the hall. The raid itself (trash and two bosses) comes next (see [Where things go](#where-things-go)).
 
 ## Running it
 
@@ -21,7 +21,7 @@ There's no build: the browser loads `index.html`, `client/` and `shared/` exactl
 | --- | --- |
 | `npm start` | Serve the game on port 2567 (`npm start -- --port 8080`) |
 | `npm run dev` | The same, restarting when `server/` or `shared/` changes |
-| `npm test` | Lobby and raid launch tests, against a real server with real clients |
+| `npm test` | Lobby, raid launch and combat tests (combat directly, the rest against a real server with real clients) |
 | `npm run vendor` | Copy three.js and the Colyseus client into `vendor/` (after upgrading either) |
 
 ## Hosting
@@ -34,10 +34,33 @@ The server serves the game's files and the Colyseus rooms on one port, so a grou
 
 There are no accounts: anyone with the address can join under any free name, so only share it with friends.
 
+## Playing
+
+| | Default key |
+| --- | --- |
+| Move, turn | W S, A D (right-drag with the mouse to steer; A and D then strafe) |
+| Strafe | Q E |
+| Run forward | both mouse buttons |
+| Abilities | 1 to 5, or click the action bar |
+| Target | Tab (next enemy), click a unit or a party frame, F1 yourself, F2 to F5 party members |
+| Stop casting, then clear target | Esc |
+
+Every key can be rebound from **Keybindings** in the raid (saved in the browser). Left-drag looks around, the wheel zooms.
+
+| Class | Role | Abilities |
+| --- | --- | --- |
+| Guardian | Tank | Strike, Shield Slam (extra threat), Thunder Clap (area), Taunt, Shield Wall (half damage taken) |
+| Cleric | Healer | Smite (cast), Flash Heal (cast), Renew (heal over time), Holy Word (big instant), Circle of Healing (area) |
+| Sorcerer | DPS | Firebolt (cast), Fire Blast, Ignite (damage over time), Arcane Explosion (area), Arcane Power (+30% damage) |
+
+Abilities share a 1.5 second global cooldown unless they say otherwise; pressing one in the last 0.4 seconds of the GCD or a cast queues it. Moving cancels a cast. Hostile abilities need the target in range and in front of you. The hall has two training dummies (they never die and reset after 10 seconds alone) and a Sparring Golem, which fights back: it attacks whoever has the most threat, chases them, gives up if pulled too far from home, and respawns 10 seconds after dying. Dead raiders release to respawn at the entrance.
+
 ## How it works
 
 - **Lobby** (`server/rooms/lobby_room.js`): the whole lobby is the party, up to 5. Players pick a role and ready up; the leader (whoever has been there longest) starts once 2 to 5 players are ready. The server locks the lobby, creates a raid room, and sends each member a seat reservation. Lobbies are made on demand, so a sixth player, or anyone arriving while a group launches, starts the next one.
-- **Raid** (`server/rooms/raid_room.js`): one instance per group, private, with seats reserved by name for that party only. It runs a fixed simulation at 20 Hz (`TICK_HZ`), which is empty for now. State syncs to clients through Colyseus schemas (`server/state.js`), which send only what changed.
+- **Raid** (`server/rooms/raid_room.js`): one instance per group, private, with seats reserved by name for that party only. It checks each player message (`shared/messages.js`) and hands it to the simulation, which runs at 20 Hz (`TICK_HZ`). State syncs to clients through Colyseus schemas (`server/state.js`), which send only what changed.
+- **Combat** (`server/world.js`): the server is authoritative. Clients send the movement keys they hold and where they face; the server moves them (`stepMovement` in `shared/combat.js`, kept inside the walls and pillars of `shared/arena.js`). Abilities are requests: the server checks the GCD, cooldowns, target, range and facing, runs casts, applies damage, healing and auras, keeps each enemy's threat table, and runs the enemies. It reports hits as `hit` messages (for floating numbers) and refusals as `error` messages. Classes and abilities are data in `shared/classes.js`, enemy kinds in `shared/enemies.js`. `RaidState.time` is the clock every cast, cooldown and aura time is measured against.
+- **Client prediction** (`client/raid/controls.js`): the player's own character moves at once with the same `stepMovement` and is pulled toward the server's position when they drift apart, so movement feels immediate over a tunnel. Everyone else eases toward their synced positions.
 - **Reconnecting:** a dropped connection keeps its character in the raid for 30 seconds (`RECONNECT_SECONDS`) while the client retries; reloading the page rejoins the same raid. Leaving the raid goes back to a lobby with the same name and role.
 - **Client** (`client/`): a plain DOM overlay for the screens and three.js for the raid. `main.js` runs the flow: join screen, lobby, raid, back to the lobby. three.js loads through the import map in `index.html`; the Colyseus client is a plain script that sets `window.Colyseus`.
 
@@ -47,9 +70,10 @@ client/           browser code
   main.js         join -> lobby -> raid flow
   net.js          connection, saved name/role, raid reconnect token
   screens/        join and lobby screens
-  raid/           raid screen, arena, camera rig, raider views
-shared/           constants, roles, message rules (browser and server)
-server/           Colyseus server, state schemas, static file serving
+  keybinds.js     rebindable keys, saved in the browser
+  raid/           raid screen, HUD, controls, camera rig, unit views, combat text
+shared/           constants, roles, classes, enemies, arena, movement, message rules (browser and server)
+server/           Colyseus server, state schemas, the combat simulation (world.js), static file serving
   rooms/          lobby_room.js, raid_room.js
 vendor/           three.js and the Colyseus client, copied by npm run vendor
 tests/            node:test, real server + @colyseus/sdk clients
@@ -59,6 +83,5 @@ start-server.ps1  install + Cloudflare tunnel + server (start-server.cmd wraps i
 
 ## Where things go
 
-- **Combat (step 2):** movement and facing as client input applied in `RaidRoom.update()`, with positions already in `Raider` state and eased in `RaiderView`. Abilities, GCD and cooldowns as server-checked messages; tab-targeting and damage numbers on the client. Rebindable hotkeys in a client keybinding module saved like the name and role in `net.js`. One class per role in `shared/roles.js`.
-- **Raid content (step 3):** the two bosses and trash between them replace `client/raid/arena.js` and drive `RaidState.encounter`.
+- **Raid content (step 3):** the two bosses and trash between them replace the practice targets (`PRACTICE_SPAWNS` in `shared/enemies.js`) and `client/raid/arena.js`, and drive `RaidState.encounter`. New enemy kinds go in `ENEMY_KINDS`; boss mechanics (casts, area attacks) extend `RaidWorld.think()`, and enemy casts already show on the target frame.
 - **Playtesting (step 4):** `start-server.cmd -HostOnline` with friends.

@@ -1,8 +1,10 @@
 // Placeholder raid geography: the entrance where the party spawns, a hall,
-// and a raised platform for the first boss. Step 3 replaces it with the real
-// layout (two boss rooms with trash between).
+// and a raised platform for the first boss. The walls and pillars match
+// shared/arena.js, which the server moves units within. Step 3 replaces it
+// with the real layout (two boss rooms with trash between).
 
 import * as THREE from 'three';
+import { PILLAR_RADIUS, PILLARS } from '../../shared/arena.js';
 
 export function buildArena() {
   const arena = new THREE.Group();
@@ -16,19 +18,18 @@ export function buildArena() {
   arena.add(floor);
 
   // Pillars down both sides of the hall.
-  const pillar = new THREE.CylinderGeometry(0.8, 1, 8, 12);
-  for (let z = -24; z <= 18; z += 7) {
-    for (const x of [-12, 12]) {
-      const p = new THREE.Mesh(pillar, dark);
-      p.position.set(x, 4, z);
-      p.castShadow = p.receiveShadow = true;
-      arena.add(p);
-    }
+  const pillar = new THREE.CylinderGeometry(PILLAR_RADIUS * 0.8, PILLAR_RADIUS, 8, 12);
+  for (const { x, z } of PILLARS) {
+    const p = new THREE.Mesh(pillar, dark);
+    p.position.set(x, 4, z);
+    p.castShadow = p.receiveShadow = true;
+    arena.add(p);
   }
 
   // The boss platform at the far end.
-  const platform = new THREE.Mesh(new THREE.CylinderGeometry(9, 9.5, 0.6, 48), dark);
-  platform.position.set(0, 0.3, -18);
+  // Low enough that units on it (which stand at floor height) don't sink in.
+  const platform = new THREE.Mesh(new THREE.CylinderGeometry(9, 9.5, 0.12, 48), dark);
+  platform.position.set(0, 0.06, -18);
   platform.receiveShadow = true;
   arena.add(platform);
   const rune = new THREE.Mesh(
@@ -36,7 +37,7 @@ export function buildArena() {
     new THREE.MeshBasicMaterial({ color: 0xd1543f, transparent: true, opacity: 0.5 }),
   );
   rune.rotation.x = -Math.PI / 2;
-  rune.position.set(0, 0.62, -18);
+  rune.position.set(0, 0.13, -18);
   arena.add(rune);
 
   // Walls, so the hall reads as indoors.

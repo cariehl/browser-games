@@ -41,6 +41,19 @@ export function rememberProfile(name, role) {
   write(() => localStorage, ROLE_KEY, role);
 }
 
+/** A JSON value saved in the browser under [key], or [fallback]. */
+export function loadSetting(key, fallback) {
+  try {
+    return JSON.parse(read(() => localStorage, key)) ?? fallback;
+  } catch {
+    return fallback;
+  }
+}
+
+export function saveSetting(key, value) {
+  write(() => localStorage, key, value == null ? null : JSON.stringify(value));
+}
+
 export const raidToken = {
   get: () => read(() => sessionStorage, RAID_TOKEN_KEY),
   set: (token) => write(() => sessionStorage, RAID_TOKEN_KEY, token),
