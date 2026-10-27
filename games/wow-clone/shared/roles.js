@@ -1,4 +1,4 @@
-// The three raid roles. Step 2 attaches one class (abilities, stats) to each.
+// The three raid roles. Each has one class: see shared/classes.js.
 
 export const ROLES = ['tank', 'healer', 'dps'];
 
