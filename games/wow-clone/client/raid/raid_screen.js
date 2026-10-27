@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { ABILITIES } from '../../shared/classes.js';
-import { distance, isFacing, reach, TAB_RANGE } from '../../shared/combat.js';
+import { distance, isFacing, QUEUE_WINDOW, reach, TAB_RANGE } from '../../shared/combat.js';
 import { show } from '../dom.js';
 import { Keybinds } from '../keybinds.js';
 import { Callbacks } from '../net.js';
@@ -19,8 +19,6 @@ import { Meter } from './meter.js';
 import { TalentPanel } from './talent_panel.js';
 import { UnitView } from './unit_view.js';
 
-/** A press this close to the end of the GCD or a cast waits and goes off when it ends (WoW's spell queue). */
-const QUEUE_WINDOW = 0.4;
 
 /** The server's clock (RaidState.time), run forward locally between patches. */
 class ServerClock {
@@ -64,7 +62,6 @@ export function raidScreen(room, canvas) {
     /** Unit views by id: raiders by session id, enemies by enemy id. */
     const views = new Map();
     let targetId = '';
-    let queued = null;
 
     const me = () => room.state.raiders?.get(room.sessionId);
 
@@ -92,9 +89,7 @@ export function raidScreen(room, canvas) {
       return null;
     };
 
-    const send = (abilityId) => room.send('cast', { ability: abilityId });
-
-    /** Uses an ability: now, after the GCD or cast if it's nearly over, or not (with a reason). */
+    /** Uses an ability: the server starts it, or queues it if it's nearly ready. Too early says why here. */
     const cast = (abilityId) => {
       const m = me();
       if (!m) return;
@@ -109,8 +104,7 @@ export function raidScreen(room, canvas) {
         (m.cooldowns.get(abilityId) ?? 0) - now,
       );
       if (wait > QUEUE_WINDOW) return hud.showError(m.castAbility ? 'You are already casting.' : 'Not ready yet.');
-      if (wait > 0) queued = { abilityId, at: now + wait };
-      else send(abilityId);
+      room.send('cast', { ability: abilityId });
     };
 
     /** Tab: the nearest living enemy in front, then the next one out on each press. */
@@ -141,8 +135,7 @@ export function raidScreen(room, canvas) {
         const id = others[Number(action.slice(11)) - 1];
         if (id) setTarget(id);
       } else if (action === 'clear') {
-        if (queued) queued = null;
-        else if (m.castAbility) room.send('stopCast', {});
+        if (m.queued || m.castAbility) room.send('stopCast', {});
         else setTarget('');
       }
     };
@@ -241,14 +234,6 @@ export function raidScreen(room, canvas) {
         controls.paused = panel.open;
       }
       if (m) controls.update(dt, m);
-      if (queued && m) {
-        if (now >= queued.at && !m.castAbility) {
-          send(queued.abilityId);
-          queued = null;
-        } else if (now > queued.at + 1) {
-          queued = null; // Something else held it up: give up rather than fire late.
-        }
-      }
 
       for (const [id, view] of views) {
         view.update(dt, id === room.sessionId ? pose() : view.unit);

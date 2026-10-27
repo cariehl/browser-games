@@ -12,7 +12,7 @@
 // It knows nothing about the network, so tests can drive it directly.
 
 import { ABILITIES, CLASSES, CRIT_CHANCE, CRIT_MULTIPLIER, HEAL_THREAT } from '../shared/classes.js';
-import { distance, facingToward, GCD, isFacing, isMoving, MELEE_RANGE, radiusOf, reach, stepMovement } from '../shared/combat.js';
+import { distance, facingToward, GCD, isFacing, isMoving, MELEE_RANGE, QUEUE_WINDOW, radiusOf, reach, stepMovement } from '../shared/combat.js';
 import { confine } from '../shared/arena.js';
 import { ENEMY_KINDS } from '../shared/enemies.js';
 import {
@@ -162,6 +162,13 @@ export class RaidWorld {
     raider.attacking = true;
   }
 
+  /** Escape: drops the queued ability if there is one, otherwise stops the cast. */
+  cancel(id) {
+    const raider = this.state.raiders.get(id);
+    if (raider?.queued) raider.queued = '';
+    else this.stopCast(id);
+  }
+
   stopCast(id) {
     const raider = this.state.raiders.get(id);
     if (!raider?.castAbility) return;
@@ -180,16 +187,32 @@ export class RaidWorld {
   }
 
   /**
-   * Starts [abilityId] for raider [id] on their current target. Returns null
-   * if it started, or why not (also sent to them as an 'error').
+   * Starts [abilityId] for raider [id] on their current target, or queues it
+   * if the GCD, a cast or its cooldown ends within QUEUE_WINDOW. Returns null
+   * if it started or queued, or why not (also sent to them as an 'error').
    */
   cast(id, abilityId) {
     const raider = this.state.raiders.get(id);
     // Not one of theirs: a bad message, not a mistake to tell them about.
     if (!raider || !raider.abilities.includes(abilityId)) return 'Unknown ability.';
+    const wait = this.waitFor(raider, abilityId);
+    if (wait > 0 && wait <= QUEUE_WINDOW && raider.talentsChosen && raider.health > 0) {
+      // A later press replaces the queued one, as in WoW.
+      raider.queued = abilityId;
+      return null;
+    }
     const why = this.tryCast(id, abilityId);
     if (why) this.emit('error', { text: why }, id);
     return why;
+  }
+
+  /** Seconds until [abilityId] could start: the GCD, a cast in progress, or its own cooldown. */
+  waitFor(raider, abilityId) {
+    return Math.max(
+      ABILITIES[abilityId].gcd !== false ? raider.gcdEnd - this.time : 0,
+      raider.castAbility ? raider.castEnd - this.time : 0,
+      (raider.cooldowns.get(abilityId) ?? 0) - this.time,
+    );
   }
 
   tryCast(id, abilityId) {
@@ -381,6 +404,7 @@ export class RaidWorld {
     const raider = this.state.raiders.get(id);
     raider.health = 0;
     raider.castAbility = '';
+    raider.queued = '';
     raider.attacking = false;
     raider.auras.clear();
     this.castTargets.delete(id);
@@ -417,6 +441,11 @@ export class RaidWorld {
         raider.z = pos.z;
       }
       if (raider.castAbility && this.time >= raider.castEnd) this.finishCast(id, raider);
+      if (raider.queued && this.waitFor(raider, raider.queued) <= 0) {
+        const abilityId = raider.queued;
+        raider.queued = '';
+        this.cast(id, abilityId);
+      }
       if (raider.attacking) this.autoAttack(id, raider);
     }
     for (const [id, unit] of [...this.state.raiders.entries(), ...this.state.enemies.entries()]) this.tickAuras(id, unit);

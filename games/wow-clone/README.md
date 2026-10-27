@@ -61,7 +61,7 @@ Every key can be rebound from **Keybindings** in the raid, to a key or to the mi
 
 **Damage meter.** Bottom right: damage or healing (effective, so overhealing doesn't count) per raider and per second for the current fight, which starts with the first hit after 5 quiet seconds. Hover a row for its breakdown by ability.
 
-Abilities share a 1.5 second global cooldown unless they say otherwise; pressing one in the last 0.4 seconds of the GCD or a cast queues it. Moving cancels a cast. Hostile abilities need the target in range and in front of you. The hall has two training dummies (they never die and reset after 10 seconds alone) and a Sparring Golem, which fights back: it attacks whoever has the most threat, chases them, gives up if pulled too far from home, and respawns 10 seconds after dying. Auto-attack swings every 2 seconds while the target is in melee reach and in front of you, and pauses while you cast. Dead raiders release to respawn at the entrance.
+Abilities share a 1.5 second global cooldown unless they say otherwise; pressing one in the last 0.75 seconds of the GCD, a cast or its cooldown queues it, and it goes off the moment it's ready (the queued button is outlined; Esc drops it). Moving cancels a cast. Hostile abilities need the target in range and in front of you. The hall has two training dummies (they never die and reset after 10 seconds alone) and a Sparring Golem, which fights back: it attacks whoever has the most threat, chases them, gives up if pulled too far from home, and respawns 10 seconds after dying. Auto-attack swings every 2 seconds while the target is in melee reach and in front of you, and pauses while you cast. Dead raiders release to respawn at the entrance.
 
 ## How it works
 

@@ -12,6 +12,9 @@ export const BACK_SPEED = 4.5;
 /** The global cooldown most abilities trigger, in seconds. */
 export const GCD = 1.5;
 
+/** A press this close to the end of the GCD, a cast or a cooldown is queued and goes off when it ends (WoW's spell queue). */
+export const QUEUE_WINDOW = 0.75;
+
 export const RAIDER_RADIUS = 0.5;
 
 /** Melee abilities reach this far past the edge of their target. */

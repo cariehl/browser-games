@@ -7,7 +7,7 @@ import { Client } from '@colyseus/sdk';
 import { matchMaker } from '@colyseus/core';
 import { ABILITIES, CLASSES } from '../shared/classes.js';
 import { ROOM_RAID } from '../shared/constants.js';
-import { GCD, RUN_SPEED, facingToward, isFacing, stepMovement } from '../shared/combat.js';
+import { GCD, QUEUE_WINDOW, RUN_SPEED, facingToward, isFacing, stepMovement } from '../shared/combat.js';
 import { confine, PILLARS } from '../shared/arena.js';
 import { cleanMove } from '../shared/messages.js';
 import { presetBuild, TALENT_POINTS, talentProblem, TREES } from '../shared/talents.js';
@@ -119,6 +119,43 @@ test('abilities check target, range, facing, the GCD and cooldowns', () => {
   run(world, 6);
   assert.equal(world.cast('t', 'shieldSlam'), null);
   assert.ok(errors().length >= 5);
+});
+
+test('a press near the end of the GCD, a cast or a cooldown queues and goes off when ready', () => {
+  const { world, state, errors } = makeWorld();
+  world.addRaider('t', { name: 'Tan', role: 'tank' }, { x: 0, z: 2, facing: 0 });
+  const dummy = world.addEnemy('dummy', { x: 0, z: 0 });
+  world.setTarget('t', dummy);
+  place(world, 't', 0, 2, dummy);
+  const tank = state.raiders.get('t');
+  const health = () => state.enemies.get(dummy).health;
+
+  assert.equal(world.cast('t', 'shieldSlam'), null);
+  // Too early: refused, not queued.
+  assert.match(world.cast('t', 'strike'), /Not ready/);
+  run(world, GCD - QUEUE_WINDOW + 0.05);
+  assert.equal(world.cast('t', 'strike'), null);
+  assert.equal(tank.queued, 'strike');
+  // A later press replaces it.
+  assert.equal(world.cast('t', 'thunderClap'), null);
+  assert.equal(tank.queued, 'thunderClap');
+  const before = health();
+  run(world, QUEUE_WINDOW - 0.15);
+  assert.equal(tank.queued, 'thunderClap');
+  assert.equal(health(), before);
+  run(world, 0.15);
+  assert.equal(tank.queued, '');
+  assert.ok(health() < before, 'the queued ability went off');
+  assert.ok(tank.gcdEnd > state.time + GCD - 0.1, 'and started a new GCD');
+
+  // Esc (stopCast) drops the queue.
+  run(world, GCD - 0.5);
+  world.cast('t', 'strike');
+  assert.equal(tank.queued, 'strike');
+  world.cancel('t');
+  assert.equal(tank.queued, '');
+  run(world, 1);
+  assert.deepEqual(errors(), ['Not ready yet.']);
 });
 
 test('a cast lands when it finishes, and a friendly spell with no friendly target heals yourself', () => {

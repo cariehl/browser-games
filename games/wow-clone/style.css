@@ -130,6 +130,7 @@ button.quiet { background: transparent; }
 .slot.unusable { filter: saturate(0.3) brightness(0.8); }
 .slot.unusable .icon { color: #ff8a7a; }
 .slot.active { border-color: var(--gold); }
+.slot.queued { border-color: #fff; box-shadow: 0 0 0 1px #fff, 0 0 8px rgba(255, 255, 255, 0.5); }
 .slot { transition: background-color 0.3s, filter 0.3s; }
 .slot .icon { transition: opacity 0.3s; }
 .slot.cooling { background: #34333a; filter: grayscale(1); }

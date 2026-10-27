@@ -284,6 +284,7 @@ export class Hud {
       // On its own cooldown (not just the GCD): grey and faded until ready.
       s.slot.classList.toggle('cooling', cd > 0);
       s.slot.classList.toggle('active', me.castAbility === s.id);
+      s.slot.classList.toggle('queued', me.queued === s.id);
     }
   }
 }
