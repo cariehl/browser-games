@@ -281,6 +281,8 @@ export class Hud {
       style(s.cd, '--sweep', left > 0 ? `${(left / total) * 360}deg` : '0deg');
       text(s.cdText, cd > GCD && cd >= left - 1e-6 ? seconds(cd) : '');
       s.slot.classList.toggle('unusable', !!blocker(s.id));
+      // On its own cooldown (not just the GCD): grey and faded until ready.
+      s.slot.classList.toggle('cooling', cd > 0);
       s.slot.classList.toggle('active', me.castAbility === s.id);
     }
   }
