@@ -36,16 +36,20 @@ There are no accounts: anyone with the address can join under any free name, so 
 
 ## Playing
 
-| | Default key |
+| | Default |
 | --- | --- |
-| Move, turn | W S, A D (right-drag with the mouse to steer; A and D then strafe) |
+| Move, turn | W S, A D |
 | Strafe | Q E |
-| Run forward | both mouse buttons |
+| Autorun | middle mouse button (W or S cancels it) |
+| Look around | left-drag (the cursor hides while dragging) |
+| Steer | right-drag: the character turns with the camera, and A and D strafe |
+| Run forward | hold both mouse buttons |
 | Abilities | 1 to 5, or click the action bar |
-| Target | Tab (next enemy), click a unit or a party frame, F1 yourself, F2 to F5 party members |
-| Stop casting, then clear target | Esc |
+| Target | left-click a unit or a party frame, Tab (next enemy), F1 yourself, F2 to F5 party members |
+| Attack | right-click an enemy: targets it and starts auto-attack (melee abilities start it too) |
+| Stop casting, then clear target | Esc (clicking empty ground keeps your target) |
 
-Every key can be rebound from **Keybindings** in the raid (saved in the browser). Left-drag looks around, the wheel zooms.
+Every key can be rebound from **Keybindings** in the raid, to a key or to the middle or side mouse buttons (saved in the browser). The wheel zooms.
 
 | Class | Role | Abilities |
 | --- | --- | --- |
@@ -53,7 +57,7 @@ Every key can be rebound from **Keybindings** in the raid (saved in the browser)
 | Cleric | Healer | Smite (cast), Flash Heal (cast), Renew (heal over time), Holy Word (big instant), Circle of Healing (area) |
 | Sorcerer | DPS | Firebolt (cast), Fire Blast, Ignite (damage over time), Arcane Explosion (area), Arcane Power (+30% damage) |
 
-Abilities share a 1.5 second global cooldown unless they say otherwise; pressing one in the last 0.4 seconds of the GCD or a cast queues it. Moving cancels a cast. Hostile abilities need the target in range and in front of you. The hall has two training dummies (they never die and reset after 10 seconds alone) and a Sparring Golem, which fights back: it attacks whoever has the most threat, chases them, gives up if pulled too far from home, and respawns 10 seconds after dying. Dead raiders release to respawn at the entrance.
+Abilities share a 1.5 second global cooldown unless they say otherwise; pressing one in the last 0.4 seconds of the GCD or a cast queues it. Moving cancels a cast. Hostile abilities need the target in range and in front of you. The hall has two training dummies (they never die and reset after 10 seconds alone) and a Sparring Golem, which fights back: it attacks whoever has the most threat, chases them, gives up if pulled too far from home, and respawns 10 seconds after dying. Auto-attack swings every 2 seconds while the target is in melee reach and in front of you, and pauses while you cast. Dead raiders release to respawn at the entrance.
 
 ## How it works
 

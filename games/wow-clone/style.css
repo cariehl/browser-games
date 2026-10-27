@@ -64,7 +64,7 @@ button.quiet { background: transparent; }
 .ready { font-size: 12px; color: var(--muted); }
 .ready.yes { color: var(--good); }
 
-.hud { position: absolute; inset: 0; pointer-events: none; }
+#ui > .hud { position: absolute; inset: 0; pointer-events: none; }
 .hud > * { pointer-events: auto; }
 .hud .labels { position: absolute; inset: 0; pointer-events: none; }
 .banner {
@@ -88,6 +88,7 @@ button.quiet { background: transparent; }
 }
 .unit-frame.me { border-color: var(--gold); }
 .unit-frame.selected { box-shadow: 0 0 0 2px #5cd17a; }
+.target-frame.attacking { border-color: #e0503c; box-shadow: 0 0 10px #e0503c88; }
 .unit-frame.away, .unit-frame.dead { opacity: 0.6; }
 .party-frame { width: 190px; padding: 4px 6px; }
 .target-frame { position: absolute; top: 16px; left: 270px; width: 260px; cursor: default; }

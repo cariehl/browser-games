@@ -166,14 +166,21 @@ export function raidScreen(room, canvas) {
     hud.root.append(panel.root);
     show(hud.root);
 
-    // Clicking a unit targets it; clicking empty ground clears the target.
+    // As in WoW: left-click a unit to target it; right-click to target it
+    // and, if it's an enemy, start attacking. Clicking empty ground keeps the
+    // target (Esc clears it).
     const raycaster = new THREE.Raycaster();
-    rig.onClick = (e) => {
+    rig.onClick = (button, e) => {
       const ndc = new THREE.Vector2((e.clientX / window.innerWidth) * 2 - 1, -(e.clientY / window.innerHeight) * 2 + 1);
       raycaster.setFromCamera(ndc, rig.camera);
       const [hit] = raycaster.intersectObjects([...views.values()].map((v) => v.hitbox), false);
-      setTarget(hit ? hit.object.userData.unitId : '');
+      if (!hit) return;
+      const id = hit.object.userData.unitId;
+      setTarget(id);
+      if (button === 2 && room.state.enemies.has(id)) room.send('attack', { on: true });
     };
+    rig.onButtonDown = (code) => controls.press(code);
+    rig.onButtonUp = (code) => controls.release(code);
 
     const callbacks = Callbacks.get(room);
     const addView = (id, unit, enemy) => {

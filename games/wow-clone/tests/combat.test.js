@@ -196,6 +196,39 @@ test('a raider can die and release; the golem resets when everyone is gone', () 
   assert.equal(dee.warp, 1);
 });
 
+test('auto-attack swings on its timer, needs reach, and stops on a new target', () => {
+  const { world, state, events, errors } = makeWorld();
+  world.addRaider('t', { name: 'Tan', role: 'tank' }, { x: 0, z: 10, facing: 0 });
+  const dummy = world.addEnemy('dummy', { x: 0, z: 0 });
+  const tank = state.raiders.get('t');
+  const swings = () => events.filter((e) => e.type === 'hit' && e.data.ability === 'attack').length;
+
+  world.setAttack('t', true);
+  assert.match(errors().at(-1), /no target/);
+  world.setTarget('t', dummy);
+  world.setAttack('t', true);
+  assert.equal(tank.attacking, true);
+  run(world, 1);
+  assert.equal(swings(), 0); // Out of reach: it waits.
+
+  place(world, 't', 0, 2, dummy);
+  run(world, 0.05);
+  assert.equal(swings(), 1);
+  run(world, 1.9);
+  assert.equal(swings(), 1);
+  run(world, 0.15);
+  assert.equal(swings(), 2);
+
+  world.setTarget('t', 't');
+  assert.equal(tank.attacking, false);
+
+  // A melee ability starts it too.
+  world.setTarget('t', dummy);
+  run(world, GCD);
+  assert.equal(world.cast('t', 'strike'), null);
+  assert.equal(tank.attacking, true);
+});
+
 test('the training dummy never dies, and resets when left alone', () => {
   const { world, state } = makeWorld();
   world.addRaider('d', { name: 'Dee', role: 'dps' }, { x: 0, z: 10, facing: 0 });
