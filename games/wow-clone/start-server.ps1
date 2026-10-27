@@ -57,7 +57,10 @@ function Test-Port($p) {
   try { $client.Connect('127.0.0.1', $p); return $true } catch { return $false } finally { $client.Close() }
 }
 
-if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'Node.js is not installed (version 22 or newer): https://nodejs.org/' }
+if (-not (Get-Command node -ErrorAction SilentlyContinue)) { Fail 'Node.js is not installed (version 22.12 or newer): https://nodejs.org/' }
+# npm silently skips Vite's native binding on older Node, and the build then fails.
+$nodeVersion = [version]((& node --version).TrimStart('v'))
+if ($nodeVersion -lt [version]'22.12.0') { Fail "Node.js $nodeVersion is too old: this needs 22.12 or newer (https://nodejs.org/). After upgrading, delete node_modules and run this again." }
 if (Test-Port $port) { Fail "Something is already listening on port $port. Stop the old server first (or pass --port)." }
 
 # 1. Pull the latest

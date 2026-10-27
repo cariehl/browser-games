@@ -6,7 +6,7 @@ This is the foundation: the lobby, raid instances, hosting and the scene. Combat
 
 ## Running it
 
-You need [Node.js](https://nodejs.org) 22.12 or newer.
+You need [Node.js](https://nodejs.org) 22.12 or newer. On older Node, npm skips the native binding Vite needs and the build fails with "Cannot find native binding".
 
 ```
 npm install
