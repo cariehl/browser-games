@@ -13,6 +13,7 @@
 // Raid: created by the lobby with { party: [{ name, role }] }; seats are
 // reserved with { name, role }. Clients never pick those themselves.
 // Raid, client -> server:
+//   'talents'   { picks }                    spend talent points ({ talentId: rank }), once per raid
 //   'move'      { forward, strafe, facing }  movement keys held (-1, 0, 1) and where they look
 //   'target'    { id }                       select a unit ('' clears)
 //   'cast'      { ability }                  use an ability on the current target

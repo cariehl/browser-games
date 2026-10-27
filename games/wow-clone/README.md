@@ -44,18 +44,22 @@ There are no accounts: anyone with the address can join under any free name, so 
 | Look around | left-drag (the cursor hides while dragging) |
 | Steer | right-drag: the character turns with the camera, and A and D strafe |
 | Run forward | hold both mouse buttons |
-| Abilities | 1 to 5, or click the action bar |
+| Abilities | 1 to 8, or click the action bar |
 | Target | left-click a unit or a party frame, Tab (next enemy), F1 yourself, F2 to F5 party members |
 | Attack | right-click an enemy: targets it and starts auto-attack (melee abilities start it too) |
 | Stop casting, then clear target | Esc (clicking empty ground keeps your target) |
 
 Every key can be rebound from **Keybindings** in the raid, to a key or to the middle or side mouse buttons (saved in the browser). The wheel zooms.
 
-| Class | Role | Abilities |
-| --- | --- | --- |
-| Guardian | Tank | Strike, Shield Slam (extra threat), Thunder Clap (area), Taunt, Shield Wall (half damage taken) |
-| Cleric | Healer | Smite (cast), Flash Heal (cast), Renew (heal over time), Holy Word (big instant), Circle of Healing (area) |
-| Sorcerer | DPS | Firebolt (cast), Fire Blast, Ignite (damage over time), Arcane Explosion (area), Arcane Power (+30% damage) |
+| Class | Role | Abilities | Talent trees |
+| --- | --- | --- | --- |
+| Guardian | Tank | Strike, Shield Slam (extra threat), Thunder Clap (area), Taunt, Shield Wall (half damage taken) | Protection, Arms, Thunder |
+| Cleric | Healer | Smite (cast), Flash Heal (cast), Renew (heal over time), Holy Word (big instant), Circle of Healing (area) | Holy, Discipline, Retribution |
+| Sorcerer | DPS | Firebolt (cast), Fire Blast, Ignite (damage over time), Arcane Explosion (area), Arcane Power (+30% damage) | Fire, Frost, Arcane |
+
+**Talents.** On first spawning in a raid, everyone spends 10 talent points before they can move or fight, and the build is locked for that raid. Each class has three trees of five talents; each tier needs 2 more points in that tree, and the last tier is a capstone that teaches a new ability (Frost also teaches Frostbolt in its first tier). A tree holds 11 points, so a build is always a trade-off: the capstone plus a few points elsewhere, or a hybrid. "Fill" spends a ready-made build down one tree, and the last build for each class is remembered. Trees and talents are data in `shared/talents.js`.
+
+**Damage meter.** Bottom right: damage or healing (effective, so overhealing doesn't count) per raider and per second for the current fight, which starts with the first hit after 5 quiet seconds. Hover a row for its breakdown by ability.
 
 Abilities share a 1.5 second global cooldown unless they say otherwise; pressing one in the last 0.4 seconds of the GCD or a cast queues it. Moving cancels a cast. Hostile abilities need the target in range and in front of you. The hall has two training dummies (they never die and reset after 10 seconds alone) and a Sparring Golem, which fights back: it attacks whoever has the most threat, chases them, gives up if pulled too far from home, and respawns 10 seconds after dying. Auto-attack swings every 2 seconds while the target is in melee reach and in front of you, and pauses while you cast. Dead raiders release to respawn at the entrance.
 
@@ -63,7 +67,7 @@ Abilities share a 1.5 second global cooldown unless they say otherwise; pressing
 
 - **Lobby** (`server/rooms/lobby_room.js`): the whole lobby is the party, up to 5. Players pick a role and ready up; the leader (whoever has been there longest) starts once 2 to 5 players are ready. The server locks the lobby, creates a raid room, and sends each member a seat reservation. Lobbies are made on demand, so a sixth player, or anyone arriving while a group launches, starts the next one.
 - **Raid** (`server/rooms/raid_room.js`): one instance per group, private, with seats reserved by name for that party only. It checks each player message (`shared/messages.js`) and hands it to the simulation, which runs at 20 Hz (`TICK_HZ`). State syncs to clients through Colyseus schemas (`server/state.js`), which send only what changed.
-- **Combat** (`server/world.js`): the server is authoritative. Clients send the movement keys they hold and where they face; the server moves them (`stepMovement` in `shared/combat.js`, kept inside the walls and pillars of `shared/arena.js`). Abilities are requests: the server checks the GCD, cooldowns, target, range and facing, runs casts, applies damage, healing and auras, keeps each enemy's threat table, and runs the enemies. It reports hits as `hit` messages (for floating numbers) and refusals as `error` messages. Classes and abilities are data in `shared/classes.js`, enemy kinds in `shared/enemies.js`. `RaidState.time` is the clock every cast, cooldown and aura time is measured against.
+- **Combat** (`server/world.js`): the server is authoritative. Clients send the movement keys they hold and where they face; the server moves them (`stepMovement` in `shared/combat.js`, kept inside the walls and pillars of `shared/arena.js`). Abilities are requests: the server checks the GCD, cooldowns, target, range and facing, runs casts, applies damage, healing and auras, keeps each enemy's threat table, and runs the enemies. It reports hits as `hit` messages (for floating numbers) and refusals as `error` messages. Classes and abilities are data in `shared/classes.js`, talents in `shared/talents.js` (folded into combat through `talentStats`), enemy kinds in `shared/enemies.js`. `RaidState.time` is the clock every cast, cooldown and aura time is measured against.
 - **Client prediction** (`client/raid/controls.js`): the player's own character moves at once with the same `stepMovement` and is pulled toward the server's position when they drift apart, so movement feels immediate over a tunnel. Everyone else eases toward their synced positions.
 - **Reconnecting:** a dropped connection keeps its character in the raid for 30 seconds (`RECONNECT_SECONDS`) while the client retries; reloading the page rejoins the same raid. Leaving the raid goes back to a lobby with the same name and role.
 - **Client** (`client/`): a plain DOM overlay for the screens and three.js for the raid. `main.js` runs the flow: join screen, lobby, raid, back to the lobby. three.js loads through the import map in `index.html`; the Colyseus client is a plain script that sets `window.Colyseus`.

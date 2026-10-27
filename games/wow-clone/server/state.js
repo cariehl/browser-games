@@ -52,6 +52,12 @@ export const Raider = schema({
   role: t.string(),
   /** False while their connection is down and the server waits for them. */
   connected: t.boolean(),
+  /** False until they spend their talent points (on first spawn); they can't act before. */
+  talentsChosen: t.boolean(),
+  /** Talent ranks by talent id (shared/talents.js). */
+  talents: t.map('uint8'),
+  /** Their action bar: the class's abilities plus any their talents grant. */
+  abilities: t.array('string'),
   /** Auto-attacking their target (started by right-clicking an enemy or a melee ability). */
   attacking: t.boolean(),
   /** When the global cooldown ends. */

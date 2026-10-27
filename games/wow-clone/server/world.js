@@ -5,12 +5,19 @@
 //   emit('hit', { source, target, ability, amount, heal, crit, tick })  to everyone
 //   emit('error', { text }, raiderId)                                     to one raider
 //
+// Talents (shared/talents.js) are chosen once per raid and folded into
+// combat through talentStats: power, crit, cooldowns, cast times, aura
+// durations, health, threat and damage taken.
+//
 // It knows nothing about the network, so tests can drive it directly.
 
-import { ABILITIES, CLASSES, CRIT_CHANCE, CRIT_MULTIPLIER, HEAL_THREAT, hasAbility } from '../shared/classes.js';
+import { ABILITIES, CLASSES, CRIT_CHANCE, CRIT_MULTIPLIER, HEAL_THREAT } from '../shared/classes.js';
 import { distance, facingToward, GCD, isFacing, isMoving, MELEE_RANGE, radiusOf, reach, stepMovement } from '../shared/combat.js';
 import { confine } from '../shared/arena.js';
 import { ENEMY_KINDS } from '../shared/enemies.js';
+import {
+  abilitiesOf, auraDurationFor, castTimeFor, cooldownFor, critFor, powerFor, talentProblem, talentStats,
+} from '../shared/talents.js';
 import { Aura, Enemy, Raider } from './state.js';
 
 const STILL = { forward: 0, strafe: 0 };
@@ -31,6 +38,8 @@ export class RaidWorld {
   castTargets = new Map();
   /** When each auto-attacking raider can next swing, by raider id. */
   nextSwings = new Map();
+  /** What each raider's talents add up to (talentStats), by raider id. */
+  stats = new Map();
   /** Next tick time for each ticking aura. */
   auraTicks = new WeakMap();
   /** Server-only enemy state by enemy id: home, swing timer, taunt, respawn. */
@@ -65,7 +74,36 @@ export class RaidWorld {
     this.state.raiders.set(id, new Raider({
       name, role, ...spot, health: maxHealth, maxHealth, targetId: '',
       castAbility: '', castStart: 0, castEnd: 0, connected: true, attacking: false, gcdEnd: 0, warp: 0,
+      talentsChosen: false, abilities: abilitiesOf(role),
     }));
+  }
+
+  /** Talent stats for raider [id] (none spent: all zeros). */
+  statsOf(id) {
+    return this.stats.get(id) ?? talentStats('', {});
+  }
+
+  /**
+   * Spends raider [id]'s talent points: [picks] is { talentId: rank }.
+   * Once per raid. Returns null, or why not (also sent as an 'error').
+   */
+  chooseTalents(id, picks) {
+    const raider = this.state.raiders.get(id);
+    if (!raider) return 'Unknown raider.';
+    const why = raider.talentsChosen ? 'Your talents are already chosen for this raid.' : talentProblem(raider.role, picks);
+    if (why) {
+      this.emit('error', { text: why }, id);
+      return why;
+    }
+    const clean = Object.fromEntries(Object.entries(picks).filter(([, rank]) => rank > 0));
+    for (const [talent, rank] of Object.entries(clean)) raider.talents.set(talent, rank);
+    const stats = talentStats(raider.role, clean);
+    this.stats.set(id, stats);
+    raider.abilities.splice(0, raider.abilities.length, ...abilitiesOf(raider.role, clean));
+    raider.maxHealth = Math.round(CLASSES[raider.role].maxHealth * (1 + stats.health));
+    raider.health = raider.maxHealth;
+    raider.talentsChosen = true;
+    return null;
   }
 
   removeRaider(id) {
@@ -73,6 +111,7 @@ export class RaidWorld {
     this.inputs.delete(id);
     this.castTargets.delete(id);
     this.nextSwings.delete(id);
+    this.stats.delete(id);
     this.forget(id);
   }
 
@@ -117,6 +156,7 @@ export class RaidWorld {
       return;
     }
     const target = this.state.enemies.get(raider.targetId);
+    if (!raider.talentsChosen) return this.emit('error', { text: 'Choose your talents first.' }, id);
     if (raider.health <= 0) return this.emit('error', { text: 'You are dead.' }, id);
     if (!target || target.health <= 0) return this.emit('error', { text: 'You have no target.' }, id);
     raider.attacking = true;
@@ -146,7 +186,7 @@ export class RaidWorld {
   cast(id, abilityId) {
     const raider = this.state.raiders.get(id);
     // Not one of theirs: a bad message, not a mistake to tell them about.
-    if (!raider || !hasAbility(raider.role, abilityId)) return 'Unknown ability.';
+    if (!raider || !raider.abilities.includes(abilityId)) return 'Unknown ability.';
     const why = this.tryCast(id, abilityId);
     if (why) this.emit('error', { text: why }, id);
     return why;
@@ -155,6 +195,7 @@ export class RaidWorld {
   tryCast(id, abilityId) {
     const raider = this.state.raiders.get(id);
     const ability = ABILITIES[abilityId];
+    if (!raider.talentsChosen) return 'Choose your talents first.';
     if (raider.health <= 0) return 'You are dead.';
     if (raider.castAbility) return 'You are already casting.';
     if (ability.gcd !== false && this.time < raider.gcdEnd) return 'Not ready yet.';
@@ -167,10 +208,11 @@ export class RaidWorld {
     if (why) return why;
 
     if (ability.gcd !== false) raider.gcdEnd = this.time + GCD;
-    if (ability.cast) {
+    const castTime = castTimeFor(this.statsOf(id), abilityId);
+    if (castTime > 0) {
       raider.castAbility = abilityId;
       raider.castStart = this.time;
-      raider.castEnd = this.time + ability.cast;
+      raider.castEnd = this.time + castTime;
       this.castTargets.set(id, targetId);
     } else {
       this.land(id, abilityId, targetId);
@@ -207,7 +249,8 @@ export class RaidWorld {
   land(id, abilityId, targetId) {
     const raider = this.state.raiders.get(id);
     const ability = ABILITIES[abilityId];
-    if (ability.cooldown) raider.cooldowns.set(abilityId, this.time + ability.cooldown);
+    const stats = this.statsOf(id);
+    if (ability.cooldown) raider.cooldowns.set(abilityId, this.time + cooldownFor(stats, abilityId));
     // Melee abilities start auto-attack, as in WoW.
     if (ability.target === 'enemy' && ability.range === MELEE_RANGE) raider.attacking = true;
 
@@ -220,20 +263,24 @@ export class RaidWorld {
     }
     for (const tid of targets) {
       if (ability.damage) {
-        const hit = this.roll(ability.damage);
-        hit.amount *= this.damageDone(raider);
+        const hit = this.roll(ability.damage, critFor(stats, abilityId));
+        hit.amount *= this.damageDone(raider) * powerFor(stats, abilityId);
         this.damage(id, tid, hit, abilityId);
       }
-      if (ability.heal) this.heal(id, tid, this.roll(ability.heal), abilityId);
+      if (ability.heal) {
+        const hit = this.roll(ability.heal, critFor(stats, abilityId));
+        hit.amount *= powerFor(stats, abilityId);
+        this.heal(id, tid, hit, abilityId);
+      }
       if (ability.aura) this.applyAura(id, tid, abilityId);
       if (ability.taunt) this.taunt(id, tid);
     }
   }
 
-  /** A roll in [min, max], with a chance to crit: { amount, crit }. */
-  roll([min, max]) {
+  /** A roll in [min, max], with [critChance] to crit: { amount, crit }. */
+  roll([min, max], critChance = CRIT_CHANCE) {
     const amount = min + this.random() * (max - min);
-    const crit = this.random() < CRIT_CHANCE;
+    const crit = this.random() < critChance;
     return { amount: crit ? amount * CRIT_MULTIPLIER : amount, crit };
   }
 
@@ -244,8 +291,9 @@ export class RaidWorld {
     return k;
   }
 
-  damageTaken(unit) {
-    let k = 1;
+  /** [id] is the unit's id: raiders' talents can lower it. */
+  damageTaken(unit, id) {
+    let k = 1 - (this.stats.get(id)?.damageTaken ?? 0);
     for (const aura of unit.auras.values()) k *= ABILITIES[aura.ability]?.aura?.damageTaken ?? 1;
     return k;
   }
@@ -257,7 +305,7 @@ export class RaidWorld {
     const target = this.unit(targetId);
     if (!target || target.health <= 0) return;
     const { amount: raw, crit = false } = typeof hit === 'number' ? { amount: hit } : hit;
-    let amount = Math.max(1, Math.round(raw * this.damageTaken(target)));
+    let amount = Math.max(1, Math.round(raw * this.damageTaken(target, targetId)));
     const enemy = this.isEnemy(targetId);
     const floor = enemy && ENEMY_KINDS[target.kind].immortal ? 1 : 0;
     amount = Math.min(amount, target.health - floor);
@@ -266,7 +314,10 @@ export class RaidWorld {
 
     if (enemy) {
       const source = this.state.raiders.get(sourceId);
-      if (source) this.addThreat(targetId, sourceId, amount * (CLASSES[source.role].threat) * (ABILITIES[abilityId]?.threat ?? 1));
+      if (source) {
+        const threat = CLASSES[source.role].threat * (1 + this.statsOf(sourceId).threat) * (ABILITIES[abilityId]?.threat ?? 1);
+        this.addThreat(targetId, sourceId, amount * threat);
+      }
       this.brains.get(targetId).lastHit = this.time;
       if (target.health <= 0) this.enemyDied(targetId);
     } else if (target.health <= 0) {
@@ -293,12 +344,13 @@ export class RaidWorld {
     const target = this.unit(targetId);
     if (!target || target.health <= 0) return;
     const spec = ABILITIES[abilityId].aura;
+    const duration = auraDurationFor(this.statsOf(sourceId), abilityId);
     const key = `${abilityId}:${sourceId}`;
     let aura = target.auras.get(key);
     if (aura) {
-      aura.ends = this.time + spec.duration;
+      aura.ends = this.time + duration;
     } else {
-      aura = new Aura({ ability: abilityId, sourceId, ends: this.time + spec.duration });
+      aura = new Aura({ ability: abilityId, sourceId, ends: this.time + duration });
       target.auras.set(key, aura);
     }
     if (spec.every) this.auraTicks.set(aura, this.time + spec.every);
@@ -381,9 +433,10 @@ export class RaidWorld {
     if (raider.castAbility || this.time < (this.nextSwings.get(id) ?? 0)) return;
     if (reach(raider, target) > MELEE_RANGE || !isFacing(raider, target)) return;
     const attack = CLASSES[raider.role].attack;
+    const stats = this.statsOf(id);
     this.nextSwings.set(id, this.time + attack.swing);
-    const hit = this.roll(attack.damage);
-    hit.amount *= this.damageDone(raider);
+    const hit = this.roll(attack.damage, critFor(stats, 'attack'));
+    hit.amount *= this.damageDone(raider) * powerFor(stats, 'attack');
     this.damage(id, raider.targetId, hit, 'attack');
   }
 
@@ -402,8 +455,9 @@ export class RaidWorld {
       const spec = ABILITIES[aura.ability]?.aura;
       let next = this.auraTicks.get(aura);
       while (spec?.every && next !== undefined && next <= this.time + 1e-9 && next <= aura.ends + 1e-9) {
-        if (spec.damage) this.damage(aura.sourceId, id, spec.damage * this.damageDoneBy(aura.sourceId), aura.ability, true);
-        if (spec.heal) this.heal(aura.sourceId, id, spec.heal, aura.ability, true);
+        const power = powerFor(this.statsOf(aura.sourceId), aura.ability);
+        if (spec.damage) this.damage(aura.sourceId, id, spec.damage * this.damageDoneBy(aura.sourceId) * power, aura.ability, true);
+        if (spec.heal) this.heal(aura.sourceId, id, spec.heal * power, aura.ability, true);
         next += spec.every;
         this.auraTicks.set(aura, next);
         if (unit.health <= 0) return; // Died: auras are gone.

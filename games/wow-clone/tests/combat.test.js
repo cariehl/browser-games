@@ -10,18 +10,29 @@ import { ROOM_RAID } from '../shared/constants.js';
 import { GCD, RUN_SPEED, facingToward, isFacing, stepMovement } from '../shared/combat.js';
 import { confine, PILLARS } from '../shared/arena.js';
 import { cleanMove } from '../shared/messages.js';
+import { presetBuild, TALENT_POINTS, talentProblem, TREES } from '../shared/talents.js';
 import { startServer } from '../server/index.js';
 import { RaidState } from '../server/state.js';
 import { RaidWorld } from '../server/world.js';
 
 const TICK = 1 / 20;
 
-/** A world with no enemies; rolls land in the middle and never crit. */
-function makeWorld() {
+/**
+ * A world with no enemies; rolls land in the middle and never crit. Raiders
+ * start ready to fight, with no talents, unless [talents] is false.
+ */
+function makeWorld({ talents = true } = {}) {
   const events = [];
   const state = new RaidState();
   state.time = 0;
   const world = new RaidWorld(state, { emit: (type, data, to) => events.push({ type, data, to }), random: () => 0.5 });
+  if (talents) {
+    const add = world.addRaider.bind(world);
+    world.addRaider = (id, info, spot) => {
+      add(id, info, spot);
+      state.raiders.get(id).talentsChosen = true;
+    };
+  }
   return { world, state, events, errors: () => events.filter((e) => e.type === 'error').map((e) => e.data.text) };
 }
 
@@ -244,6 +255,55 @@ test('the training dummy never dies, and resets when left alone', () => {
   assert.equal(d.threat.size, 0);
 });
 
+test('talent builds must spend every point and respect tiers', () => {
+  for (const role of Object.keys(TREES)) {
+    for (let tree = 0; tree < 3; tree++) assert.equal(talentProblem(role, presetBuild(role, tree)), null, `${role} ${tree}`);
+  }
+  assert.match(talentProblem('dps', {}), /Spend all/);
+  assert.match(talentProblem('dps', { pyroblast: 1, burningSoul: 3, improvedFireBlast: 2, frostbolt: 1, iceArmor: 3 }), /needs 6 points/);
+  assert.match(talentProblem('dps', { burningSoul: 4, iceArmor: 3, frostbolt: 1, arcaneFocus: 2 }), /Bad rank/);
+  assert.match(talentProblem('dps', { strike: 1 }), /Unknown talent/);
+  assert.match(talentProblem('dps', ['burningSoul']), /Pick/);
+  assert.match(talentProblem('dps', { burningSoul: 3, improvedFireBlast: 2, iceArmor: 3, arcaneFocus: 3 }), new RegExp(`Only ${TALENT_POINTS}`));
+});
+
+test('raiders must choose talents before acting, once, and talents change combat', () => {
+  const { world, state, errors } = makeWorld({ talents: false });
+  world.addRaider('d', { name: 'Dee', role: 'dps' }, { x: 0, z: 2, facing: 0 });
+  const dee = state.raiders.get('d');
+  const dummy = world.addEnemy('dummy', { x: 0, z: 0 });
+  world.setTarget('d', dummy);
+  assert.match(world.cast('d', 'fireBlast'), /talents first/);
+  assert.match(world.chooseTalents('d', { burningSoul: 3 }), /Spend all/);
+  assert.equal(world.cast('d', 'frostbolt'), 'Unknown ability.');
+
+  // Frost: Frostbolt and Glacial Spike join the bar; Ice Armor adds 12% health.
+  assert.equal(world.chooseTalents('d', presetBuild('dps', 1)), null);
+  assert.deepEqual([...dee.abilities].slice(5), ['frostbolt', 'glacialSpike']);
+  assert.equal(dee.maxHealth, Math.round(CLASSES.dps.maxHealth * 1.12));
+  assert.match(world.chooseTalents('d', presetBuild('dps', 0)), /already chosen/);
+
+  // Piercing Ice: +15% frost damage on Frostbolt's 500 midpoint.
+  const before = state.enemies.get(dummy).health;
+  assert.equal(world.cast('d', 'frostbolt'), null);
+  run(world, 2.55);
+  assert.equal(before - state.enemies.get(dummy).health, 575);
+  assert.ok(errors().some((e) => /talents first/.test(e)));
+});
+
+test('talents shorten casts and cooldowns', () => {
+  const { world, state } = makeWorld({ talents: false });
+  world.addRaider('d', { name: 'Dee', role: 'dps' }, { x: 0, z: 2, facing: 0 });
+  const dee = state.raiders.get('d');
+  world.setTarget('d', world.addEnemy('dummy', { x: 0, z: 0 }));
+  world.chooseTalents('d', presetBuild('dps', 0)); // Kindling 2, Improved Fire Blast 2.
+  world.cast('d', 'firebolt');
+  assert.ok(Math.abs(dee.castEnd - dee.castStart - 1.5) < 1e-9);
+  run(world, 1.6);
+  world.cast('d', 'fireBlast');
+  assert.ok(Math.abs(dee.cooldowns.get('fireBlast') - state.time - 5) < 1e-9);
+});
+
 let server;
 before(async () => {
   server = await startServer({ port: 0 });
@@ -259,6 +319,12 @@ test('the raid room takes moves, targets and casts over the network', async () =
     await until(() => room.state.raiders?.size === 1 && room.state.enemies?.size === 3);
     const me = room.state.raiders.get(room.sessionId);
     assert.equal(me.health, CLASSES.dps.maxHealth);
+    assert.equal(me.talentsChosen, false);
+    const refused = new Promise((resolve) => room.onMessage('error', resolve));
+    room.send('cast', { ability: 'firebolt' });
+    assert.match((await refused).text, /talents first/);
+    room.send('talents', { picks: presetBuild('dps', 2) });
+    await until(() => me.talentsChosen && me.abilities.length === 6);
 
     // Malformed messages are ignored.
     room.send('move', { forward: 5, strafe: 0, facing: 0 });
