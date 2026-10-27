@@ -34,6 +34,7 @@ export class RaidRoom extends Room {
     this.world = new RaidWorld(this.state, { emit: (type, data, to) => this.tell(type, data, to) });
     for (const spawn of PRACTICE_SPAWNS) this.world.addEnemy(spawn.kind, spawn);
 
+    this.onMessage('talents', (client, data) => this.world.chooseTalents(client.sessionId, data?.picks));
     this.onMessage('move', (client, data) => {
       const input = cleanMove(data);
       if (input) this.world.setInput(client.sessionId, input);

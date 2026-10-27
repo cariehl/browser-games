@@ -7,6 +7,7 @@ import { ABILITIES, CLASSES, isHarmful } from '../../shared/classes.js';
 import { GCD } from '../../shared/combat.js';
 import { ENEMY_KINDS } from '../../shared/enemies.js';
 import { roleCss } from '../../shared/roles.js';
+import { castTimeFor, cooldownFor, pointsInTree, talentStats, TREES } from '../../shared/talents.js';
 import { el } from '../dom.js';
 import { keyLabel } from '../keybinds.js';
 
@@ -21,6 +22,24 @@ function style(node, prop, value) {
 
 function seconds(s) {
   return s >= 10 ? `${Math.ceil(s)}` : s.toFixed(1);
+}
+
+/** A raider's talent picks as a plain object. */
+export function picksOf(raider) {
+  return Object.fromEntries(raider.talents?.entries() ?? []);
+}
+
+/** The tree a raider put most points in ('' before they choose): their spec. */
+function specOf(raider) {
+  if (!raider.talentsChosen) return '';
+  const picks = picksOf(raider);
+  const trees = TREES[raider.role] ?? [];
+  let best = null;
+  for (const [i, tree] of trees.entries()) {
+    const points = pointsInTree(raider.role, picks, i);
+    if (!best || points > best.points) best = { name: tree.name, points };
+  }
+  return best?.name ?? '';
 }
 
 function percent(frac) {
@@ -61,7 +80,7 @@ class UnitFrame {
     this.root.classList.toggle('away', !enemy && !unit.connected);
     this.root.classList.toggle('me', isMe);
     text(this.name, unit.name);
-    text(this.tag, enemy ? (ENEMY_KINDS[unit.kind]?.passive ? 'Dummy' : 'Enemy') : (CLASSES[unit.role]?.name ?? unit.role));
+    text(this.tag, enemy ? (ENEMY_KINDS[unit.kind]?.passive ? 'Dummy' : 'Enemy') : (specOf(unit) || (CLASSES[unit.role]?.name ?? unit.role)));
     style(this.tag, '--role', enemy ? '#7a2e26' : roleCss(unit.role));
     style(this.fill, 'width', percent(unit.health / unit.maxHealth));
     text(this.hp, dead ? 'Dead' : !enemy && !unit.connected ? 'Offline' : `${unit.health} / ${unit.maxHealth}`);
@@ -159,16 +178,20 @@ export class Hud {
     this.root.append(left, this.target.root, this.bar, this.castBar, this.error, this.banner, this.deadPanel, menu, this.help);
   }
 
-  /** Builds the action bar for [role]'s class. */
-  setClass(role) {
-    if (this.role === role) return;
-    this.role = role;
-    this.slots = (CLASSES[role]?.abilities ?? []).map((id, i) => {
+  /** Builds the action bar from [me]'s abilities, with talents in the tooltips. */
+  setAbilities(me) {
+    const picks = picksOf(me);
+    const key = `${[...me.abilities].join()}|${JSON.stringify(picks)}`;
+    if (this.barKey === key) return;
+    this.barKey = key;
+    this.stats = talentStats(me.role, picks);
+    this.slots = [...me.abilities].map((id, i) => {
       const ability = ABILITIES[id];
       const slot = el('button', 'slot');
       slot.style.setProperty('--c', ability.color);
-      const timing = [ability.cast ? `${ability.cast} sec cast` : 'Instant', ability.cooldown ? `${ability.cooldown} sec cooldown` : '']
-        .filter(Boolean).join(', ');
+      const cast = castTimeFor(this.stats, id);
+      const cooldown = cooldownFor(this.stats, id);
+      const timing = [cast ? `${cast} sec cast` : 'Instant', cooldown ? `${cooldown} sec cooldown` : ''].filter(Boolean).join(', ');
       slot.title = `${ability.name}\n${timing}${ability.range ? `, ${ability.range} yd range` : ''}\n${ability.desc}`;
       const icon = el('span', 'icon', ability.icon);
       const key = el('span', 'key');
@@ -205,7 +228,7 @@ export class Hud {
     this.myId = myId;
     const me = state.raiders.get(myId);
     if (!me) return;
-    this.setClass(me.role);
+    this.setAbilities(me);
     const raiders = state.raiders;
     this.player.show(me, { now, enemy: false, isMe: true, raiders });
 
@@ -226,7 +249,7 @@ export class Hud {
     this.deadPanel.hidden = me.health > 0;
 
     const k = (action) => keyLabel(this.keybinds.keyFor(action));
-    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('autorun')} autorun · ${k('targetNext')} or click to target, right-click to attack · ${k('action1')}–${k('action5')} abilities`);
+    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('autorun')} autorun · ${k('targetNext')} or click to target, right-click to attack · ${k('action1')}–${k(`action${Math.max(1, this.slots.length)}`)} abilities`);
   }
 
   updateParty(raiders, myId, targetId, now) {
@@ -252,7 +275,7 @@ export class Hud {
       let left = 0;
       let total = 1;
       const cd = (me.cooldowns.get(s.id) ?? 0) - now;
-      if (cd > 0) [left, total] = [cd, ability.cooldown];
+      if (cd > 0) [left, total] = [cd, cooldownFor(this.stats, s.id) || cd];
       const gcd = me.gcdEnd - now;
       if (ability.gcd !== false && gcd > left) [left, total] = [gcd, GCD];
       style(s.cd, '--sweep', left > 0 ? `${(left / total) * 360}deg` : '0deg');

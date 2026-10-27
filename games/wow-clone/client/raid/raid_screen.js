@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
-import { ABILITIES, CLASSES } from '../../shared/classes.js';
+import { ABILITIES } from '../../shared/classes.js';
 import { distance, isFacing, reach, TAB_RANGE } from '../../shared/combat.js';
 import { show } from '../dom.js';
 import { Keybinds } from '../keybinds.js';
@@ -15,6 +15,8 @@ import { CombatText } from './combat_text.js';
 import { Controls } from './controls.js';
 import { Hud } from './hud.js';
 import { KeybindPanel } from './keybind_panel.js';
+import { Meter } from './meter.js';
+import { TalentPanel } from './talent_panel.js';
 import { UnitView } from './unit_view.js';
 
 /** A press this close to the end of the GCD or a cast waits and goes off when it ends (WoW's spell queue). */
@@ -128,7 +130,7 @@ export function raidScreen(room, canvas) {
       const m = me();
       if (!m) return;
       if (action.startsWith('action')) {
-        const abilityId = CLASSES[m.role]?.abilities[Number(action.slice(6)) - 1];
+        const abilityId = m.abilities[Number(action.slice(6)) - 1];
         if (abilityId) cast(abilityId);
       } else if (action === 'targetNext') {
         targetNextEnemy();
@@ -146,7 +148,10 @@ export function raidScreen(room, canvas) {
     };
 
     const controls = new Controls(room, rig, keybinds, onAction);
-    const panel = new KeybindPanel(keybinds, () => (controls.paused = false));
+    const panel = new KeybindPanel(keybinds, () => (controls.paused = talents.open));
+    // First spawn: no moving or fighting until the talent points are spent.
+    const talents = new TalentPanel((picks) => room.send('talents', { picks }));
+    const meter = new Meter();
     const hud = new Hud(keybinds, {
       cast,
       target: setTarget,
@@ -161,9 +166,9 @@ export function raidScreen(room, canvas) {
         panel.show();
       },
     });
-    // Nameplates and combat text under the HUD, the keybinding panel over it.
+    // Nameplates and combat text under the HUD, the panels over it.
     hud.root.prepend(labels.domElement);
-    hud.root.append(panel.root);
+    hud.root.append(meter.root, talents.root, panel.root);
     show(hud.root);
 
     // As in WoW: left-click a unit to target it; right-click to target it
@@ -199,6 +204,7 @@ export function raidScreen(room, canvas) {
     callbacks.listen('time', (time) => clock.sync(time));
 
     room.onMessage('hit', (hit) => {
+      meter.add(hit, room.state.raiders);
       const mine = hit.source === room.sessionId;
       const onMe = hit.target === room.sessionId;
       const view = views.get(hit.target);
@@ -227,6 +233,13 @@ export function raidScreen(room, canvas) {
       const dt = Math.min(timer.getDelta(), 0.1);
       const now = clock.now();
       const m = me();
+      if (m && !m.talentsChosen) {
+        talents.show(m.role);
+        controls.paused = true;
+      } else if (m && talents.open) {
+        talents.hide();
+        controls.paused = panel.open;
+      }
       if (m) controls.update(dt, m);
       if (queued && m) {
         if (now >= queued.at && !m.castAbility) {
@@ -245,6 +258,7 @@ export function raidScreen(room, canvas) {
       if (mine) rig.target.set(mine.root.position.x, 1.4, mine.root.position.z);
       rig.update();
       combatText.update(dt);
+      meter.render();
       if (room.state.raiders) hud.update({ state: room.state, myId: room.sessionId, targetId, now, blocker });
       renderer.render(scene, rig.camera);
       labels.render(scene, rig.camera);
