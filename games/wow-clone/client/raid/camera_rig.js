@@ -4,15 +4,15 @@
 import * as THREE from 'three';
 
 export class CameraRig {
-  readonly camera: THREE.PerspectiveCamera;
   /** What the camera looks at (the player's character), in world space. */
-  readonly target = new THREE.Vector3();
+  target = new THREE.Vector3();
   yaw = 0;
   pitch = 0.45;
   distance = 14;
-  private dragging = false;
+  dragging = false;
 
-  constructor(private canvas: HTMLCanvasElement) {
+  constructor(canvas) {
+    this.canvas = canvas;
     this.camera = new THREE.PerspectiveCamera(60, 1, 0.1, 500);
     canvas.addEventListener('pointerdown', this.onDown);
     canvas.addEventListener('wheel', this.onWheel, { passive: false });
@@ -21,7 +21,7 @@ export class CameraRig {
     window.addEventListener('pointermove', this.onMove);
   }
 
-  resize(width: number, height: number) {
+  resize(width, height) {
     this.camera.aspect = width / height;
     this.camera.updateProjectionMatrix();
   }
@@ -44,25 +44,25 @@ export class CameraRig {
     window.removeEventListener('pointermove', this.onMove);
   }
 
-  private onDown = (e: PointerEvent) => {
+  onDown = (e) => {
     this.dragging = true;
     this.canvas.setPointerCapture(e.pointerId);
   };
 
-  private onUp = () => {
+  onUp = () => {
     this.dragging = false;
   };
 
-  private onMove = (e: PointerEvent) => {
+  onMove = (e) => {
     if (!this.dragging) return;
     this.yaw -= e.movementX * 0.005;
     this.pitch = THREE.MathUtils.clamp(this.pitch + e.movementY * 0.005, 0.05, 1.4);
   };
 
-  private onWheel = (e: WheelEvent) => {
+  onWheel = (e) => {
     e.preventDefault();
     this.distance = THREE.MathUtils.clamp(this.distance * Math.exp(e.deltaY * 0.001), 4, 40);
   };
 
-  private onContextMenu = (e: Event) => e.preventDefault();
+  onContextMenu = (e) => e.preventDefault();
 }

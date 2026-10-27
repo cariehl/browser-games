@@ -2,14 +2,14 @@
 // Resolves with a seat reservation for the raid once the leader starts, or
 // null if the player leaves.
 
-import { Callbacks, type Room, type SeatReservation } from '@colyseus/sdk';
-import { PARTY_MAX } from '../../../shared/constants';
-import { startBlocker } from '../../../shared/messages';
-import { ROLES, ROLE_INFO, type Role } from '../../../shared/roles';
-import type { LobbyState } from '../../../shared/state';
-import { el, show } from '../dom';
+import { PARTY_MAX } from '../../shared/constants.js';
+import { startBlocker } from '../../shared/messages.js';
+import { ROLES, ROLE_INFO, roleCss } from '../../shared/roles.js';
+import { el, show } from '../dom.js';
+import { Callbacks } from '../net.js';
 
-export function lobbyScreen(room: Room<any, LobbyState>, onRole: (role: Role) => void): Promise<SeatReservation | null> {
+/** [room]: the joined lobby room. [onRole]: called with a role the player picks. */
+export function lobbyScreen(room, onRole) {
   return new Promise((resolve) => {
     const panel = el('div', 'panel lobby');
     const title = el('h1', '', 'Lobby');
@@ -20,7 +20,7 @@ export function lobbyScreen(room: Room<any, LobbyState>, onRole: (role: Role) =>
     const roleRow = el('div', 'roles');
     const roleButtons = ROLES.map((r) => {
       const b = el('button', 'role', ROLE_INFO[r].label);
-      b.style.setProperty('--role', hex(ROLE_INFO[r].color));
+      b.style.setProperty('--role', roleCss(r));
       b.onclick = () => {
         room.send('setRole', { role: r });
         onRole(r);
@@ -29,6 +29,7 @@ export function lobbyScreen(room: Room<any, LobbyState>, onRole: (role: Role) =>
     });
     roleRow.append(...roleButtons);
 
+    const me = () => room.state.players.get(room.sessionId);
     const ready = el('button', '', 'Ready');
     ready.onclick = () => room.send('setReady', { ready: !me()?.ready });
     const start = el('button', 'primary', 'Start raid');
@@ -44,16 +45,14 @@ export function lobbyScreen(room: Room<any, LobbyState>, onRole: (role: Role) =>
     panel.append(title, list, roleRow, actions, status, notice);
     show(panel);
 
-    const me = () => room.state.players.get(room.sessionId);
-
     const render = () => {
       if (!room.state.players) return; // The first state hasn't arrived yet.
       const players = [...room.state.players.entries()];
       title.textContent = `Lobby (${players.length}/${PARTY_MAX})`;
       list.replaceChildren(...players.map(([id, p]) => {
         const li = el('li');
-        const role = el('span', 'tag', ROLE_INFO[p.role as Role]?.label ?? p.role);
-        role.style.setProperty('--role', hex(ROLE_INFO[p.role as Role]?.color ?? 0x888888));
+        const role = el('span', 'tag', ROLE_INFO[p.role]?.label ?? p.role);
+        role.style.setProperty('--role', roleCss(p.role));
         li.append(role, el('span', 'name', p.name + (id === room.sessionId ? ' (you)' : '')));
         if (id === room.state.leaderId) li.append(el('span', 'muted small', 'leader'));
         li.append(el('span', p.ready ? 'ready yes' : 'ready', p.ready ? 'Ready' : 'Not ready'));
@@ -80,18 +79,14 @@ export function lobbyScreen(room: Room<any, LobbyState>, onRole: (role: Role) =>
     callbacks.listen('launching', render);
     render();
 
-    room.onMessage('notice', ({ text }: { text: string }) => {
+    room.onMessage('notice', ({ text }) => {
       notice.textContent = text;
     });
-    room.onMessage('launch', ({ reservation }: { reservation: SeatReservation }) => {
+    room.onMessage('launch', ({ reservation }) => {
       room.removeAllListeners();
       room.leave();
       resolve(reservation);
     });
     room.onLeave(() => resolve(null));
   });
-}
-
-function hex(color: number) {
-  return `#${color.toString(16).padStart(6, '0')}`;
 }

@@ -1,12 +1,12 @@
 // The first screen: a name and a role, then into a lobby.
 
-import { NAME_MAX } from '../../../shared/constants';
-import { ROLES, ROLE_INFO, type Role } from '../../../shared/roles';
-import { el, show } from '../dom';
-import { endpoint, savedProfile } from '../net';
+import { NAME_MAX } from '../../shared/constants.js';
+import { ROLES, ROLE_INFO, roleCss } from '../../shared/roles.js';
+import { el, show } from '../dom.js';
+import { savedProfile } from '../net.js';
 
-/** Shows the join form; resolves with what the player picked. [error] says why the last try failed. */
-export function joinScreen(error = ''): Promise<{ name: string; role: Role }> {
+/** Shows the join form; resolves with { name, role }. [error] says why the last try failed. */
+export function joinScreen(error = '') {
   return new Promise((resolve) => {
     const saved = savedProfile();
     const form = el('form', 'panel join');
@@ -18,12 +18,12 @@ export function joinScreen(error = ''): Promise<{ name: string; role: Role }> {
     Object.assign(name, { maxLength: NAME_MAX, value: saved.name, autocomplete: 'nickname', spellcheck: false, required: true });
     nameLabel.append(name);
 
-    let role: Role = saved.role;
+    let role = saved.role;
     const roles = el('div', 'roles');
     const buttons = ROLES.map((r) => {
       const b = el('button', 'role', ROLE_INFO[r].label);
       b.type = 'button';
-      b.style.setProperty('--role', `#${ROLE_INFO[r].color.toString(16).padStart(6, '0')}`);
+      b.style.setProperty('--role', roleCss(r));
       b.onclick = () => {
         role = r;
         for (const other of buttons) other.classList.toggle('picked', other === b);
@@ -34,7 +34,7 @@ export function joinScreen(error = ''): Promise<{ name: string; role: Role }> {
     roles.append(...buttons);
 
     const info = el('p', 'muted small');
-    fetch(`${endpoint}/server-info`).then((r) => r.json()).then((s: { raids: number }) => {
+    fetch('/server-info').then((r) => r.json()).then((s) => {
       info.textContent = s.raids ? `${s.raids} raid${s.raids === 1 ? '' : 's'} in progress` : '';
     }).catch(() => {});
 

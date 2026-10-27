@@ -2,18 +2,16 @@
 // A reload during a raid rejoins it (the server holds the character for
 // RECONNECT_SECONDS).
 
-import type { Room } from '@colyseus/sdk';
-import { ROOM_LOBBY } from '../../shared/constants';
-import type { LobbyState, RaidState } from '../../shared/state';
-import { client, errorText, raidToken, rememberProfile, savedProfile } from './net';
-import { joinScreen } from './screens/join_screen';
-import { lobbyScreen } from './screens/lobby_screen';
-import { raidScreen } from './raid/raid_screen';
-import './style.css';
+import { ROOM_LOBBY } from '../shared/constants.js';
+import { client, errorText, raidToken, rememberProfile, savedProfile } from './net.js';
+import { joinScreen } from './screens/join_screen.js';
+import { lobbyScreen } from './screens/lobby_screen.js';
+import { raidScreen } from './raid/raid_screen.js';
 
-const canvas = document.getElementById('scene') as HTMLCanvasElement;
+const canvas = document.getElementById('scene');
 
-async function playRaid(room: Room<any, RaidState>) {
+/** Plays a joined raid room until the player leaves. Resolves to an error to show, or ''. */
+async function playRaid(room) {
   raidToken.set(room.reconnectionToken);
   room.onReconnect(() => raidToken.set(room.reconnectionToken));
   const { lost } = await raidScreen(room, canvas);
@@ -23,13 +21,13 @@ async function playRaid(room: Room<any, RaidState>) {
 
 async function main() {
   let error = '';
-  let profile: ReturnType<typeof savedProfile> | null = null;
+  let profile = null;
 
   // Back from a reload mid-raid? Afterwards, straight on to a lobby as before.
   const token = raidToken.get();
   if (token) {
     try {
-      error = await playRaid(await client.reconnect<RaidState>(token));
+      error = await playRaid(await client.reconnect(token));
       if (!error) profile = savedProfile();
     } catch {
       raidToken.set(null);
@@ -39,9 +37,9 @@ async function main() {
   for (;;) {
     profile ??= await joinScreen(error);
     error = '';
-    let lobby: Room<any, LobbyState>;
+    let lobby;
     try {
-      lobby = await client.joinOrCreate<LobbyState>(ROOM_LOBBY, profile);
+      lobby = await client.joinOrCreate(ROOM_LOBBY, profile);
     } catch (e) {
       error = errorText(e);
       profile = null;
@@ -58,7 +56,7 @@ async function main() {
       continue;
     }
     try {
-      error = await playRaid(await client.consumeSeatReservation<RaidState>(reservation));
+      error = await playRaid(await client.consumeSeatReservation(reservation));
     } catch (e) {
       error = errorText(e);
     }

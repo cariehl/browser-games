@@ -4,7 +4,7 @@
 
 import * as THREE from 'three';
 
-export function buildArena(): THREE.Group {
+export function buildArena() {
   const arena = new THREE.Group();
 
   const stone = new THREE.MeshStandardMaterial({ color: 0x5b5a63, roughness: 0.95 });
