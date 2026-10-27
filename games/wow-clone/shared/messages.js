@@ -16,6 +16,7 @@
 //   'move'      { forward, strafe, facing }  movement keys held (-1, 0, 1) and where they look
 //   'target'    { id }                       select a unit ('' clears)
 //   'cast'      { ability }                  use an ability on the current target
+//   'attack'    { on }                       start (true) or stop auto-attacking the current target
 //   'stopCast'  {}
 //   'release'   {}                           respawn at the entrance when dead
 // Raid, server -> client:

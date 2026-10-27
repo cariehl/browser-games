@@ -8,7 +8,7 @@
 // It knows nothing about the network, so tests can drive it directly.
 
 import { ABILITIES, CLASSES, CRIT_CHANCE, CRIT_MULTIPLIER, HEAL_THREAT, hasAbility } from '../shared/classes.js';
-import { distance, facingToward, GCD, isFacing, isMoving, radiusOf, reach, stepMovement } from '../shared/combat.js';
+import { distance, facingToward, GCD, isFacing, isMoving, MELEE_RANGE, radiusOf, reach, stepMovement } from '../shared/combat.js';
 import { confine } from '../shared/arena.js';
 import { ENEMY_KINDS } from '../shared/enemies.js';
 import { Aura, Enemy, Raider } from './state.js';
@@ -29,6 +29,8 @@ export class RaidWorld {
   inputs = new Map();
   /** The target a raider's current cast will land on, by raider id. */
   castTargets = new Map();
+  /** When each auto-attacking raider can next swing, by raider id. */
+  nextSwings = new Map();
   /** Next tick time for each ticking aura. */
   auraTicks = new WeakMap();
   /** Server-only enemy state by enemy id: home, swing timer, taunt, respawn. */
@@ -62,7 +64,7 @@ export class RaidWorld {
     const maxHealth = CLASSES[role].maxHealth;
     this.state.raiders.set(id, new Raider({
       name, role, ...spot, health: maxHealth, maxHealth, targetId: '',
-      castAbility: '', castStart: 0, castEnd: 0, connected: true, gcdEnd: 0, warp: 0,
+      castAbility: '', castStart: 0, castEnd: 0, connected: true, attacking: false, gcdEnd: 0, warp: 0,
     }));
   }
 
@@ -70,6 +72,7 @@ export class RaidWorld {
     this.state.raiders.delete(id);
     this.inputs.delete(id);
     this.castTargets.delete(id);
+    this.nextSwings.delete(id);
     this.forget(id);
   }
 
@@ -100,7 +103,23 @@ export class RaidWorld {
   setTarget(id, targetId) {
     const raider = this.state.raiders.get(id);
     if (!raider || (targetId && !this.unit(targetId))) return;
+    // A new target ends auto-attack on the old one.
+    if (targetId !== raider.targetId) raider.attacking = false;
     raider.targetId = targetId;
+  }
+
+  /** Starts or stops auto-attacking the current target. */
+  setAttack(id, on) {
+    const raider = this.state.raiders.get(id);
+    if (!raider) return;
+    if (!on) {
+      raider.attacking = false;
+      return;
+    }
+    const target = this.state.enemies.get(raider.targetId);
+    if (raider.health <= 0) return this.emit('error', { text: 'You are dead.' }, id);
+    if (!target || target.health <= 0) return this.emit('error', { text: 'You have no target.' }, id);
+    raider.attacking = true;
   }
 
   stopCast(id) {
@@ -189,6 +208,8 @@ export class RaidWorld {
     const raider = this.state.raiders.get(id);
     const ability = ABILITIES[abilityId];
     if (ability.cooldown) raider.cooldowns.set(abilityId, this.time + ability.cooldown);
+    // Melee abilities start auto-attack, as in WoW.
+    if (ability.target === 'enemy' && ability.range === MELEE_RANGE) raider.attacking = true;
 
     let targets = [targetId];
     if (ability.target === 'enemiesAround' || ability.target === 'alliesAround') {
@@ -308,6 +329,7 @@ export class RaidWorld {
     const raider = this.state.raiders.get(id);
     raider.health = 0;
     raider.castAbility = '';
+    raider.attacking = false;
     raider.auras.clear();
     this.castTargets.delete(id);
     this.inputs.delete(id);
@@ -343,9 +365,26 @@ export class RaidWorld {
         raider.z = pos.z;
       }
       if (raider.castAbility && this.time >= raider.castEnd) this.finishCast(id, raider);
+      if (raider.attacking) this.autoAttack(id, raider);
     }
     for (const [id, unit] of [...this.state.raiders.entries(), ...this.state.enemies.entries()]) this.tickAuras(id, unit);
     for (const [id, enemy] of [...this.state.enemies.entries()]) this.think(id, enemy, dt);
+  }
+
+  /** Swings at the target when the swing timer allows and it's in reach and in front. Casting holds the swing. */
+  autoAttack(id, raider) {
+    const target = this.state.enemies.get(raider.targetId);
+    if (!target || target.health <= 0) {
+      raider.attacking = false;
+      return;
+    }
+    if (raider.castAbility || this.time < (this.nextSwings.get(id) ?? 0)) return;
+    if (reach(raider, target) > MELEE_RANGE || !isFacing(raider, target)) return;
+    const attack = CLASSES[raider.role].attack;
+    this.nextSwings.set(id, this.time + attack.swing);
+    const hit = this.roll(attack.damage);
+    hit.amount *= this.damageDone(raider);
+    this.damage(id, raider.targetId, hit, 'attack');
   }
 
   finishCast(id, raider) {

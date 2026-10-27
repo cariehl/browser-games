@@ -106,19 +106,24 @@ export const ABILITIES = {
 /**
  *   maxHealth  starting and maximum health
  *   threat     multiplier on the threat their damage causes
+ *   attack     auto-attack (right-click an enemy): a melee hit for a roll
+ *              in [damage] every [swing] seconds while in range and facing
  *   abilities  in action bar order
  */
 export const CLASSES = {
   tank: {
     name: 'Guardian', maxHealth: 7000, threat: 3,
+    attack: { swing: 2, damage: [90, 110] },
     abilities: ['strike', 'shieldSlam', 'thunderClap', 'taunt', 'shieldWall'],
   },
   healer: {
     name: 'Cleric', maxHealth: 4500, threat: 1,
+    attack: { swing: 2, damage: [30, 40] },
     abilities: ['smite', 'flashHeal', 'renew', 'holyWord', 'circleOfHealing'],
   },
   dps: {
     name: 'Sorcerer', maxHealth: 4500, threat: 1,
+    attack: { swing: 2, damage: [30, 40] },
     abilities: ['firebolt', 'fireBlast', 'ignite', 'arcaneExplosion', 'arcanePower'],
   },
 };

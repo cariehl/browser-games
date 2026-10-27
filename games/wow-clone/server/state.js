@@ -52,6 +52,8 @@ export const Raider = schema({
   role: t.string(),
   /** False while their connection is down and the server waits for them. */
   connected: t.boolean(),
+  /** Auto-attacking their target (started by right-clicking an enemy or a melee ability). */
+  attacking: t.boolean(),
   /** When the global cooldown ends. */
   gcdEnd: t.float64(),
   /** When each ability (by id) is ready again; missing means ready. */

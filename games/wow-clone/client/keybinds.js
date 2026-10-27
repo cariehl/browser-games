@@ -1,5 +1,6 @@
 // Rebindable keys, saved in the browser. Keys are KeyboardEvent.code values,
-// so a binding follows the key's position (W is Z on an AZERTY keyboard).
+// so a binding follows the key's position (W is Z on an AZERTY keyboard),
+// or 'Mouse3' (middle), 'Mouse4' and 'Mouse5' (side) for mouse buttons.
 
 import { loadSetting, saveSetting } from './net.js';
 
@@ -13,6 +14,7 @@ export const ACTIONS = [
   { id: 'turnRight', label: 'Turn right', key: 'KeyD' },
   { id: 'strafeLeft', label: 'Strafe left', key: 'KeyQ' },
   { id: 'strafeRight', label: 'Strafe right', key: 'KeyE' },
+  { id: 'autorun', label: 'Autorun', key: 'Mouse3' },
   { id: 'action1', label: 'Action button 1', key: 'Digit1' },
   { id: 'action2', label: 'Action button 2', key: 'Digit2' },
   { id: 'action3', label: 'Action button 3', key: 'Digit3' },
@@ -38,6 +40,8 @@ export function keyLabel(code) {
   if (code.startsWith('Key')) return code.slice(3);
   if (code.startsWith('Digit')) return code.slice(5);
   if (code.startsWith('Numpad')) return `N${code.slice(6)}`;
+  if (code === 'Mouse3') return 'Middle';
+  if (code.startsWith('Mouse')) return `M${code.slice(5)}`;
   const names = {
     Escape: 'Esc', ArrowUp: '↑', ArrowDown: '↓', ArrowLeft: '←', ArrowRight: '→', Backquote: '`',
     Minus: '-', Equal: '=', BracketLeft: '[', BracketRight: ']', Semicolon: ';', Quote: "'",

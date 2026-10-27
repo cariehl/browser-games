@@ -212,6 +212,7 @@ export class Hud {
     const enemy = state.enemies.get(targetId);
     const target = enemy ?? raiders.get(targetId) ?? null;
     this.target.show(target, { now, enemy: !!enemy, isMe: targetId === myId, raiders });
+    this.target.root.classList.toggle('attacking', !!enemy && me.attacking);
 
     this.updateParty(raiders, myId, targetId, now);
     this.updateBar(me, now, blocker);
@@ -225,7 +226,7 @@ export class Hud {
     this.deadPanel.hidden = me.health > 0;
 
     const k = (action) => keyLabel(this.keybinds.keyFor(action));
-    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('targetNext')} or click to target · ${k('action1')}–${k('action5')} abilities`);
+    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('autorun')} autorun · ${k('targetNext')} or click to target, right-click to attack · ${k('action1')}–${k('action5')} abilities`);
   }
 
   updateParty(raiders, myId, targetId, now) {

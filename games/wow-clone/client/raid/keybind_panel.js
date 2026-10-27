@@ -1,5 +1,6 @@
-// The keybinding panel: click an action's key, then press the new key.
-// Esc cancels a rebind; a key already in use moves to the new action.
+// The keybinding panel: click an action's key, then press the new key (or
+// the middle or a side mouse button). Esc cancels a rebind; a key already in
+// use moves to the new action.
 
 import { el } from '../dom.js';
 import { ACTIONS, keyLabel } from '../keybinds.js';
@@ -21,7 +22,7 @@ export class KeybindPanel {
     close.onclick = () => this.close();
     const actions = el('div', 'actions');
     actions.append(reset, close);
-    this.root.append(el('h1', '', 'Keybindings'), el('p', 'muted small', 'Click a key, then press the new one. Esc cancels.'), this.list, actions);
+    this.root.append(el('h1', '', 'Keybindings'), el('p', 'muted small', 'Click a key, then press the new key or mouse button. Esc cancels.'), this.list, actions);
   }
 
   get open() {
@@ -61,12 +62,25 @@ export class KeybindPanel {
       if (e.code !== 'Escape') this.keybinds.set(actionId, e.code);
       this.render();
     };
+    // Middle (1) and side (3, 4) buttons; left and right stay for clicking.
+    this.onButton = (e) => {
+      const code = { 1: 'Mouse3', 3: 'Mouse4', 4: 'Mouse5' }[e.button];
+      if (!code) return;
+      e.preventDefault();
+      e.stopPropagation();
+      this.stopListening();
+      this.keybinds.set(actionId, code);
+      this.render();
+    };
     window.addEventListener('keydown', this.onKey, { capture: true });
+    window.addEventListener('mousedown', this.onButton, { capture: true });
   }
 
   stopListening() {
     if (this.onKey) window.removeEventListener('keydown', this.onKey, { capture: true });
+    if (this.onButton) window.removeEventListener('mousedown', this.onButton, { capture: true });
     this.onKey = null;
+    this.onButton = null;
   }
 
   dispose() {

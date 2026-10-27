@@ -1,7 +1,8 @@
 // The player's own character: keys and mouse become movement input, which
 // is sent to the server and also applied here at once (prediction), so moving
 // feels immediate. The server's position wins: the prediction is pulled
-// toward it whenever the two drift apart.
+// toward it whenever the two drift apart. Bound mouse buttons (from the
+// CameraRig) work like keys.
 
 import { isMoving, stepMovement } from '../../shared/combat.js';
 import { MOVEMENT } from '../keybinds.js';
@@ -18,6 +19,8 @@ function wrap(angle) {
 export class Controls {
   /** Movement actions whose keys are down. */
   held = new Set();
+  /** Running forward on its own until cancelled. */
+  autorun = false;
   input = { forward: 0, strafe: 0 };
   /** The predicted position and the facing the player chose. */
   pos = null;
@@ -47,19 +50,35 @@ export class Controls {
 
   onKeyDown = (e) => {
     if (this.paused || e.target instanceof HTMLInputElement) return;
-    const action = this.keybinds.actionFor(e.code);
-    if (!action) return;
+    if (!this.keybinds.actionFor(e.code)) return;
     e.preventDefault();
-    if (MOVEMENT.has(action)) this.held.add(action);
-    else if (!e.repeat) this.onAction(action);
+    if (!e.repeat) this.press(e.code);
   };
 
-  onKeyUp = (e) => {
-    const action = this.keybinds.actionFor(e.code);
-    if (action) this.held.delete(action);
-  };
+  onKeyUp = (e) => this.release(e.code);
 
   onBlur = () => this.held.clear();
+
+  /** A key or mouse button [code] went down. */
+  press(code) {
+    if (this.paused) return;
+    const action = this.keybinds.actionFor(code);
+    if (!action) return;
+    if (MOVEMENT.has(action)) {
+      this.held.add(action);
+      // Moving forward or back yourself takes over from autorun.
+      if (action === 'forward' || action === 'back') this.autorun = false;
+    } else if (action === 'autorun') {
+      this.autorun = !this.autorun;
+    } else {
+      this.onAction(action);
+    }
+  }
+
+  release(code) {
+    const action = this.keybinds.actionFor(code);
+    if (action) this.held.delete(action);
+  }
 
   /** Steps the player's character by [dt] seconds. [me]: their synced Raider. */
   update(dt, me) {
@@ -82,7 +101,12 @@ export class Controls {
       turn = 0;
       this.facing = wrap(this.rig.yaw);
     }
-    if (this.rig.running) forward = 1;
+    if (this.autorun && !forward) forward = 1;
+    if (this.rig.running) {
+      forward = 1;
+      this.autorun = false;
+    }
+    if (!alive) this.autorun = false;
     if (!alive || this.paused) forward = strafe = turn = 0;
     this.facing = wrap(this.facing + turn * TURN_SPEED * dt);
     this.input = { forward, strafe };
