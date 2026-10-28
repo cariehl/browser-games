@@ -137,6 +137,8 @@ button.quiet { background: transparent; }
 .slot.cooling .icon { opacity: 0.3; }
 .slot.cooling .key { opacity: 0.5; }
 .slot.pressed { animation: press 0.25s; }
+.action-bar.placing .slot { cursor: copy; }
+.slot.held { transform: translateY(-6px); border-color: var(--gold); box-shadow: 0 6px 12px #000a; opacity: 0.85; }
 @keyframes press { from { box-shadow: 0 0 0 3px var(--gold); } to { box-shadow: 0 0 0 0 transparent; } }
 
 .cast-bar {

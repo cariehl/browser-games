@@ -124,7 +124,7 @@ export function raidScreen(room, canvas) {
       const m = me();
       if (!m) return;
       if (action.startsWith('action')) {
-        const abilityId = m.abilities[Number(action.slice(6)) - 1];
+        const abilityId = hud.abilityAt(Number(action.slice(6)) - 1);
         if (abilityId) cast(abilityId);
       } else if (action === 'targetNext') {
         targetNextEnemy();
@@ -135,6 +135,7 @@ export function raidScreen(room, canvas) {
         const id = others[Number(action.slice(11)) - 1];
         if (id) setTarget(id);
       } else if (action === 'clear') {
+        if (hud.drop()) return;
         if (m.queued || m.castAbility) room.send('stopCast', {});
         else setTarget('');
       }
@@ -219,6 +220,11 @@ export function raidScreen(room, canvas) {
     };
     window.addEventListener('resize', resize);
     resize();
+    // A click anywhere but the action bar puts down a picked-up ability.
+    const putDown = (e) => {
+      if (!e.target.closest?.('.slot')) hud.drop();
+    };
+    window.addEventListener('mousedown', putDown, { capture: true });
 
     const timer = new THREE.Timer();
     renderer.setAnimationLoop(() => {
@@ -255,6 +261,7 @@ export function raidScreen(room, canvas) {
       done = true;
       renderer.setAnimationLoop(null);
       window.removeEventListener('resize', resize);
+      window.removeEventListener('mousedown', putDown, { capture: true });
       rig.dispose();
       controls.dispose();
       panel.dispose();
