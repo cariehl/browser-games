@@ -16,9 +16,10 @@
 //   'talents'   { picks }                    spend talent points ({ talentId: rank }), once per raid
 //   'move'      { forward, strafe, facing }  movement keys held (-1, 0, 1) and where they look
 //   'target'    { id }                       select a unit ('' clears)
-//   'cast'      { ability }                  use an ability on the current target
+//   'cast'      { ability }                  use an ability on the current target (queued if nearly ready)
 //   'attack'    { on }                       start (true) or stop auto-attacking the current target
-//   'stopCast'  {}
+//   'jump'      {}                           jump (stops a cast)
+//   'stopCast'  {}                           drop the queued ability, or else stop casting
 //   'release'   {}                           respawn at the entrance when dead
 // Raid, server -> client:
 //   'hit'       { source, target, ability, amount, heal, crit, tick }  damage or healing done

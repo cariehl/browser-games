@@ -111,8 +111,13 @@ export class UnitView {
     this.ringMaterial.color.set(this.enemy ? 0xe0503c : 0x5cd17a);
   }
 
-  /** Eases toward [pose] ({ x, z, facing }: the server's, or the prediction); [dt] in seconds. */
-  update(dt, pose = this.unit) {
+  /**
+   * Eases toward [pose] ({ x, z, facing }: the server's, or the prediction),
+   * [height] off the ground (jumping); [dt] in seconds.
+   */
+  update(dt, pose = this.unit, height = 0) {
+    this.root.position.y = height;
+    this.ring.position.y = 0.05 - height; // The selection ring stays on the floor.
     const k = 1 - Math.exp(-dt * 15);
     this.root.position.x += (pose.x - this.root.position.x) * k;
     this.root.position.z += (pose.z - this.root.position.z) * k;

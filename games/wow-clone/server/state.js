@@ -64,6 +64,10 @@ export const Raider = schema({
   gcdEnd: t.float64(),
   /** When each ability (by id) is ready again; missing means ready. */
   cooldowns: t.map('float64'),
+  /** When their last jump started (RaidState.time); see jumpHeight in shared/combat.js. */
+  jumpStart: t.float64(),
+  /** The ability queued to go off when the GCD, cast or its cooldown ends (QUEUE_WINDOW); '' if none. */
+  queued: t.string(),
   /** Counts server teleports (spawn, release), so the client snaps instead of predicting. */
   warp: t.uint16(),
 }, 'Raider');

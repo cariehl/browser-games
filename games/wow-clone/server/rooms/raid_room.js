@@ -50,7 +50,8 @@ export class RaidRoom extends Room {
     this.onMessage('attack', (client, data) => {
       if (typeof data?.on === 'boolean') this.world.setAttack(client.sessionId, data.on);
     });
-    this.onMessage('stopCast', (client) => this.world.stopCast(client.sessionId));
+    this.onMessage('jump', (client) => this.world.jump(client.sessionId));
+    this.onMessage('stopCast', (client) => this.world.cancel(client.sessionId));
     this.onMessage('release', (client) => {
       const raider = this.state.raiders.get(client.sessionId);
       if (raider) this.world.release(client.sessionId, this.spawnFor(raider.name));

@@ -7,7 +7,7 @@ import { Client } from '@colyseus/sdk';
 import { matchMaker } from '@colyseus/core';
 import { ABILITIES, CLASSES } from '../shared/classes.js';
 import { ROOM_RAID } from '../shared/constants.js';
-import { GCD, RUN_SPEED, facingToward, isFacing, stepMovement } from '../shared/combat.js';
+import { GCD, JUMP_SECONDS, jumpHeight, QUEUE_WINDOW, RUN_SPEED, facingToward, isFacing, stepMovement } from '../shared/combat.js';
 import { confine, PILLARS } from '../shared/arena.js';
 import { cleanMove } from '../shared/messages.js';
 import { presetBuild, TALENT_POINTS, talentProblem, TREES } from '../shared/talents.js';
@@ -119,6 +119,77 @@ test('abilities check target, range, facing, the GCD and cooldowns', () => {
   run(world, 6);
   assert.equal(world.cast('t', 'shieldSlam'), null);
   assert.ok(errors().length >= 5);
+});
+
+test('a press near the end of the GCD, a cast or a cooldown queues and goes off when ready', () => {
+  const { world, state, errors } = makeWorld();
+  world.addRaider('t', { name: 'Tan', role: 'tank' }, { x: 0, z: 2, facing: 0 });
+  const dummy = world.addEnemy('dummy', { x: 0, z: 0 });
+  world.setTarget('t', dummy);
+  place(world, 't', 0, 2, dummy);
+  const tank = state.raiders.get('t');
+  const health = () => state.enemies.get(dummy).health;
+
+  assert.equal(world.cast('t', 'shieldSlam'), null);
+  // Too early: refused, not queued.
+  assert.match(world.cast('t', 'strike'), /Not ready/);
+  run(world, GCD - QUEUE_WINDOW + 0.05);
+  assert.equal(world.cast('t', 'strike'), null);
+  assert.equal(tank.queued, 'strike');
+  // A later press replaces it.
+  assert.equal(world.cast('t', 'thunderClap'), null);
+  assert.equal(tank.queued, 'thunderClap');
+  const before = health();
+  run(world, QUEUE_WINDOW - 0.15);
+  assert.equal(tank.queued, 'thunderClap');
+  assert.equal(health(), before);
+  run(world, 0.15);
+  assert.equal(tank.queued, '');
+  assert.ok(health() < before, 'the queued ability went off');
+  assert.ok(tank.gcdEnd > state.time + GCD - 0.1, 'and started a new GCD');
+
+  // Esc (stopCast) drops the queue.
+  run(world, GCD - 0.5);
+  world.cast('t', 'strike');
+  assert.equal(tank.queued, 'strike');
+  world.cancel('t');
+  assert.equal(tank.queued, '');
+  run(world, 1);
+  assert.deepEqual(errors(), ['Not ready yet.']);
+});
+
+test('jumping stops a cast, and a cast pressed in the air waits for the landing', () => {
+  const { world, state, errors } = makeWorld();
+  world.addRaider('h', { name: 'Hea', role: 'healer' }, { x: 0, z: 10, facing: 0 });
+  const healer = state.raiders.get('h');
+  assert.equal(jumpHeight(-1), 0);
+  assert.ok(jumpHeight(JUMP_SECONDS / 2) > 1);
+  assert.equal(jumpHeight(JUMP_SECONDS), 0);
+
+  world.cast('h', 'flashHeal');
+  assert.equal(healer.castAbility, 'flashHeal');
+  world.jump('h');
+  assert.equal(healer.castAbility, '');
+  assert.equal(healer.jumpStart, state.time);
+  // No double jump.
+  run(world, 0.2);
+  const start = healer.jumpStart;
+  world.jump('h');
+  assert.equal(healer.jumpStart, start);
+
+  // Instant spells work in the air; a cast queues for the landing.
+  run(world, GCD);
+  world.jump('h');
+  assert.equal(world.cast('h', 'renew'), null);
+  assert.ok(healer.auras.size > 0);
+  run(world, GCD - 0.5);
+  world.jump('h');
+  run(world, 0.1);
+  assert.equal(world.cast('h', 'flashHeal'), null);
+  assert.equal(healer.queued, 'flashHeal');
+  run(world, JUMP_SECONDS);
+  assert.equal(healer.castAbility, 'flashHeal');
+  assert.deepEqual(errors(), []);
 });
 
 test('a cast lands when it finishes, and a friendly spell with no friendly target heals yourself', () => {

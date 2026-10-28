@@ -14,6 +14,7 @@ export const ACTIONS = [
   { id: 'turnRight', label: 'Turn right', key: 'KeyD' },
   { id: 'strafeLeft', label: 'Strafe left', key: 'KeyQ' },
   { id: 'strafeRight', label: 'Strafe right', key: 'KeyE' },
+  { id: 'jump', label: 'Jump', key: 'Space' },
   { id: 'autorun', label: 'Autorun', key: 'Mouse3' },
   { id: 'action1', label: 'Action button 1', key: 'Digit1' },
   { id: 'action2', label: 'Action button 2', key: 'Digit2' },

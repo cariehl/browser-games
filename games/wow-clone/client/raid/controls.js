@@ -2,9 +2,9 @@
 // is sent to the server and also applied here at once (prediction), so moving
 // feels immediate. The server's position wins: the prediction is pulled
 // toward it whenever the two drift apart. Bound mouse buttons (from the
-// CameraRig) work like keys.
+// CameraRig) work like keys. Jumps are predicted the same way.
 
-import { isMoving, stepMovement } from '../../shared/combat.js';
+import { isMoving, JUMP_SECONDS, jumpHeight, stepMovement } from '../../shared/combat.js';
 import { MOVEMENT } from '../keybinds.js';
 
 /** Turning speed with the turn keys, radians per second. */
@@ -28,6 +28,8 @@ export class Controls {
   /** True while something else (the keybinding panel) owns the keyboard. */
   paused = false;
   warp = -1;
+  /** When the player's own last jump started, in seconds of performance.now(). */
+  jumpedAt = -Infinity;
   sent = null;
   sinceSent = 0;
 
@@ -70,9 +72,23 @@ export class Controls {
       if (action === 'forward' || action === 'back') this.autorun = false;
     } else if (action === 'autorun') {
       this.autorun = !this.autorun;
+    } else if (action === 'jump') {
+      this.jump();
     } else {
       this.onAction(action);
     }
+  }
+
+  jump() {
+    const now = performance.now() / 1000;
+    if (now - this.jumpedAt < JUMP_SECONDS || this.dead) return;
+    this.jumpedAt = now;
+    this.room.send('jump', {});
+  }
+
+  /** How high the player's character is off the ground (mid-jump). */
+  height() {
+    return jumpHeight(performance.now() / 1000 - this.jumpedAt);
   }
 
   release(code) {
@@ -91,6 +107,7 @@ export class Controls {
       this.sent = null;
     }
     const alive = me.health > 0;
+    this.dead = !alive;
     const held = (action) => (this.held.has(action) ? 1 : 0);
     let forward = held('forward') - held('back');
     let strafe = held('strafeRight') - held('strafeLeft');

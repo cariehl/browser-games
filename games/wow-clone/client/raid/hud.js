@@ -10,6 +10,7 @@ import { roleCss } from '../../shared/roles.js';
 import { castTimeFor, cooldownFor, pointsInTree, talentStats, TREES } from '../../shared/talents.js';
 import { el } from '../dom.js';
 import { keyLabel } from '../keybinds.js';
+import { loadSetting, saveSetting } from '../net.js';
 
 /** Sets [node]'s text only when it differs (DOM writes are the cost here). */
 function text(node, value) {
@@ -22,6 +23,15 @@ function style(node, prop, value) {
 
 function seconds(s) {
   return s >= 10 ? `${Math.ceil(s)}` : s.toFixed(1);
+}
+
+const barKey = (role) => `raid.bar.${role}`;
+
+/** [abilities] in the saved bar order for [role]: saved ones first, new ones (from talents) after. */
+function arrange(role, abilities) {
+  const saved = loadSetting(barKey(role), []);
+  const order = Array.isArray(saved) ? saved.filter((id) => abilities.includes(id)) : [];
+  return [...new Set([...order, ...abilities])];
 }
 
 /** A raider's talent picks as a plain object. */
@@ -178,30 +188,85 @@ export class Hud {
     this.root.append(left, this.target.root, this.bar, this.castBar, this.error, this.banner, this.deadPanel, menu, this.help);
   }
 
-  /** Builds the action bar from [me]'s abilities, with talents in the tooltips. */
+  /**
+   * Builds the action bar from [me]'s abilities, with talents in the
+   * tooltips. Shift-click (or shift-drag) a button to pick it up, then click
+   * another slot to swap them; the order is saved per class.
+   */
   setAbilities(me) {
     const picks = picksOf(me);
     const key = `${[...me.abilities].join()}|${JSON.stringify(picks)}`;
     if (this.barKey === key) return;
     this.barKey = key;
+    this.role = me.role;
     this.stats = talentStats(me.role, picks);
-    this.slots = [...me.abilities].map((id, i) => {
+    this.drawBar(arrange(me.role, [...me.abilities]));
+  }
+
+  drawBar(order) {
+    this.drop();
+    this.slots = order.map((id, i) => {
       const ability = ABILITIES[id];
       const slot = el('button', 'slot');
       slot.style.setProperty('--c', ability.color);
       const cast = castTimeFor(this.stats, id);
       const cooldown = cooldownFor(this.stats, id);
       const timing = [cast ? `${cast} sec cast` : 'Instant', cooldown ? `${cooldown} sec cooldown` : ''].filter(Boolean).join(', ');
-      slot.title = `${ability.name}\n${timing}${ability.range ? `, ${ability.range} yd range` : ''}\n${ability.desc}`;
+      slot.title = `${ability.name}\n${timing}${ability.range ? `, ${ability.range} yd range` : ''}\n${ability.desc}\nShift-click to move.`;
       const icon = el('span', 'icon', ability.icon);
       const key = el('span', 'key');
       const cd = el('span', 'cd');
       const cdText = el('span', 'cd-text');
       slot.append(icon, cd, cdText, key);
-      slot.onclick = () => this.handlers.cast(id);
+      slot.onmousedown = (e) => {
+        if (e.button !== 0) return;
+        if (this.held != null) {
+          this.place(i);
+        } else if (e.shiftKey) {
+          this.held = i;
+          slot.classList.add('held');
+          this.bar.classList.add('placing');
+        } else {
+          return;
+        }
+        this.skipClick = true;
+      };
+      // Shift-drag: let go over another slot to put it there.
+      slot.onmouseup = (e) => {
+        if (e.button === 0 && this.held != null && this.held !== i) this.place(i);
+      };
+      slot.onclick = () => {
+        if (this.skipClick) this.skipClick = false;
+        else this.handlers.cast(id);
+      };
       return { id, action: `action${i + 1}`, slot, key, cd, cdText };
     });
     this.bar.replaceChildren(...this.slots.map((s) => s.slot));
+  }
+
+  /** Puts the held ability in slot [i], swapping with what's there, and saves the order. */
+  place(i) {
+    const from = this.held;
+    this.drop();
+    if (from === i) return;
+    const order = this.slots.map((s) => s.id);
+    [order[from], order[i]] = [order[i], order[from]];
+    saveSetting(barKey(this.role), order);
+    this.drawBar(order);
+  }
+
+  /** Puts down a picked-up ability without moving it. Returns true if one was held. */
+  drop() {
+    if (this.held == null) return false;
+    this.slots[this.held]?.slot.classList.remove('held');
+    this.bar.classList.remove('placing');
+    this.held = null;
+    return true;
+  }
+
+  /** The ability in action bar slot [i] (from 0), if any. */
+  abilityAt(i) {
+    return this.slots[i]?.id;
   }
 
   /** Lights up a slot as if pressed. */
@@ -249,7 +314,7 @@ export class Hud {
     this.deadPanel.hidden = me.health > 0;
 
     const k = (action) => keyLabel(this.keybinds.keyFor(action));
-    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('autorun')} autorun · ${k('targetNext')} or click to target, right-click to attack · ${k('action1')}–${k(`action${Math.max(1, this.slots.length)}`)} abilities`);
+    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('jump')} jump · ${k('autorun')} autorun · ${k('targetNext')} or click to target, right-click to attack · ${k('action1')}–${k(`action${Math.max(1, this.slots.length)}`)} abilities`);
   }
 
   updateParty(raiders, myId, targetId, now) {
@@ -284,6 +349,7 @@ export class Hud {
       // On its own cooldown (not just the GCD): grey and faded until ready.
       s.slot.classList.toggle('cooling', cd > 0);
       s.slot.classList.toggle('active', me.castAbility === s.id);
+      s.slot.classList.toggle('queued', me.queued === s.id);
     }
   }
 }
