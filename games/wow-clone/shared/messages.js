@@ -18,6 +18,7 @@
 //   'target'    { id }                       select a unit ('' clears)
 //   'cast'      { ability }                  use an ability on the current target (queued if nearly ready)
 //   'attack'    { on }                       start (true) or stop auto-attacking the current target
+//   'jump'      {}                           jump (stops a cast)
 //   'stopCast'  {}                           drop the queued ability, or else stop casting
 //   'release'   {}                           respawn at the entrance when dead
 // Raid, server -> client:

@@ -15,6 +15,17 @@ export const GCD = 1.5;
 /** A press this close to the end of the GCD, a cast or a cooldown is queued and goes off when it ends (WoW's spell queue). */
 export const QUEUE_WINDOW = 0.75;
 
+/** A jump: how long it's in the air, in seconds, and how high it goes. */
+export const JUMP_SECONDS = 0.6;
+export const JUMP_HEIGHT = 1.1;
+
+/** Height above the ground [t] seconds into a jump: a parabola, 0 before and after. */
+export function jumpHeight(t) {
+  if (!(t > 0 && t < JUMP_SECONDS)) return 0;
+  const f = t / JUMP_SECONDS;
+  return 4 * JUMP_HEIGHT * f * (1 - f);
+}
+
 export const RAIDER_RADIUS = 0.5;
 
 /** Melee abilities reach this far past the edge of their target. */

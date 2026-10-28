@@ -5,7 +5,7 @@
 import * as THREE from 'three';
 import { CSS2DRenderer } from 'three/addons/renderers/CSS2DRenderer.js';
 import { ABILITIES } from '../../shared/classes.js';
-import { distance, isFacing, QUEUE_WINDOW, reach, TAB_RANGE } from '../../shared/combat.js';
+import { distance, isFacing, jumpHeight, QUEUE_WINDOW, reach, TAB_RANGE } from '../../shared/combat.js';
 import { show } from '../dom.js';
 import { Keybinds } from '../keybinds.js';
 import { Callbacks } from '../net.js';
@@ -242,7 +242,8 @@ export function raidScreen(room, canvas) {
       if (m) controls.update(dt, m);
 
       for (const [id, view] of views) {
-        view.update(dt, id === room.sessionId ? pose() : view.unit);
+        if (id === room.sessionId) view.update(dt, pose(), controls.height());
+        else view.update(dt, view.unit, view.enemy ? 0 : jumpHeight(now - view.unit.jumpStart));
         view.setSelected(id === targetId);
       }
       const mine = views.get(room.sessionId);

@@ -7,7 +7,7 @@ import { Client } from '@colyseus/sdk';
 import { matchMaker } from '@colyseus/core';
 import { ABILITIES, CLASSES } from '../shared/classes.js';
 import { ROOM_RAID } from '../shared/constants.js';
-import { GCD, QUEUE_WINDOW, RUN_SPEED, facingToward, isFacing, stepMovement } from '../shared/combat.js';
+import { GCD, JUMP_SECONDS, jumpHeight, QUEUE_WINDOW, RUN_SPEED, facingToward, isFacing, stepMovement } from '../shared/combat.js';
 import { confine, PILLARS } from '../shared/arena.js';
 import { cleanMove } from '../shared/messages.js';
 import { presetBuild, TALENT_POINTS, talentProblem, TREES } from '../shared/talents.js';
@@ -156,6 +156,40 @@ test('a press near the end of the GCD, a cast or a cooldown queues and goes off 
   assert.equal(tank.queued, '');
   run(world, 1);
   assert.deepEqual(errors(), ['Not ready yet.']);
+});
+
+test('jumping stops a cast, and a cast pressed in the air waits for the landing', () => {
+  const { world, state, errors } = makeWorld();
+  world.addRaider('h', { name: 'Hea', role: 'healer' }, { x: 0, z: 10, facing: 0 });
+  const healer = state.raiders.get('h');
+  assert.equal(jumpHeight(-1), 0);
+  assert.ok(jumpHeight(JUMP_SECONDS / 2) > 1);
+  assert.equal(jumpHeight(JUMP_SECONDS), 0);
+
+  world.cast('h', 'flashHeal');
+  assert.equal(healer.castAbility, 'flashHeal');
+  world.jump('h');
+  assert.equal(healer.castAbility, '');
+  assert.equal(healer.jumpStart, state.time);
+  // No double jump.
+  run(world, 0.2);
+  const start = healer.jumpStart;
+  world.jump('h');
+  assert.equal(healer.jumpStart, start);
+
+  // Instant spells work in the air; a cast queues for the landing.
+  run(world, GCD);
+  world.jump('h');
+  assert.equal(world.cast('h', 'renew'), null);
+  assert.ok(healer.auras.size > 0);
+  run(world, GCD - 0.5);
+  world.jump('h');
+  run(world, 0.1);
+  assert.equal(world.cast('h', 'flashHeal'), null);
+  assert.equal(healer.queued, 'flashHeal');
+  run(world, JUMP_SECONDS);
+  assert.equal(healer.castAbility, 'flashHeal');
+  assert.deepEqual(errors(), []);
 });
 
 test('a cast lands when it finishes, and a friendly spell with no friendly target heals yourself', () => {

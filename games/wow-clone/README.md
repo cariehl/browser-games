@@ -41,6 +41,7 @@ There are no accounts: anyone with the address can join under any free name, so 
 | Move, turn | W S, A D |
 | Strafe | Q E |
 | Autorun | middle mouse button (W or S cancels it) |
+| Jump | Space (stops a cast; spells with a cast time wait until you land) |
 | Look around | left-drag (the cursor hides while dragging) |
 | Steer | right-drag: the character turns with the camera, and A and D strafe |
 | Run forward | hold both mouse buttons |

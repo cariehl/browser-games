@@ -314,7 +314,7 @@ export class Hud {
     this.deadPanel.hidden = me.health > 0;
 
     const k = (action) => keyLabel(this.keybinds.keyFor(action));
-    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('autorun')} autorun · ${k('targetNext')} or click to target, right-click to attack · ${k('action1')}–${k(`action${Math.max(1, this.slots.length)}`)} abilities`);
+    text(this.help, `${k('forward')}${k('turnLeft')}${k('back')}${k('turnRight')} move · ${k('strafeLeft')}/${k('strafeRight')} strafe · right-drag to steer · ${k('jump')} jump · ${k('autorun')} autorun · ${k('targetNext')} or click to target, right-click to attack · ${k('action1')}–${k(`action${Math.max(1, this.slots.length)}`)} abilities`);
   }
 
   updateParty(raiders, myId, targetId, now) {
