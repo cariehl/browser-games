@@ -1,4 +1,3 @@
-import type { Room } from 'colyseus.js';
 import { COLOR_INFO, cardDef } from '../../shared/cards';
 import { allDecks, deckOptions } from './deckstore';
 import { Game, MAX_SPELL_MANA } from '../../shared/engine';
@@ -7,6 +6,7 @@ import type { Action, GameEvent, GameState, Target, Unit } from '../../shared/ty
 import { isMuted, sfx, toggleMute } from './audio';
 import { music } from './music';
 import { cardBackHTML, cardHelp, cardHTML, esc } from './cardview';
+import type { RoomLike } from './localroom';
 import type { BoardScene, HL } from './scene';
 
 type Mode =
@@ -44,7 +44,7 @@ export class GameController {
   seenCards = new Set<number>();
   previewCard: { cardId: string; cost?: number } | null = null;
 
-  constructor(public room: Room, public scene: BoardScene, ui: HTMLElement, public onExit: () => void, public currentDeckId: () => string) {
+  constructor(public room: RoomLike, public scene: BoardScene, ui: HTMLElement, public onExit: () => void, public currentDeckId: () => string) {
     this.root = document.createElement('div');
     this.root.className = 'game';
     ui.innerHTML = '';
@@ -242,7 +242,7 @@ export class GameController {
       this.render();
       if (this.view.phase === 'action' && this.view.turn === this.seat && (prevTurn !== this.seat || prevPhase !== 'action') && !first) sfx.yourTurn();
       if (first && this.view.phase === 'action') this.banner(`Round ${this.view.round}`, this.view.initiative === this.seat ? 'You have the initiative' : 'Opponent has the initiative');
-      try { sessionStorage.setItem('oom-reconnect', this.room.reconnectionToken); } catch { /* ignore */ }
+      if (this.room.reconnectionToken) try { sessionStorage.setItem('oom-reconnect', this.room.reconnectionToken); } catch { /* ignore */ }
     }
   }
 

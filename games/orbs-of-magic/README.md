@@ -28,6 +28,12 @@ Double-click `start-server.cmd` (or run `.\start-server.ps1`). It pulls the late
 
 Example from cmd or a shortcut: `start-server.cmd -HostOnline`.
 
+### GitHub Pages (no server)
+
+`npm run build:pages` builds a static version into `dist/` that runs AI battles entirely in the browser, so it can be hosted anywhere static files can. Pushing to `main` deploys it with `.github/workflows/pages.yml` to https://cariehl.github.io/orbs-of-magic-threejs/ (one-time setup: repository **Settings → Pages → Source: GitHub Actions**).
+
+Online play is hidden in this build. To offer it as well, host the server somewhere reachable and set the repository variable `VITE_SERVER_URL` (for example `wss://your-server.example.com`) under **Settings → Secrets and variables → Actions → Variables**, or set it in `client/.env.pages` for a local build.
+
 Other scripts:
 
 | Script | What it does |
@@ -95,7 +101,7 @@ Pick **New Deck** (or **Copy & edit** on any deck) in the main menu. Decks are e
 
 ## Multiplayer
 
-- **Battle the AI**: a private room with a server-side AI opponent.
+- **Battle the AI**: a private room with a server-side AI opponent (in the GitHub Pages build the AI runs in your browser).
 - **Quick Match**: joins any open public room or creates one.
 - **Private Match**: creates a room and shows a code; your friend enters it under *Join*.
 - Each action has a 75 second timer (auto-pass). Disconnected players have 60 seconds to reconnect (refreshing the page reconnects automatically).

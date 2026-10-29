@@ -1,5 +1,4 @@
 import './style.css';
-import type { Room } from 'colyseus.js';
 import { ALL_CARDS, COLOR_INFO, cardDef } from '../../shared/cards';
 import { DECKS } from '../../shared/decks';
 import type { Color } from '../../shared/types';
@@ -9,7 +8,8 @@ import { openDeckBuilder } from './deckbuilder';
 import { allDecks, deckOptions, deleteCustom, findDeck } from './deckstore';
 import { GameController, HELP_HTML } from './game';
 import { music, renderOffline } from './music';
-import { client } from './net';
+import { LocalRoom, type RoomLike } from './localroom';
+import { LOCAL_AI, ONLINE, client } from './net';
 import { BoardScene } from './scene';
 
 const ui = document.getElementById('ui')!;
@@ -65,9 +65,9 @@ function menu() {
         <button class="btn big btn-ai">🤖 Battle the AI</button>
         <label class="ai-deck">AI deck <select class="ai-deck-sel"><option value="random">Random</option>${DECKS.map((d) => `<option value="${d.id}" ${aiDeck === d.id ? 'selected' : ''}>${esc(d.name)} (${d.archetype})</option>`).join('')}</select></label>
         <div class="sep">Online</div>
-        <button class="btn big btn-quick">⚡ Quick Match</button>
+        ${ONLINE ? `<button class="btn big btn-quick">⚡ Quick Match</button>
         <button class="btn btn-private">🔒 Create Private Match</button>
-        <div class="join-row"><input class="code-input" placeholder="Match code"><button class="btn btn-join">Join</button></div>
+        <div class="join-row"><input class="code-input" placeholder="Match code"><button class="btn btn-join">Join</button></div>` : `<p class="dim offline-note">Online play needs a game server. This version runs entirely in your browser, so you can battle the AI. See the README to host a server for friends.</p>`}
         <div class="sep">Learn</div>
         <div class="row"><button class="btn ghost btn-howto">How to Play</button><button class="btn ghost btn-library">Card Library</button><button class="btn ghost btn-orbs">The Five Orbs</button></div>
         <div class="sep">Settings</div>
@@ -88,14 +88,20 @@ function menu() {
   if (del) del.onclick = () => { if (confirm(`Delete "${sel.name}"?`)) { deleteCustom(sel.id); deckId = DECKS[0].id; store.set('oom-deck', deckId); menu(); } };
   q<HTMLSelectElement>('.ai-deck-sel').onchange = (e) => { aiDeck = (e.target as HTMLSelectElement).value; store.set('oom-aideck', aiDeck); };
   const dopts = deckOptions(deckId);
-  q('.btn-ai').onclick = () => start(() => client.create('duel', { name: playerName, ...dopts, vsAI: true, aiDeckId: aiDeck === 'random' ? undefined : aiDeck }));
-  q('.btn-quick').onclick = () => start(() => client.joinOrCreate('duel', { name: playerName, ...dopts }));
-  q('.btn-private').onclick = () => start(() => client.create('duel', { name: playerName, ...dopts, private: true }));
-  q('.btn-join').onclick = () => {
-    const code = q<HTMLInputElement>('.code-input').value.trim();
-    if (!code) return;
-    start(() => client.joinById(code, { name: playerName, ...dopts }));
-  };
+  q('.btn-ai').onclick = () => start(async () => {
+    const aiDeckId = aiDeck === 'random' ? undefined : aiDeck;
+    return LOCAL_AI || !client ? new LocalRoom({ name: playerName, ...dopts, aiDeckId }) : client.create('duel', { name: playerName, ...dopts, vsAI: true, aiDeckId });
+  });
+  if (client) {
+    const online = client;
+    q('.btn-quick').onclick = () => start(() => online.joinOrCreate('duel', { name: playerName, ...dopts }));
+    q('.btn-private').onclick = () => start(() => online.create('duel', { name: playerName, ...dopts, private: true }));
+    q('.btn-join').onclick = () => {
+      const code = q<HTMLInputElement>('.code-input').value.trim();
+      if (!code) return;
+      start(() => online.joinById(code, { name: playerName, ...dopts }));
+    };
+  }
   q('.btn-howto').onclick = () => modal(`<div class="help">${HELP_HTML}</div>`);
   q('.btn-library').onclick = () => library('all');
   q('.btn-orbs').onclick = () => orbs();
@@ -139,7 +145,7 @@ function orbs() {
     }).join('')}</div>`);
 }
 
-async function start(join: () => Promise<Room>) {
+async function start(join: () => Promise<RoomLike>) {
   const status = ui.querySelector('.status') as HTMLElement | null;
   if (status) status.textContent = 'Connecting…';
   sfx.select();
@@ -153,7 +159,7 @@ async function start(join: () => Promise<Room>) {
   }
 }
 
-function launch(room: Room) {
+function launch(room: RoomLike) {
   current?.dispose();
   current = new GameController(room, scene, ui, () => { current = null; menu(); }, () => deckId);
 }
@@ -164,7 +170,7 @@ for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev
 async function boot() {
   let token: string | null = null;
   try { token = sessionStorage.getItem('oom-reconnect'); } catch { /* ignore */ }
-  if (token) {
+  if (token && client) {
     try { const room = await client.reconnect(token); launch(room); return; } catch { try { sessionStorage.removeItem('oom-reconnect'); } catch { /* ignore */ } }
   }
   menu();
