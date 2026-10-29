@@ -92,8 +92,33 @@ export class GameController {
       if (e.code === 'Escape') this.setMode({ kind: 'idle' });
     };
     window.addEventListener('keydown', this.keyHandler);
+    window.addEventListener('wheel', this.wheelHandler, { passive: false });
   }
   private keyHandler: (e: KeyboardEvent) => void = () => {};
+
+  /** The mouse wheel scrolls the text of the hovered card (and then its keyword notes), so long cards are readable. */
+  private wheelHandler = (e: WheelEvent) => {
+    const hc = this.root.querySelector<HTMLElement>('.hover-card.show');
+    const over = e.target as HTMLElement;
+    if (!hc || over?.closest?.('.modal, .emote-list') || (over?.closest?.('.log') && !over.closest('.logcard'))) return;
+    const texts = [...hc.querySelectorAll<HTMLElement>('.card.big .text')].filter((t) => t.scrollHeight > t.clientHeight + 1);
+    const help = hc.querySelector<HTMLElement>('.hc-help');
+    const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    const canScroll = (el: HTMLElement) => (dy > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0);
+    const targets = texts.some(canScroll) ? texts : help && canScroll(help) ? [help] : [];
+    if (!targets.length) return;
+    e.preventDefault();
+    for (const t of targets) t.scrollTop += dy * 0.5;
+    this.markOverflow(hc);
+  };
+
+  /** Fades the bottom (or top) edge of card text that has more to read. */
+  private markOverflow(hc: HTMLElement) {
+    for (const t of hc.querySelectorAll<HTMLElement>('.card.big .text')) {
+      t.classList.toggle('more-below', t.scrollTop + t.clientHeight < t.scrollHeight - 1);
+      t.classList.toggle('more-above', t.scrollTop > 0);
+    }
+  }
 
   private bindRoom() {
     const room = this.room;
@@ -146,6 +171,7 @@ export class GameController {
     this.disposed = true;
     clearInterval(this.timerInt);
     window.removeEventListener('keydown', this.keyHandler);
+    window.removeEventListener('wheel', this.wheelHandler);
     this.scene.onHexClick = () => {}; this.scene.onHexHover = () => {};
     this.scene.onSanctumClick = () => {}; this.scene.onSanctumHover = () => {};
     this.scene.setMenuMode(true);
@@ -470,12 +496,14 @@ export class GameController {
       const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
       hc.innerHTML = `<div class="hc-row">${cardHTML(d, { extraClass: 'big', cost: this.previewCard.cost })}${lvl}</div><div class="hc-help">${cardHelp(d)}</div>`;
       hc.classList.add('show');
+      this.markOverflow(hc);
       return;
     }
     if (this.hoverSanctum !== null) {
       const p = this.view.players[this.hoverSanctum];
       hc.innerHTML = `<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Units standing in ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} territory (the two back rows) can attack it.</p></div>`;
       hc.classList.add('show');
+      this.markOverflow(hc);
       this.showForecast(null);
       return;
     }
@@ -496,9 +524,11 @@ export class GameController {
       const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
       hc.innerHTML = `<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`;
       hc.classList.add('show');
+      this.markOverflow(hc);
     } else if (this.hoverHex && this.view && [1, 4, 7].includes(this.hoverHex.c) && this.hoverHex.r === 3) {
       hc.innerHTML = `<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`;
       hc.classList.add('show');
+      this.markOverflow(hc);
     } else hc.classList.remove('show');
     this.showForecast(u ?? null);
   }
@@ -801,4 +831,4 @@ export const HELP_HTML = `
   <div><b>❄️ Freeze</b> the unit loses its next order</div><div><b>🕸️ Root</b> the unit can't move</div>
 </div>
 <h4>Controls</h4>
-<p>Click a card, then a highlighted target. Click your unit, then a blue hex to move or a red target to attack (it will walk into range automatically). <b>Space</b> passes, <b>Esc</b> or right-click cancels, mouse wheel zooms. Hover anything for details.</p>`;
+<p>Click a card, then a highlighted target. Click your unit, then a blue hex to move or a red target to attack (it will walk into range automatically). <b>Space</b> passes, <b>Esc</b> or right-click cancels, the mouse wheel scrolls the text of a hovered card. Hover anything for details.</p>`;

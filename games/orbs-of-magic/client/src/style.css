@@ -107,7 +107,12 @@ input, select { pointer-events: auto; font: inherit; background: rgba(0,0,0,0.35
 .card .up { color: #b6ff9a; } .card .down { color: #ffb0b0; }
 .card .mini { font-size: 11px; color: #fff; display: flex; gap: 6px; } .card .mini i { font-style: normal; }
 .card.big { --card-w: 220px; --card-h: 310px; width: 220px; height: 310px; font-size: 13.5px; }
-.card.big .art { height: 36%; } .card.big .name { font-size: 17px; } .card.big .art span { font-size: 72px; } .card.big .type { font-size: 11px; }
+.card.big .text { overflow-y: auto; scrollbar-width: none; }
+.card.big .text::-webkit-scrollbar { display: none; }
+.card.big .text.more-below { -webkit-mask-image: linear-gradient(#000 calc(100% - 22px), transparent); mask-image: linear-gradient(#000 calc(100% - 22px), transparent); }
+.card.big .text.more-above { -webkit-mask-image: linear-gradient(transparent, #000 22px); mask-image: linear-gradient(transparent, #000 22px); }
+.card.big .text.more-above.more-below { -webkit-mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 22px), transparent); mask-image: linear-gradient(transparent, #000 22px, #000 calc(100% - 22px), transparent); }
+.card.big .art { height: 32%; } .card.big .name { font-size: 17px; } .card.big .art span { font-size: 72px; } .card.big .type { font-size: 11px; }
 .card.big .cost { width: 42px; height: 42px; font-size: 22px; } .card.big .atk, .card.big .hp { width: 40px; height: 40px; font-size: 21px; }
 .card.champion { border-color: #ffd76a; box-shadow: 0 0 0 1px #8a5a0d, 0 0 16px rgba(255,215,106,0.55), 0 6px 18px rgba(0,0,0,0.6); }
 .card.champion .name { color: #ffe9a8; }

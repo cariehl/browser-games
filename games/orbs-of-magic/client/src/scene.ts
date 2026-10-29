@@ -350,7 +350,6 @@ export class BoardScene {
   shake = 0;
   camBase = new THREE.Vector3();
   camTarget = new THREE.Vector3();
-  zoom = 1;
   motes!: THREE.Points;
   hoverKey: string | null = null;
   hoverSanctum: number | null = null;
@@ -383,7 +382,6 @@ export class BoardScene {
     canvas.addEventListener('pointermove', (e) => this.pointerMove(e));
     canvas.addEventListener('click', (e) => this.click(e));
     canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); this.onRightClick(); });
-    canvas.addEventListener('wheel', (e) => { this.zoom = THREE.MathUtils.clamp(this.zoom + e.deltaY * 0.0008, 0.7, 1.25); }, { passive: true });
     this.renderer.setAnimationLoop(() => this.frame());
   }
 
@@ -986,7 +984,7 @@ export class BoardScene {
       this.camera.position.set(Math.sin(a) * 19, 11 + Math.sin(time * 0.2) * 1.5, Math.cos(a) * 19);
       this.camera.lookAt(0, 0, 0);
     } else {
-      const pos = this.camBase.clone().multiplyScalar(this.zoom);
+      const pos = this.camBase.clone();
       if (this.shake > 0) {
         pos.add(new THREE.Vector3((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake, 0));
         this.shake = Math.max(0, this.shake - dt * 1.5);
