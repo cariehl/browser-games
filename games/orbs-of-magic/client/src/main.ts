@@ -41,13 +41,12 @@ function menu() {
       <span class="deck-icon">${d.icon}</span>
       <span class="deck-name">${esc(d.name)}</span>
       <span class="deck-arch">${colorDots(d.colors)} ${esc(d.archetype)}</span>
-    </button>`).join('') + `<button class="deck-tile new-deck"><span class="deck-icon">＋</span><span class="deck-name">New Deck</span><span class="deck-arch">Deck builder</span></button>`;
+    </button>`).join('');
   ui.innerHTML = `
   <div class="menu">
     <div class="title"><h1>Orbs <span>of</span> Magic</h1><div class="subtitle">A tactical card battle for the five Orbs</div></div>
     <div class="menu-body">
       <div class="panel deck-picker">
-        <div class="row name-row"><label>Wizard name <input class="name-input" maxlength="20" value="${esc(playerName)}"></label></div>
         <h3>Choose your deck</h3>
         <div class="deck-grid">${deckTiles}</div>
         <div class="deck-detail">
@@ -62,7 +61,7 @@ function menu() {
         </div>
       </div>
       <div class="panel play-panel">
-        <h3>Play</h3>
+        <div class="play-head"><h3>Play</h3><label>Wizard name <input class="name-input" maxlength="20" value="${esc(playerName)}"></label></div>
         <button class="btn big btn-ai">🤖 Battle the AI</button>
         <label class="ai-deck">AI deck <select class="ai-deck-sel"><option value="random">Random</option>${DECKS.map((d) => `<option value="${d.id}" ${aiDeck === d.id ? 'selected' : ''}>${esc(d.name)} (${d.archetype})</option>`).join('')}</select></label>
         <div class="sep">Online</div>
@@ -70,7 +69,9 @@ function menu() {
         <button class="btn btn-private">🔒 Create Private Match</button>
         <div class="join-row"><input class="code-input" placeholder="Match code"><button class="btn btn-join">Join</button></div>
         <div class="sep">Learn</div>
-        <div class="row"><button class="btn ghost btn-howto">How to Play</button><button class="btn ghost btn-library">Card Library</button><button class="btn ghost btn-orbs">The Five Orbs</button><button class="btn ghost btn-music-menu">🎵 Music: ${music.isOn() ? 'On' : 'Off'}</button></div>
+        <div class="row"><button class="btn ghost btn-howto">How to Play</button><button class="btn ghost btn-library">Card Library</button><button class="btn ghost btn-orbs">The Five Orbs</button></div>
+        <div class="sep">Settings</div>
+        <div class="row"><button class="btn ghost new-deck">＋ New Deck</button><button class="btn ghost btn-music-menu">🎵 Music: ${music.isOn() ? 'On' : 'Off'}</button></div>
         <div class="status dim"></div>
       </div>
     </div>

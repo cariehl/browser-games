@@ -2,6 +2,7 @@ import { ALL_CARDS, COLOR_INFO, cardDef } from '../../shared/cards';
 import { DECKS, DECK_SIZE, MAX_COLORS, MAX_COPIES, deckColors, deckCount, validateDeck, type DeckList } from '../../shared/decks';
 import type { Color } from '../../shared/types';
 import { sfx } from './audio';
+import { attachCardHover } from './cardhover';
 import { cardHTML, esc } from './cardview';
 import { upsertCustom } from './deckstore';
 
@@ -17,6 +18,8 @@ export function openDeckBuilder(ui: HTMLElement, start: DeckList | null, done: (
   const root = document.createElement('div');
   root.className = 'builder';
   ui.appendChild(root);
+  const removeHover = attachCardHover(root, '.b-card, .b-row');
+  const close = (id: string | null) => { removeHover(); root.remove(); done(id); };
 
   const count = (id: string) => deck.cards.find(([c]) => c === id)?.[1] ?? 0;
 
@@ -119,13 +122,12 @@ export function openDeckBuilder(ui: HTMLElement, start: DeckList | null, done: (
       render();
     };
     (root.querySelector('.b-clear') as HTMLElement).onclick = () => { deck.cards = []; render(); };
-    (root.querySelector('.b-cancel') as HTMLElement).onclick = () => { root.remove(); done(null); };
+    (root.querySelector('.b-cancel') as HTMLElement).onclick = () => close(null);
     (root.querySelector('.b-save') as HTMLElement).onclick = () => {
       if (validateDeck(deck.cards)) return;
       upsertCustom(deck);
       sfx.select();
-      root.remove();
-      done(deck.id);
+      close(deck.id);
     };
   }
   render();
