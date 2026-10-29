@@ -1,6 +1,6 @@
 import { cardDef } from './cards';
 import { Game } from './engine';
-import { LEY_ORBS, deployRows, dist, inEnemyTerritory, isOrb, type Hex } from './hex';
+import { LEY_ORBS, canHitSanctum, deployRows, dist, inEnemyTerritory, isOrb, type Hex } from './hex';
 import type { Action, Target, Unit } from './types';
 
 /**
@@ -31,7 +31,9 @@ function positional(g: Game, u: Unit): number {
   v += progress * 0.25;
   if (isOrb(u)) v += 3;
   else v += Math.max(0, 2 - Math.min(...LEY_ORBS.map((o) => dist(o, u)))) * 0.4;
-  if (inEnemyTerritory(u.owner, u)) v += g.power(u) * (u.kw.includes('siege') ? 1.6 : 0.8);
+  const siege = u.kw.includes('siege') ? 1.6 : 0.8;
+  if (canHitSanctum(u.owner, u.range, u)) v += g.power(u) * siege;
+  else if (inEnemyTerritory(u.owner, u)) v += g.power(u) * siege * 0.5; // a melee unit one step from the Sanctum
   return v;
 }
 

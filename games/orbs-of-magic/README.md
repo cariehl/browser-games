@@ -35,6 +35,11 @@ Other scripts:
 | `npm run sim -- 10` | Plays every deck against every other deck 10 times with the AI and prints win rates |
 | `npx tsx scripts/trace.ts wildfire night_court 42` | Play-by-play of a single AI game (deck A, deck B, seed) |
 | `npm run typecheck` | TypeScript check of client, server and shared code |
+| `npm run replay -- logs/games/<file>.jsonl` | Replays a logged game and prints its battle log and the final board. Add `--at N` to stop after action N, or `--board` to print the board every round |
+
+### Game logs
+
+The server writes every game to `logs/games/<time>-<room>.jsonl`: the seed and both decklists, then every action in order, plus timeouts, disconnects and any rules errors. The rules engine is deterministic, so `npm run replay` rebuilds the exact game from that file. To report a bug, send the newest file from that folder (the server console also prints each game's log path when it starts). Set `OOM_LOG_DIR` to log somewhere else, or `OOM_NO_LOGS=1` to turn logging off.
 
 ## How to play
 
@@ -42,7 +47,7 @@ Other scripts:
 - **Rounds (Legends of Runeterra style):** each round both players gain a mana crystal (max 10) and draw a card. Players alternate taking **one action at a time**: play a card, order a unit, or pass. The round ends when both players pass back to back. The **initiative** (who acts first) swaps every round.
 - **Units** are summoned onto your two back rows (your *territory*). They can't act the round they arrive unless they're **Swift**. An **order** moves a unit up to its speed (usually 2) and/or attacks something in range.
 - **Combat:** attacker and defender damage each other simultaneously unless the defender can't reach back (ranged attacks). Damage persists between rounds.
-- **Sanctum attacks:** a unit standing in *enemy territory* (their two back rows) can attack their Sanctum.
+- **Sanctum attacks:** melee units can attack the enemy Sanctum from the enemy's back row. Ranged units can attack it from anywhere in *enemy territory* (the enemy's two back rows).
 - **Ley Orbs:** three orbs hover over the centre row. Each one you stand on at the start of a round gives you +1 mana that round and deals 1 damage to the enemy Sanctum.
 - **Spell mana:** up to 3 unspent mana carries over, usable only for Spells and Orders.
 - Card types: **Units**, **Spells** (instant effects) and **Orders** (effects that command your units: ready them, buff them, make them fight).

@@ -2,7 +2,7 @@ import type { Room } from 'colyseus.js';
 import { COLOR_INFO, cardDef } from '../../shared/cards';
 import { allDecks, deckOptions } from './deckstore';
 import { Game, MAX_SPELL_MANA } from '../../shared/engine';
-import { ALL_HEXES, dist, inEnemyTerritory, key, same, type Hex } from '../../shared/hex';
+import { ALL_HEXES, canHitSanctum, dist, key, same, type Hex } from '../../shared/hex';
 import type { Action, GameEvent, GameState, Target, Unit } from '../../shared/types';
 import { isMuted, sfx, toggleMute } from './audio';
 import { cardBackHTML, cardHelp, cardHTML, esc } from './cardview';
@@ -398,7 +398,7 @@ export class GameController {
       if (g.canAct(at)) { sfx.select(); this.setMode({ kind: 'unit', uid: at.uid }); }
       else {
         sfx.error();
-        this.toast(at.frozen ? 'That unit is frozen.' : at.exhausted ? 'That unit has already acted this round.' : 'Units can\'t act the round they are summoned (unless Swift).');
+        this.toast(g.isFrozen(at) ? 'That unit is Frozen.' : at.exhausted ? 'That unit has already acted this round.' : 'Units can\'t act the round they are summoned (unless Swift).');
       }
     }
   }
@@ -412,10 +412,10 @@ export class GameController {
     if (g.attackTargets(u, from).some((t) => 'sanctum' in t)) { this.send({ type: 'order', uid: u.uid, to: this.mode.moveTo, attack: { sanctum: p } }); return; }
     for (const [, path] of g.reachable(u)) {
       const dst = path[path.length - 1];
-      if (inEnemyTerritory(this.seat, dst)) { this.send({ type: 'order', uid: u.uid, to: dst, attack: { sanctum: p } }); return; }
+      if (canHitSanctum(this.seat, u.range, dst)) { this.send({ type: 'order', uid: u.uid, to: dst, attack: { sanctum: p } }); return; }
     }
     sfx.error();
-    this.toast('Units must stand in enemy territory (their two red back rows) to attack their Sanctum.');
+    this.toast('To attack the enemy Sanctum, melee units must stand on its back row. Ranged units can attack from either red row.');
   }
 
   // ───────────── highlights / hover ─────────────
@@ -432,7 +432,7 @@ export class GameController {
     if (this.hoverSanctum !== null && this.hoverSanctum !== this.seat) {
       const from = base ?? here;
       if (g.attackTargets(u, from).some((t) => 'sanctum' in t)) { this.scene.showGuide(pathTo(base), this.scene.sanctumPos(this.hoverSanctum)); return; }
-      for (const [, path] of reach) if (inEnemyTerritory(this.seat, path[path.length - 1])) { this.scene.showGuide(path, this.scene.sanctumPos(this.hoverSanctum)); return; }
+      for (const [, path] of reach) if (canHitSanctum(this.seat, u.range, path[path.length - 1])) { this.scene.showGuide(path, this.scene.sanctumPos(this.hoverSanctum)); return; }
     }
     if (target && target.owner !== this.seat) {
       const from = base ?? here;
@@ -503,7 +503,7 @@ export class GameController {
     }
     if (this.hoverSanctum !== null) {
       const p = this.view.players[this.hoverSanctum];
-      setHC(`<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Units standing in ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} territory (the two back rows) can attack it.</p></div>`);
+      setHC(`<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Melee units on ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} back row can attack it, and ranged units can attack it from either of ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} two back rows.</p></div>`);
       hc.classList.add('show');
       this.markOverflow(hc);
       this.showForecast(null);
@@ -513,11 +513,12 @@ export class GameController {
     if (u) {
       const d = cardDef(u.cardId);
       const status: string[] = [];
-      if (u.frozen) status.push('❄️ Frozen: skips its next order');
+      const frozen = g.isFrozen(u);
+      if (frozen) status.push(u.frozenUntil > this.view.round ? "❄️ Frozen: can't act this round or next" : "❄️ Frozen: can't act this round");
       if (g.isRooted(u)) status.push("🕸️ Rooted: can't move");
-      if (u.exhausted && !u.frozen) status.push('✓ Already acted this round');
+      if (u.exhausted && !frozen) status.push('✓ Already acted this round');
       else if (u.summonedRound === this.view.round && !u.kw.includes('swift')) status.push("💤 Just summoned: can't act until next round");
-      else if (!u.frozen) status.push('⚡ Ready to act');
+      else if (!frozen) status.push('⚡ Ready to act');
       if (u.tempAtk) status.push(`🔥 +${u.tempAtk} power this round`);
       if (d.champion) {
         const [cur, need] = d.champion.progress(g, u);
@@ -819,7 +820,7 @@ export const HELP_HTML = `
   <div><h4>🎯 Goal</h4><p>Reduce the enemy <b>Sanctum</b> (the big orb behind their side) from 20 to 0.</p></div>
   <div><h4>🔁 Rounds</h4><p>Each round you gain a mana crystal (up to 10) and draw a card. Players take turns doing <b>one action at a time</b>. The player with the <b>initiative</b> goes first; it swaps every round. The round ends when both players <b>pass in a row</b>, so passing just to see what your opponent does is a real tactic.</p></div>
   <div><h4>🃏 Actions</h4><p><b>Play a card</b>: Units are summoned onto your two back rows. Spells and Orders take effect immediately.<br><b>Order a unit</b>: Move it up to its speed (usually 2 hexes) and/or attack something in range. Each unit can be ordered once per round, starting the round after it is summoned.<br><b>Pass</b>.</p></div>
-  <div><h4>⚔️ Combat</h4><p>Attacker and defender damage each other at the same time, unless the defender can't reach back (ranged attacks). Damage stays on units between rounds. Reach <b>enemy territory</b> (their two back rows) to attack their Sanctum directly.</p></div>
+  <div><h4>⚔️ Combat</h4><p>Attacker and defender damage each other at the same time, unless the defender can't reach back (ranged attacks). Damage stays on units between rounds. To attack the enemy Sanctum directly, melee units must reach the enemy's <b>back row</b>. Ranged units can attack it from either of the enemy's two back rows.</p></div>
   <div><h4>🔮 Ley Orbs</h4><p>Three orbs float over the center row. Each one you stand on at the start of a round gives you <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>
   <div><h4>💧 Spell mana</h4><p>Up to 3 unspent mana carries over as <b>spell mana</b>, which can only pay for Spells and Orders.</p></div>
 </div>

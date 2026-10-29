@@ -1,7 +1,7 @@
 import { CARDS, cardDef, type CardDef, type TargetSpec } from './cards';
 import { deckColors, deckIcon, prebuiltList, validateDeck, type DeckList } from './decks';
 import {
-  ALL_HEXES, LEY_ORBS, deployRows, dist, inEnemyTerritory, inBounds, key, neighbors, ownHalfRows, same, type Hex,
+  ALL_HEXES, LEY_ORBS, canHitSanctum, deployRows, dist, inBounds, key, neighbors, ownHalfRows, same, type Hex,
 } from './hex';
 import type { Action, CardInst, GameEvent, GameState, Keyword, PlayerState, Target, Unit } from './types';
 
@@ -30,6 +30,9 @@ const isHexT = (t: Target): t is { c: number; r: number } => !!t && 'c' in t;
  * The rules engine. Wraps a plain-data GameState so it can be cloned cheaply
  * (the AI simulates moves on clones) and sent over the wire as-is.
  */
+/** Thrown when a Sanctum falls, to stop resolving the rest of the action at once. */
+class GameOver extends Error {}
+
 export class Game {
   s: GameState;
   events: GameEvent[] = [];
@@ -82,6 +85,7 @@ export class Game {
   has(u: Unit, k: Keyword) { return u.kw.includes(k); }
   tUnit(t: Target) { return isUnitT(t) ? this.unit(t.uid) : undefined; }
   isRooted(u: Unit) { return u.rootedUntil >= this.s.round; }
+  isFrozen(u: Unit) { return u.frozenUntil >= this.s.round; }
   canAct(u: Unit) {
     return u.hp > 0 && !u.exhausted && (u.summonedRound !== this.s.round || this.has(u, 'swift'));
   }
@@ -189,13 +193,23 @@ export class Game {
     const out: ({ uid: number } | { sanctum: number })[] = this.s.units
       .filter((e) => e.owner !== u.owner && e.hp > 0 && dist(from, e) <= u.range)
       .map((e) => ({ uid: e.uid }));
-    if (inEnemyTerritory(u.owner, from)) out.push({ sanctum: 1 - u.owner });
+    if (canHitSanctum(u.owner, u.range, from)) out.push({ sanctum: 1 - u.owner });
     return out;
   }
 
   // ───────────── the main entry point ─────────────
   act(p: number, a: Action): ActResult {
     this.events = [];
+    try {
+      return this.doAct(p, a);
+    } catch (e) {
+      // The game ended part-way through resolving: skip whatever was still to come.
+      if (e instanceof GameOver) return { ok: true, events: this.events };
+      throw e;
+    }
+  }
+
+  private doAct(p: number, a: Action): ActResult {
     const s = this.s;
     if (s.phase === 'over') return { ok: false, error: 'The game is over.' };
     if (a.type === 'concede') {
@@ -343,7 +357,7 @@ export class Game {
       pl.mana = pl.maxMana;
     }
     for (const u of s.units) {
-      if (u.frozen) { u.frozen = false; u.exhausted = true; } else u.exhausted = false;
+      u.exhausted = this.isFrozen(u);
     }
     this.draw(s.initiative, 1);
     this.draw(1 - s.initiative, 1);
@@ -474,8 +488,11 @@ export class Game {
   destroy(u: Unit) { if (u.hp > 0) u.hp = 0; }
 
   freeze(u: Unit) {
-    if (u.exhausted) u.frozen = true; else u.exhausted = true;
+    // Frozen units lose their next order: this round's if they still have it, otherwise next round's.
+    u.frozenUntil = this.canAct(u) ? this.s.round : this.s.round + 1;
+    u.exhausted = true;
     this.emit({ t: 'freeze', uid: u.uid });
+    this.log(u.owner, `{{${u.cardId}}} was Frozen.`);
   }
 
   root(u: Unit, rounds: number) {
@@ -484,7 +501,7 @@ export class Game {
   }
 
   ready(u: Unit) {
-    u.exhausted = false; u.frozen = false;
+    u.exhausted = false; u.frozenUntil = 0;
     if (u.summonedRound === this.s.round) u.summonedRound = -1;
     this.emit({ t: 'ready', uid: u.uid });
   }
@@ -509,7 +526,7 @@ export class Game {
     const u: Unit = {
       uid: this.s.nextId++, cardId, owner, c: h.c, r: h.r,
       atk: d.atk ?? 0, hp: d.hp ?? 1, maxHp: d.hp ?? 1, speed: d.speed ?? 2, range: d.range ?? 1,
-      kw: [...(d.kw ?? [])], exhausted: false, summonedRound: this.s.round, frozen: false, rootedUntil: 0, tempAtk: 0,
+      kw: [...(d.kw ?? [])], exhausted: false, summonedRound: this.s.round, frozenUntil: 0, rootedUntil: 0, tempAtk: 0,
     };
     this.s.units.push(u);
     this.emit({ t: 'summon', uid: u.uid, unit: structuredClone(u) });
@@ -596,6 +613,7 @@ export class Game {
     this.s.winner = winner;
     this.emit({ t: 'gameOver', winner });
     this.log(-1, winner === -1 ? 'The game is a draw!' : `${this.s.players[winner].name} wins!`);
+    throw new GameOver();
   }
 
   log(p: number, text: string) {

@@ -3,6 +3,7 @@ import { chooseAction } from '../shared/ai';
 import { DECKS, prebuiltList, validateDeck, type DeckList } from '../shared/decks';
 import { Game, eventsFor, viewFor } from '../shared/engine';
 import type { Action, GameEvent } from '../shared/types';
+import { GameLog } from './gamelog';
 
 /** Seconds a player gets per action before they automatically pass. */
 const ACTION_TIME = 75;
@@ -24,6 +25,7 @@ export class DuelRoom extends Room {
   maxClients = 2;
   seats: Seat[] = [];
   game: Game | null = null;
+  log: GameLog | null = null;
   deadline = 0;
   timer: ReturnType<typeof setTimeout> | null = null;
   aiTimer: ReturnType<typeof setTimeout> | null = null;
@@ -94,7 +96,8 @@ export class DuelRoom extends Room {
       this.sendState([]);
     } catch {
       if (this.game && this.game.s.phase !== 'over') {
-        this.game.act(seat, { type: 'concede' });
+        this.log?.note(`${this.seats[seat].name} disconnected and did not come back`);
+        this.act(seat, { type: 'concede' });
         this.sendState(this.game.events);
       }
       this.seats[seat].sessionId = null;
@@ -113,10 +116,11 @@ export class DuelRoom extends Room {
   private startGame() {
     const [a, b] = this.seats;
     for (const s of this.seats) s.rematch = s.isAI;
-    this.game = Game.create(
-      { name: a.name, deck: a.deck, isAI: a.isAI },
-      { name: b.name, deck: b.deck, isAI: b.isAI },
-    );
+    const seed = (Math.random() * 2 ** 31) | 0;
+    const players = [a, b].map((s) => ({ name: s.name, deck: s.deck, isAI: s.isAI }));
+    this.log = new GameLog(this.roomId, seed, players);
+    this.game = Game.create(players[0], players[1], seed);
+    console.log(`Game started in room ${this.roomId}: ${a.name} (${a.deck.name}) vs ${b.name} (${b.deck.name}). Log: ${this.log.file}`);
     this.sendState([{ t: 'fx', kind: 'start', at: null }]);
     this.armTimer();
     this.maybeAI();
@@ -125,9 +129,26 @@ export class DuelRoom extends Room {
   private handleAction(client: Client, action: Action) {
     const seat = this.seatOf(client);
     if (seat < 0 || !this.game) return;
-    const res = this.game.act(seat, action);
+    const res = this.act(seat, action);
     if (!res.ok) { client.send('error', res.error); return; }
     this.afterAction(res.events);
+  }
+
+  /** Every action goes through here so it is logged, and so a rules-engine crash can't take down the server. */
+  private act(seat: number, action: Action) {
+    const g = this.game!;
+    const round = g.s.round;
+    let res: ReturnType<Game['act']>;
+    try {
+      res = g.act(seat, action);
+    } catch (e) {
+      console.error(`Rules error in room ${this.roomId}:`, e);
+      this.log?.note('rules error', { seat, action, error: String((e as Error)?.stack ?? e) });
+      res = { ok: false, error: 'Something went wrong on the server. That action was not applied.' };
+    }
+    this.log?.action(seat, action, round, res);
+    if (g.s.phase === 'over' && this.log) { this.log.end(g.s.winner, g.s.round); this.log = null; }
+    return res;
   }
 
   private afterAction(events: GameEvent[]) {
@@ -164,13 +185,14 @@ export class DuelRoom extends Room {
     const g = this.game;
     if (!g || g.s.phase === 'over') return;
     if (g.s.phase === 'mulligan') {
-      for (let p = 0; p < 2; p++) if (!g.s.players[p].mulliganDone) g.act(p, { type: 'mulligan', iids: [] });
+      for (let p = 0; p < 2; p++) if (!g.s.players[p].mulliganDone) { this.log?.note(`seat ${p} ran out of mulligan time`); this.act(p, { type: 'mulligan', iids: [] }); }
       this.afterAction(g.events);
       return;
     }
     const p = g.s.turn;
     if (this.seats[p].isAI) return;
-    g.act(p, { type: 'pass' });
+    this.log?.note(`seat ${p} ran out of time`);
+    this.act(p, { type: 'pass' });
     this.afterAction(g.events);
   }
 
@@ -182,7 +204,7 @@ export class DuelRoom extends Room {
     if (aiSeat < 0) return;
     if (g.s.phase === 'mulligan') {
       if (!g.s.players[aiSeat].mulliganDone) {
-        g.act(aiSeat, chooseAction(g, aiSeat));
+        this.act(aiSeat, chooseAction(g, aiSeat));
         // Only broadcast if this finished the mulligan for both.
         if ((g.s.phase as string) === 'action') this.afterAction(g.events);
       }
@@ -194,8 +216,8 @@ export class DuelRoom extends Room {
     this.aiTimer = setTimeout(() => {
       if (!this.game || this.game.s.turn !== aiSeat || this.game.s.phase !== 'action') return;
       const action = chooseAction(this.game, aiSeat);
-      const res = this.game.act(aiSeat, action);
-      if (!res.ok) this.game.act(aiSeat, { type: 'pass' });
+      const res = this.act(aiSeat, action);
+      if (!res.ok) this.act(aiSeat, { type: 'pass' });
       this.afterAction(this.game.events);
     }, delay);
   }

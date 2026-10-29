@@ -29,7 +29,7 @@ export interface Unit {
   kw: Keyword[];
   exhausted: boolean;
   summonedRound: number;
-  frozen: boolean;   // will not ready at the start of next round
+  frozenUntil: number; // Frozen: can't act until after this round number
   rootedUntil: number; // can't move until the end of this round number
   tempAtk: number;   // bonus power until end of round
 }
