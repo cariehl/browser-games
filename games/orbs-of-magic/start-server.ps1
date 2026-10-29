@@ -88,7 +88,9 @@ Step '2/4 Installing packages and building'
 if ($skipInstall) {
   Write-Host 'Skipped (-SkipInstall).'
 } else {
-  & npm install --no-audit --no-fund
+  # --include=dev: the build needs vite and the server needs tsx, even when NODE_ENV is 'production'
+  # (which would make npm skip and remove them).
+  & npm install --include=dev --no-audit --no-fund
   if ($LASTEXITCODE -ne 0) { Fail 'npm install failed.' }
 }
 if ($skipBuild) {
@@ -170,9 +172,12 @@ Write-Host '  ===========================================================' -Fore
 Step '4/4 Starting the server'
 try {
   # The server is TypeScript, so it runs through the tsx that npm install put in node_modules.
+  # NODE_ENV is only set for the server and put back afterwards, so it can't leak into a later run.
+  $oldNodeEnv = $env:NODE_ENV
   $env:NODE_ENV = 'production'
   & node (Join-Path $Root 'node_modules/tsx/dist/cli.mjs') (Join-Path $Root 'server/index.ts') @serverArgs
 } finally {
+  $env:NODE_ENV = $oldNodeEnv
   if ($tunnel -and -not $tunnel.HasExited) {
     Write-Host 'Closing the tunnel.'
     Stop-Process -Id $tunnel.Id -Force -ErrorAction SilentlyContinue
