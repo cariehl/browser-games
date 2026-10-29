@@ -16,6 +16,18 @@ npm run build
 npm start          # → http://localhost:2567
 ```
 
+### Hosting on Windows
+
+Double-click `start-server.cmd` (or run `.\start-server.ps1`). It pulls the latest code, runs `npm install` and `npm run build`, then hosts the game on http://localhost:2567 in that window. Ctrl+C stops it.
+
+| Option | What it does |
+| --- | --- |
+| `-HostOnline` | Opens a Cloudflare quick tunnel and prints a public URL for friends (copied to the clipboard). Needs `cloudflared`: on PATH, in `$env:CLOUDFLARED`, at `..\cloudflared\cloudflared.exe`, or given with `-Cloudflared <path>` |
+| `--port 8080` | Listens on another port (`$env:PORT` works too) |
+| `-SkipPull` / `-SkipInstall` / `-SkipBuild` | Skips that step |
+
+Example from cmd or a shortcut: `start-server.cmd -HostOnline`.
+
 Other scripts:
 
 | Script | What it does |
