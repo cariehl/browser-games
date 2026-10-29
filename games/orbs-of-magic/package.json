@@ -11,7 +11,8 @@
     "start": "NODE_ENV=production tsx server/index.ts",
     "sim": "tsx scripts/sim.ts",
     "typecheck": "tsc --noEmit",
-    "replay": "tsx scripts/replay.ts"
+    "replay": "tsx scripts/replay.ts",
+    "build:pages": "vite build --mode pages"
   },
   "dependencies": {
     "@colyseus/core": "^0.16.26",

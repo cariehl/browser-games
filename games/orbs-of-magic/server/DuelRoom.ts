@@ -1,25 +1,18 @@
 import { Room, type Client } from '@colyseus/core';
 import { chooseAction } from '../shared/ai';
-import { DECKS, prebuiltList, validateDeck, type DeckList } from '../shared/decks';
+import { DECKS, prebuiltList, type DeckList } from '../shared/decks';
 import { Game, eventsFor, viewFor } from '../shared/engine';
+import { EMOTES, aiDeck, aiDelay, pickDeck } from '../shared/room';
 import type { Action, GameEvent } from '../shared/types';
 import { GameLog } from './gamelog';
 
 /** Seconds a player gets per action before they automatically pass. */
 const ACTION_TIME = 75;
 const MULLIGAN_TIME = 45;
-const EMOTES = ['Well played!', 'Good luck!', 'Hmm...', 'Oops!', 'Wow!', 'Thanks!', 'Not today!', 'Behold!'];
 
 interface Seat { sessionId: string | null; name: string; deck: DeckList; isAI: boolean; connected: boolean; rematch: boolean }
 
 export interface JoinOptions { name?: string; deckId?: string; customDeck?: DeckList; vsAI?: boolean; aiDeckId?: string; private?: boolean }
-
-/** Pick the player's deck: a legal custom list, else the named prebuilt deck. */
-function pickDeck(opts: { deckId?: string; customDeck?: DeckList } | undefined): DeckList {
-  const c = opts?.customDeck;
-  if (c && typeof c.name === 'string' && !validateDeck(c.cards)) return { id: 'custom', name: c.name.slice(0, 30) || 'Custom Deck', cards: c.cards };
-  return prebuiltList(opts?.deckId ?? '');
-}
 
 export class DuelRoom extends Room {
   maxClients = 2;
@@ -38,7 +31,7 @@ export class DuelRoom extends Room {
     if (this.vsAI) {
       this.maxClients = 1;
       this.aiDeckChoice = DECKS.some((d) => d.id === options.aiDeckId) ? options.aiDeckId : undefined;
-      const deck = DECKS.find((d) => d.id === options.aiDeckId) ?? DECKS[Math.floor(Math.random() * DECKS.length)];
+      const deck = aiDeck(options.aiDeckId);
       this.seats[1] = { sessionId: null, name: `${deck.name} AI`, deck: prebuiltList(deck.id), isAI: true, connected: true, rematch: true };
     }
     if (options.private || this.vsAI) this.setPrivate(true);
@@ -56,7 +49,7 @@ export class DuelRoom extends Room {
       this.seats[seat].rematch = true;
       if (opts?.deckId || opts?.customDeck) this.seats[seat].deck = pickDeck(opts);
       if (this.vsAI) {
-        const deck = DECKS.find((d) => d.id === this.aiDeckChoice) ?? DECKS[Math.floor(Math.random() * DECKS.length)];
+        const deck = aiDeck(this.aiDeckChoice);
         this.seats[1].deck = prebuiltList(deck.id); this.seats[1].name = `${deck.name} AI`;
       }
       this.broadcast('rematchStatus', this.seats.map((s) => s?.rematch ?? false));
@@ -212,7 +205,7 @@ export class DuelRoom extends Room {
     }
     if (g.s.turn !== aiSeat) return;
     if (this.aiTimer) clearTimeout(this.aiTimer);
-    const delay = 700 + Math.min(eventCount, 12) * 220;
+    const delay = aiDelay(eventCount);
     this.aiTimer = setTimeout(() => {
       if (!this.game || this.game.s.turn !== aiSeat || this.game.s.phase !== 'action') return;
       const action = chooseAction(this.game, aiSeat);
