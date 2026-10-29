@@ -74,6 +74,7 @@ export interface GameState {
   lastPlayed: { player: number; cardId: string } | null;
 }
 
+/** Log text may reference cards as {{cardId}}; the client turns those into hoverable names. */
 export interface LogEntry { p: number; text: string; round: number }
 
 /** A target picked by a player: a hex, a unit or a Sanctum. null = skipped optional target. */

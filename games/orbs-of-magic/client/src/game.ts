@@ -2,10 +2,10 @@ import type { Room } from 'colyseus.js';
 import { COLOR_INFO, cardDef } from '../../shared/cards';
 import { allDecks, deckOptions } from './deckstore';
 import { Game, MAX_SPELL_MANA } from '../../shared/engine';
-import { inEnemyTerritory, key, same, type Hex } from '../../shared/hex';
+import { ALL_HEXES, dist, inEnemyTerritory, key, same, type Hex } from '../../shared/hex';
 import type { Action, GameEvent, GameState, Target, Unit } from '../../shared/types';
 import { isMuted, sfx, toggleMute } from './audio';
-import { cardBackHTML, cardHTML, esc, keywordHelp } from './cardview';
+import { cardBackHTML, cardHelp, cardHTML, esc } from './cardview';
 import type { BoardScene, HL } from './scene';
 
 type Mode =
@@ -36,6 +36,7 @@ export class GameController {
   disposed = false;
   rematchSent = false;
   seenCards = new Set<number>();
+  previewCard: { cardId: string; cost?: number } | null = null;
 
   constructor(public room: Room, public scene: BoardScene, ui: HTMLElement, public onExit: () => void, public currentDeckId: () => string) {
     this.root = document.createElement('div');
@@ -163,7 +164,7 @@ export class GameController {
   get opp() { return this.view!.players[1 - this.seat]; }
   get myTurn() { return !!this.view && this.view.phase === 'action' && this.view.turn === this.seat && !this.animating; }
 
-  private canActUnit = (u: Unit) => !!this.view && u.owner === this.seat && this.g.canAct(u);
+  private canActUnit = (u: Unit) => !!this.view && this.view.phase === 'action' && this.g.canAct(u);
 
   // ───────────── state flow ─────────────
   private async pump() {
@@ -447,6 +448,13 @@ export class GameController {
         map.set(key(u), 'selected');
         if (this.mode.moveTo) map.set(key(this.mode.moveTo), 'dest');
       }
+    } else if (this.hoverHex) {
+      // Idle hover on any unit: show where it can move and what it threatens from where it stands.
+      const u = g.unitAt(this.hoverHex);
+      if (u) {
+        if (g.canAct(u)) for (const k of g.reachable(u).keys()) map.set(k, 'move');
+        for (const h of ALL_HEXES) if (dist(h, u) <= u.range && dist(h, u) > 0) map.set(key(h), 'attackFar');
+      }
     }
     this.scene.setHighlights(map, sanctum);
   }
@@ -457,6 +465,13 @@ export class GameController {
     fc.classList.add('hidden');
     if (!this.view) return;
     const g = this.g;
+    if (this.previewCard) {
+      const d = cardDef(this.previewCard.cardId);
+      const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
+      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { extraClass: 'big', cost: this.previewCard.cost })}${lvl}</div><div class="hc-help">${cardHelp(d)}</div>`;
+      hc.classList.add('show');
+      return;
+    }
     if (this.hoverSanctum !== null) {
       const p = this.view.players[this.hoverSanctum];
       hc.innerHTML = `<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Units standing in ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} territory (the two back rows) can attack it.</p></div>`;
@@ -470,15 +485,16 @@ export class GameController {
       const status: string[] = [];
       if (u.frozen) status.push('❄️ Frozen: skips its next order');
       if (g.isRooted(u)) status.push("🕸️ Rooted: can't move");
-      if (u.exhausted) status.push('💤 Already acted this round');
-      else if (u.summonedRound === this.view.round && !u.kw.includes('swift')) status.push('🌀 Summoned this round');
+      if (u.exhausted && !u.frozen) status.push('✓ Already acted this round');
+      else if (u.summonedRound === this.view.round && !u.kw.includes('swift')) status.push("💤 Just summoned: can't act until next round");
+      else if (!u.frozen) status.push('⚡ Ready to act');
       if (u.tempAtk) status.push(`🔥 +${u.tempAtk} power this round`);
       if (d.champion) {
         const [cur, need] = d.champion.progress(g, u);
         status.push(`⭐ Level up: ${d.champion.label} ${Math.min(cur, need)}/${need}`);
       }
-      const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'preview' }) : '';
-      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div>` + `<div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${keywordHelp(u.kw)}`;
+      const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
+      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`;
       hc.classList.add('show');
     } else if (this.hoverHex && this.view && [1, 4, 7].includes(this.hoverHex.c) && this.hoverHex.r === 3) {
       hc.innerHTML = `<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`;
@@ -570,6 +586,8 @@ export class GameController {
     const hand = this.me.hand;
     const g = this.g;
     const n = hand.length;
+    // The old card elements are about to be replaced, so their mouseleave will never fire.
+    if (this.previewCard && !this.root.querySelector('.logcard:hover')) { this.previewCard = null; this.updateHover(); }
     el.innerHTML = hand.map((ci, i) => {
       const d = cardDef(ci.cardId);
       const playable = this.myTurn && g.playable(this.seat, ci);
@@ -584,7 +602,12 @@ export class GameController {
     for (const ci of hand) this.seenCards.add(ci.iid);
     el.querySelectorAll<HTMLElement>('.hand-slot').forEach((s) => {
       s.onclick = (e) => { e.stopPropagation(); this.clickCard(Number(s.dataset.iid)); };
-      s.onmouseenter = () => sfx.hover();
+      s.onmouseenter = () => {
+        sfx.hover();
+        const ci = hand.find((c) => c.iid === Number(s.dataset.iid));
+        if (ci) { this.previewCard = { cardId: ci.cardId, cost: g.cost(this.seat, ci) }; this.updateHover(); }
+      };
+      s.onmouseleave = () => { this.previewCard = null; this.updateHover(); };
     });
   }
 
@@ -620,8 +643,15 @@ export class GameController {
 
   private renderLog() {
     const el = $(this.root, '.log');
-    el.innerHTML = `<h4>Battle Log</h4>` + this.view!.log.slice(-40).reverse().map((l) =>
-      `<div class="${l.p === this.seat ? 'mine' : l.p === -1 ? 'sys' : 'theirs'}">${esc(l.text)}</div>`).join('');
+    const fmt = (t: string) => esc(t).replace(/\{\{(\w+)\}\}/g, (_m, id: string) => {
+      try { return `<span class="logcard" data-card="${id}">${esc(cardDef(id).name)}</span>`; } catch { return id; }
+    });
+    el.innerHTML = `<h4>Battle Log</h4>` + this.view!.log.slice(-60).reverse().map((l) =>
+      `<div class="${l.p === this.seat ? 'mine' : l.p === -1 ? 'sys' : 'theirs'}">${fmt(l.text)}</div>`).join('');
+    el.querySelectorAll<HTMLElement>('.logcard').forEach((s) => {
+      s.onmouseenter = () => { this.previewCard = { cardId: s.dataset.card! }; this.updateHover(); };
+      s.onmouseleave = () => { this.previewCard = null; this.updateHover(); };
+    });
   }
 
   private updatePrompt() {

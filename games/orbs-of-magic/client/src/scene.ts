@@ -91,6 +91,11 @@ class UnitVisual {
   ice: THREE.Mesh;
   roots: THREE.Mesh;
   base: THREE.Mesh;
+  status: THREE.Sprite;
+  statusCanvas = document.createElement('canvas');
+  statusTex: THREE.CanvasTexture;
+  rangeMarks = new THREE.Group();
+  rangeBadge: THREE.Sprite | null = null;
   data: Unit;
   flyHeight = 0;
   canActNow = false;
@@ -146,10 +151,52 @@ class UnitVisual {
     this.roots.rotation.x = Math.PI / 2; this.roots.position.y = 0.3; this.roots.scale.set(1.1, 1.1, 0.6);
     this.body.add(this.roots);
 
+    // Status badges (summoning sickness, frozen, rooted) float above the unit.
+    this.statusCanvas.width = 256; this.statusCanvas.height = 72;
+    this.statusTex = new THREE.CanvasTexture(this.statusCanvas);
+    this.statusTex.colorSpace = THREE.SRGBColorSpace;
+    this.status = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.statusTex, transparent: true, depthTest: false }));
+    this.status.scale.set(2.2, 0.62, 1);
+    this.status.position.y = 1.95;
+    this.status.renderOrder = 6;
+    this.body.add(this.status);
+
+    // Ranged units get a dashed blue ring around their base and a range badge.
+    if ((d.range ?? 1) > 1 || u.range > 1) this.addRangeMarks(u.range);
+
     this.group.add(this.body);
     this.flyHeight = u.kw.includes('flying') ? 0.45 : 0;
     this.place(u);
     this.refresh(u, false, 0);
+  }
+
+  addRangeMarks(range: number) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x6fc8ff });
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.07), mat);
+      m.position.set(Math.cos(a) * 0.86, 0.06, Math.sin(a) * 0.86);
+      m.rotation.y = -a + Math.PI / 2;
+      this.rangeMarks.add(m);
+    }
+    this.body.add(this.rangeMarks);
+    const c = document.createElement('canvas');
+    c.width = c.height = 96;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#1b5fb8'; ctx.beginPath(); ctx.arc(48, 48, 44, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 6; ctx.strokeStyle = '#bfe4ff'; ctx.stroke();
+    ctx.font = '40px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🏹', 40, 44);
+    ctx.font = '900 30px Inter, sans-serif'; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 5;
+    ctx.strokeText(String(range), 70, 70); ctx.fillText(String(range), 70, 70);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.rangeBadge = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    this.rangeBadge.scale.set(0.72, 0.72, 1);
+    this.rangeBadge.position.set(-0.7, 1.35, 0);
+    this.rangeBadge.renderOrder = 6;
+    this.body.add(this.rangeBadge);
   }
 
   place(h: Hex) {
@@ -165,8 +212,31 @@ class UnitVisual {
     this.ice.visible = u.frozen;
     this.roots.visible = u.rootedUntil >= round;
     this.flyHeight = u.kw.includes('flying') ? 0.45 : 0;
-    const exhausted = u.exhausted || (u.summonedRound === round && !u.kw.includes('swift'));
-    (this.icon.material as THREE.SpriteMaterial).color.set(exhausted ? 0x8a8f9e : 0xffffff);
+    const sick = u.summonedRound === round && !u.kw.includes('swift') && !u.exhausted;
+    const exhausted = u.exhausted || sick;
+    (this.icon.material as THREE.SpriteMaterial).color.set(u.frozen ? 0x9fdcff : exhausted ? 0x6f7384 : 0xffffff);
+    // Lay spent units slightly back so "already acted" reads at a glance.
+    this.icon.material.rotation = u.exhausted && !u.frozen ? -0.35 : 0;
+
+    const sc = this.statusCanvas.getContext('2d')!;
+    sc.clearRect(0, 0, 256, 72);
+    const tags: [string, string][] = [];
+    if (u.frozen) tags.push(['❄️', '#6fd0ff']);
+    else if (sick) tags.push(['💤', '#b9a8ff']);
+    else if (u.exhausted) tags.push(['✓', '#9aa0b4']);
+    if (u.rootedUntil >= round) tags.push(['🕸️', '#8fd05a']);
+    if (u.tempAtk > 0) tags.push(['🔥', '#ffb04d']);
+    const w = 64;
+    tags.forEach(([t, col], i) => {
+      const x = 128 - (tags.length * w) / 2 + i * w + w / 2;
+      sc.fillStyle = 'rgba(10,8,20,0.8)'; sc.beginPath(); sc.arc(x, 36, 30, 0, Math.PI * 2); sc.fill();
+      sc.lineWidth = 4; sc.strokeStyle = col; sc.stroke();
+      sc.font = t === '✓' ? '900 34px Inter, sans-serif' : '34px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      sc.textAlign = 'center'; sc.textBaseline = 'middle'; sc.fillStyle = col;
+      sc.fillText(t, x, 38);
+    });
+    this.statusTex.needsUpdate = true;
+    if (u.range > 1 && !this.rangeBadge) this.addRangeMarks(u.range);
 
     const ctx = this.statCanvas.getContext('2d')!;
     ctx.clearRect(0, 0, 256, 96);
@@ -185,7 +255,6 @@ class UnitVisual {
     if (u.kw.includes('guardian')) pips.push('🛡️');
     if (u.kw.includes('deadly')) pips.push('☠️');
     if (u.kw.includes('siege')) pips.push('🏰');
-    if (u.range > 1) pips.push('🎯');
     ctx.font = '26px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
     pips.slice(0, 2).forEach((p, i) => ctx.fillText(p, 128, 32 + i * 32));
     this.statTex.needsUpdate = true;
@@ -195,8 +264,10 @@ class UnitVisual {
     const fly = this.flyHeight;
     this.body.position.y = fly + (fly ? Math.sin(time * 2 + this.data.uid) * 0.08 : 0);
     this.icon.position.y = 0.95 + Math.sin(time * 1.6 + this.data.uid * 1.3) * 0.04;
+    // Ready ring: units that can still act this round. Pulses for your units on your turn.
     const m = this.ring.material as THREE.MeshBasicMaterial;
-    m.opacity = this.canActNow && myTurn && this.mine ? 0.45 + Math.sin(time * 4) * 0.25 : 0;
+    m.color.setHex(this.mine ? 0xffe066 : 0xff7a3d);
+    m.opacity = !this.canActNow ? 0 : this.mine && myTurn ? 0.6 + Math.sin(time * 4) * 0.3 : 0.35;
     this.bubble.rotation.y = time;
   }
 }

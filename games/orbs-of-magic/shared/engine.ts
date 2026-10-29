@@ -253,10 +253,10 @@ export class Game {
       if (d.type === 'unit') {
         const h = targets[0] as Hex;
         const u = this.summon(d.id, p, h);
-        this.log(p, `${pl.name} summoned ${d.name}.`);
+        this.log(p, `${pl.name} summoned {{${d.id}}}.`);
         if (u && d.onPlay) d.onPlay(this, { p, targets: targets.slice(1), self: u });
       } else {
-        this.log(p, `${pl.name} cast ${d.name}.`);
+        this.log(p, `${pl.name} played {{${d.id}}}.`);
         pl.spellsCast++;
         d.onPlay?.(this, { p, targets });
         for (const u of this.unitsOf(p)) cardDef(u.cardId).onSpellCast?.(this, u, d.id);
@@ -286,6 +286,10 @@ export class Game {
         this.emit({ t: 'move', uid: u.uid, path });
       }
       u.exhausted = true;
+      const who = `${s.players[p].name}'s {{${u.cardId}}}`;
+      if (!a.attack) this.log(p, `${who} moved.`);
+      else if ('sanctum' in a.attack) this.log(p, `${who} attacked the enemy Sanctum.`);
+      else this.log(p, `${who} attacked {{${this.unit(a.attack.uid)!.cardId}}}.`);
       if (a.attack) {
         if ('sanctum' in a.attack) this.attackSanctum(u, a.attack.sanctum);
         else { const tgt = this.unit(a.attack.uid)!; this.combat(u, tgt); }
@@ -314,7 +318,7 @@ export class Game {
       u.range = to.range ?? 1;
       for (const k of to.kw ?? []) if (!u.kw.includes(k)) u.kw.push(k);
       this.emit({ t: 'levelUp', uid: u.uid, unit: structuredClone(u) });
-      this.log(u.owner, `${d.name} leveled up into ${to.name}!`);
+      this.log(u.owner, `{{${d.id}}} leveled up into {{${to.id}}}!`);
     }
   }
 
@@ -568,6 +572,7 @@ export class Game {
       for (const u of dead) {
         this.emit({ t: 'death', uid: u.uid });
         const d = cardDef(u.cardId);
+        this.log(u.owner, `${this.s.players[u.owner].name}'s {{${u.cardId}}} died.`);
         if (!d.token && !d.levelOf) this.s.players[u.owner].graveyard.push(u.cardId);
         if (d.levelOf) this.s.players[u.owner].graveyard.push(d.levelOf);
         this.s.players[u.owner].alliesLost++;
@@ -595,7 +600,7 @@ export class Game {
 
   log(p: number, text: string) {
     this.s.log.push({ p, text, round: this.s.round });
-    if (this.s.log.length > 80) this.s.log.shift();
+    if (this.s.log.length > 150) this.s.log.shift();
   }
 
   emit(e: GameEvent) { this.events.push(e); }
