@@ -74,6 +74,7 @@ export const sfx = {
   orb: () => { tone(880, 0.6, 'sine', 0.15, 440); tone(1320, 0.5, 'sine', 0.08, 660); },
   victory: () => [523, 659, 784, 1046].forEach((f, i) => tone(f, 0.5, 'triangle', 0.25, undefined, i * 0.15)),
   defeat: () => [392, 349, 311, 262].forEach((f, i) => tone(f, 0.6, 'sawtooth', 0.12, undefined, i * 0.2)),
+  levelUp: () => { [392, 523, 659, 784, 1046].forEach((f, i) => tone(f, 0.35, 'triangle', 0.2, undefined, i * 0.07)); noise(0.6, 0.15, 4000, 0.3); },
   error: () => tone(160, 0.15, 'square', 0.1),
   emote: () => tone(990, 0.1, 'sine', 0.12, 1320),
 };

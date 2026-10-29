@@ -1,16 +1,17 @@
 // Plays AI-vs-AI games to sanity-check the rules and deck balance.
 // Usage: npm run sim -- [gamesPerPairing]
 import { chooseAction } from '../shared/ai';
-import { DECKS } from '../shared/decks';
+import { DECKS, validateDeck } from '../shared/decks';
 import { Game } from '../shared/engine';
 
 const N = Number(process.argv[2] ?? 2);
+for (const d of DECKS) { const err = validateDeck(d.cards); if (err) { console.error(`Deck ${d.id} is illegal: ${err}`); process.exit(1); } }
 const wins: Record<string, { w: number; g: number }> = {};
 let totalRounds = 0, games = 0, slowest = 0;
 for (const a of DECKS) for (const b of DECKS) {
   if (a.id >= b.id) continue;
   for (let i = 0; i < N; i++) {
-    const g = Game.create({ name: a.name, deckId: a.id, isAI: true }, { name: b.name, deckId: b.id, isAI: true }, (Math.random() * 1e9) | 0);
+    const g = Game.create({ name: a.name, deck: a.id, isAI: true }, { name: b.name, deck: b.id, isAI: true }, (Math.random() * 1e9) | 0);
     let steps = 0;
     while (g.s.phase !== 'over' && steps < 3000) {
       const p = g.s.phase === 'mulligan' ? g.s.players.findIndex((x) => !x.mulliganDone) : g.s.turn;

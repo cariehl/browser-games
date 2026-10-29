@@ -1,11 +1,11 @@
 import type { Room } from 'colyseus.js';
 import { COLOR_INFO, cardDef } from '../../shared/cards';
-import { DECKS } from '../../shared/decks';
+import { allDecks, deckOptions } from './deckstore';
 import { Game, MAX_SPELL_MANA } from '../../shared/engine';
-import { inEnemyTerritory, key, same, type Hex } from '../../shared/hex';
+import { ALL_HEXES, dist, inEnemyTerritory, key, same, type Hex } from '../../shared/hex';
 import type { Action, GameEvent, GameState, Target, Unit } from '../../shared/types';
 import { isMuted, sfx, toggleMute } from './audio';
-import { cardBackHTML, cardHTML, esc, keywordHelp } from './cardview';
+import { cardBackHTML, cardHelp, cardHTML, esc } from './cardview';
 import type { BoardScene, HL } from './scene';
 
 type Mode =
@@ -35,8 +35,10 @@ export class GameController {
   timerInt: ReturnType<typeof setInterval>;
   disposed = false;
   rematchSent = false;
+  seenCards = new Set<number>();
+  previewCard: { cardId: string; cost?: number } | null = null;
 
-  constructor(public room: Room, public scene: BoardScene, ui: HTMLElement, public onExit: () => void) {
+  constructor(public room: Room, public scene: BoardScene, ui: HTMLElement, public onExit: () => void, public currentDeckId: () => string) {
     this.root = document.createElement('div');
     this.root.className = 'game';
     ui.innerHTML = '';
@@ -136,7 +138,7 @@ export class GameController {
     s.onHexClick = (h) => this.hexClick(h);
     s.onHexHover = (h) => { this.hoverHex = h; this.updateHover(); this.updateHighlights(); };
     s.onSanctumClick = (p) => this.sanctumClick(p);
-    s.onSanctumHover = (p) => { this.hoverSanctum = p; this.updateHover(); };
+    s.onSanctumHover = (p) => { this.hoverSanctum = p; this.updateHover(); this.updateGuide(); };
     s.onRightClick = () => { if (this.mode.kind !== 'idle') { this.setMode({ kind: 'idle' }); sfx.click(); } };
   }
 
@@ -162,7 +164,7 @@ export class GameController {
   get opp() { return this.view!.players[1 - this.seat]; }
   get myTurn() { return !!this.view && this.view.phase === 'action' && this.view.turn === this.seat && !this.animating; }
 
-  private canActUnit = (u: Unit) => !!this.view && u.owner === this.seat && this.g.canAct(u);
+  private canActUnit = (u: Unit) => !!this.view && this.view.phase === 'action' && this.g.canAct(u);
 
   // ───────────── state flow ─────────────
   private async pump() {
@@ -173,7 +175,12 @@ export class GameController {
       this.seat = msg.seat;
       this.deadline = msg.deadline;
       this.connected = msg.connected;
-      if (first) { this.scene.setSeat(msg.seat); this.hideOverlay(); }
+      if (first) {
+        this.scene.setSeat(msg.seat); this.hideOverlay();
+        let seen = '1';
+        try { seen = localStorage.getItem('oom-help-seen') ?? ''; localStorage.setItem('oom-help-seen', '1'); } catch { /* ignore */ }
+        if (!seen) setTimeout(() => this.toggleHelp(), 300);
+      }
       const prevTurn = this.view?.turn;
       const prevPhase = this.view?.phase;
       if (this.view && msg.events.length && !first) {
@@ -227,6 +234,9 @@ export class GameController {
         break;
       case 'draw':
         if (e.burned) this.toast(`${e.p === this.seat ? 'Your' : "Opponent's"} hand is full! ${cardDef(e.burned).name} was burned.`);
+        break;
+      case 'levelUp':
+        this.banner(cardDef(e.unit.cardId).name, `${e.unit.owner === this.seat ? 'Your' : "Opponent's"} champion leveled up!`);
         break;
       case 'gameOver':
         await this.scene.wait(500);
@@ -383,7 +393,34 @@ export class GameController {
   }
 
   // ───────────── highlights / hover ─────────────
+  private updateGuide() {
+    if (!this.view || this.mode.kind !== 'unit' || !this.myTurn) { this.scene.showGuide(null, null); return; }
+    const g = this.g;
+    const u = g.unit(this.mode.uid);
+    if (!u) { this.scene.showGuide(null, null); return; }
+    const here: Hex = { c: u.c, r: u.r };
+    const reach = g.reachable(u);
+    const pathTo = (h: Hex | undefined) => (h ? reach.get(key(h)) ?? [here] : [here]);
+    const base = this.mode.moveTo;
+    const target = this.hoverHex ? g.unitAt(this.hoverHex) : undefined;
+    if (this.hoverSanctum !== null && this.hoverSanctum !== this.seat) {
+      const from = base ?? here;
+      if (g.attackTargets(u, from).some((t) => 'sanctum' in t)) { this.scene.showGuide(pathTo(base), this.scene.sanctumPos(this.hoverSanctum)); return; }
+      for (const [, path] of reach) if (inEnemyTerritory(this.seat, path[path.length - 1])) { this.scene.showGuide(path, this.scene.sanctumPos(this.hoverSanctum)); return; }
+    }
+    if (target && target.owner !== this.seat) {
+      const from = base ?? here;
+      if (g.attackTargets(u, from).some((t) => 'uid' in t && t.uid === target.uid)) { this.scene.showGuide(pathTo(base), this.scene.hexPos(target, 0.7)); return; }
+      let best: Hex[] | null = null;
+      for (const [, path] of reach) if (g.attackTargets(u, path[path.length - 1]).some((t) => 'uid' in t && t.uid === target.uid) && (!best || path.length < best.length)) best = path;
+      if (best && !base) { this.scene.showGuide(best, this.scene.hexPos(target, 0.7)); return; }
+    }
+    if (this.hoverHex && reach.has(key(this.hoverHex)) && !base) { this.scene.showGuide(reach.get(key(this.hoverHex))!, null); return; }
+    this.scene.showGuide(base ? pathTo(base) : null, null);
+  }
+
   private updateHighlights() {
+    this.updateGuide();
     if (!this.view) return;
     const map = new Map<string, HL>();
     let sanctum: number | null = null;
@@ -411,6 +448,13 @@ export class GameController {
         map.set(key(u), 'selected');
         if (this.mode.moveTo) map.set(key(this.mode.moveTo), 'dest');
       }
+    } else if (this.hoverHex) {
+      // Idle hover on any unit: show where it can move and what it threatens from where it stands.
+      const u = g.unitAt(this.hoverHex);
+      if (u) {
+        if (g.canAct(u)) for (const k of g.reachable(u).keys()) map.set(k, 'move');
+        for (const h of ALL_HEXES) if (dist(h, u) <= u.range && dist(h, u) > 0) map.set(key(h), 'attackFar');
+      }
     }
     this.scene.setHighlights(map, sanctum);
   }
@@ -421,6 +465,13 @@ export class GameController {
     fc.classList.add('hidden');
     if (!this.view) return;
     const g = this.g;
+    if (this.previewCard) {
+      const d = cardDef(this.previewCard.cardId);
+      const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
+      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { extraClass: 'big', cost: this.previewCard.cost })}${lvl}</div><div class="hc-help">${cardHelp(d)}</div>`;
+      hc.classList.add('show');
+      return;
+    }
     if (this.hoverSanctum !== null) {
       const p = this.view.players[this.hoverSanctum];
       hc.innerHTML = `<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Units standing in ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} territory (the two back rows) can attack it.</p></div>`;
@@ -434,10 +485,16 @@ export class GameController {
       const status: string[] = [];
       if (u.frozen) status.push('❄️ Frozen: skips its next order');
       if (g.isRooted(u)) status.push("🕸️ Rooted: can't move");
-      if (u.exhausted) status.push('💤 Already acted this round');
-      else if (u.summonedRound === this.view.round && !u.kw.includes('swift')) status.push('🌀 Summoned this round');
+      if (u.exhausted && !u.frozen) status.push('✓ Already acted this round');
+      else if (u.summonedRound === this.view.round && !u.kw.includes('swift')) status.push("💤 Just summoned: can't act until next round");
+      else if (!u.frozen) status.push('⚡ Ready to act');
       if (u.tempAtk) status.push(`🔥 +${u.tempAtk} power this round`);
-      hc.innerHTML = cardHTML(d, { unit: u, extraClass: 'big' }) + `<div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${keywordHelp(u.kw)}`;
+      if (d.champion) {
+        const [cur, need] = d.champion.progress(g, u);
+        status.push(`⭐ Level up: ${d.champion.label} ${Math.min(cur, need)}/${need}`);
+      }
+      const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
+      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`;
       hc.classList.add('show');
     } else if (this.hoverHex && this.view && [1, 4, 7].includes(this.hoverHex.c) && this.hoverHex.r === 3) {
       hc.innerHTML = `<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`;
@@ -503,7 +560,6 @@ export class GameController {
 
   private renderPlayer(el: HTMLElement, p: number) {
     const pl = this.view!.players[p];
-    const deck = DECKS.find((d) => d.id === pl.deckId)!;
     const mine = p === this.seat;
     const extra = Math.max(0, pl.mana - pl.maxMana);
     let gems = '';
@@ -515,13 +571,13 @@ export class GameController {
     const hpPct = Math.max(0, pl.sanctum) / 20 * 100;
     el.classList.toggle('active', active);
     el.innerHTML = `
-      <div class="avatar" style="background:${deck.colors.map((c, i) => `radial-gradient(circle at ${i ? '70% 70%' : '30% 30%'}, ${COLOR_INFO[c].hex}, transparent 70%)`).join(',')}">${cardDef(deck.signature).icon}</div>
+      <div class="avatar" style="background:${pl.deckColors.map((c, i) => `radial-gradient(circle at ${i ? '70% 70%' : '30% 30%'}, ${COLOR_INFO[c].hex}, transparent 70%)`).join(',')}">${pl.deckIcon}</div>
       <div class="pdata">
         <div class="pname">${esc(pl.name)} ${!this.connected[p] ? '<span class="dc">disconnected</span>' : ''}${this.view!.passes === 1 && this.view!.turn !== p && this.view!.phase === 'action' ? '<span class="passed">passed</span>' : ''}</div>
         <div class="hpbar"><div class="fill ${mine ? 'mine' : 'theirs'}" style="width:${hpPct}%"></div><span>🔮 ${pl.sanctum}</span></div>
         <div class="mana" title="Mana ${pl.mana}/${pl.maxMana}">${gems}<span class="mana-num">${pl.mana}/${pl.maxMana}</span></div>
         <div class="spellmana" title="Spell mana: unspent mana carried over (spells and orders only)">${spell}</div>
-        <div class="counts"><span title="Cards in hand">🂠 ${pl.hand.length}</span><span title="Cards in deck">📚 ${pl.deck.length}</span><span title="Deck">${esc(deck.name)}</span></div>
+        <div class="counts"><span title="Cards in hand">🂠 ${pl.hand.length}</span><span title="Cards in deck">📚 ${pl.deck.length}</span><span title="Deck">${esc(pl.deckName)}</span></div>
       </div>`;
   }
 
@@ -530,6 +586,8 @@ export class GameController {
     const hand = this.me.hand;
     const g = this.g;
     const n = hand.length;
+    // The old card elements are about to be replaced, so their mouseleave will never fire.
+    if (this.previewCard && !this.root.querySelector('.logcard:hover')) { this.previewCard = null; this.updateHover(); }
     el.innerHTML = hand.map((ci, i) => {
       const d = cardDef(ci.cardId);
       const playable = this.myTurn && g.playable(this.seat, ci);
@@ -537,12 +595,19 @@ export class GameController {
       const mid = (n - 1) / 2;
       const rot = (i - mid) * Math.min(5, 30 / n);
       const lift = Math.abs(i - mid) * Math.abs(i - mid) * 3;
-      return `<div class="hand-slot ${playable ? 'playable' : ''} ${selected ? 'selected' : ''}" style="--rot:${rot}deg; --lift:${lift}px; --i:${i}" data-iid="${ci.iid}">
+      const fresh = !this.seenCards.has(ci.iid);
+      return `<div class="hand-slot ${playable ? 'playable' : ''} ${selected ? 'selected' : ''} ${fresh ? 'fresh' : ''}" style="--rot:${rot}deg; --lift:${lift}px; --i:${i}" data-iid="${ci.iid}">
         ${cardHTML(d, { cost: g.cost(this.seat, ci) })}</div>`;
     }).join('');
+    for (const ci of hand) this.seenCards.add(ci.iid);
     el.querySelectorAll<HTMLElement>('.hand-slot').forEach((s) => {
       s.onclick = (e) => { e.stopPropagation(); this.clickCard(Number(s.dataset.iid)); };
-      s.onmouseenter = () => sfx.hover();
+      s.onmouseenter = () => {
+        sfx.hover();
+        const ci = hand.find((c) => c.iid === Number(s.dataset.iid));
+        if (ci) { this.previewCard = { cardId: ci.cardId, cost: g.cost(this.seat, ci) }; this.updateHover(); }
+      };
+      s.onmouseleave = () => { this.previewCard = null; this.updateHover(); };
     });
   }
 
@@ -578,8 +643,15 @@ export class GameController {
 
   private renderLog() {
     const el = $(this.root, '.log');
-    el.innerHTML = `<h4>Battle Log</h4>` + this.view!.log.slice(-40).reverse().map((l) =>
-      `<div class="${l.p === this.seat ? 'mine' : l.p === -1 ? 'sys' : 'theirs'}">${esc(l.text)}</div>`).join('');
+    const fmt = (t: string) => esc(t).replace(/\{\{(\w+)\}\}/g, (_m, id: string) => {
+      try { return `<span class="logcard" data-card="${id}">${esc(cardDef(id).name)}</span>`; } catch { return id; }
+    });
+    el.innerHTML = `<h4>Battle Log</h4>` + this.view!.log.slice(-60).reverse().map((l) =>
+      `<div class="${l.p === this.seat ? 'mine' : l.p === -1 ? 'sys' : 'theirs'}">${fmt(l.text)}</div>`).join('');
+    el.querySelectorAll<HTMLElement>('.logcard').forEach((s) => {
+      s.onmouseenter = () => { this.previewCard = { cardId: s.dataset.card! }; this.updateHover(); };
+      s.onmouseleave = () => { this.previewCard = null; this.updateHover(); };
+    });
   }
 
   private updatePrompt() {
@@ -632,7 +704,8 @@ export class GameController {
     if (this.root.querySelector('.overlay .gameover')) return;
     const win = v.winner === this.seat, draw = v.winner === -1;
     win ? sfx.victory() : draw ? sfx.pass() : sfx.defeat();
-    const deckOpts = DECKS.map((d) => `<option value="${d.id}" ${d.id === this.me.deckId ? 'selected' : ''}>${esc(d.name)} (${d.archetype})</option>`).join('');
+    const cur = this.currentDeckId();
+    const deckOpts = allDecks().map((d) => `<option value="${d.id}" ${d.id === cur ? 'selected' : ''}>${esc(d.name)} (${d.archetype})</option>`).join('');
     this.showOverlay(`<div class="panel gameover ${win ? 'win' : draw ? 'draw' : 'lose'}">
       <div class="go-orb"></div>
       <h1>${win ? 'Victory!' : draw ? 'Draw' : 'Defeat'}</h1>
@@ -645,7 +718,7 @@ export class GameController {
       <div class="rematch-status dim"></div></div>`);
     (this.root.querySelector('.btn-rematch') as HTMLButtonElement).onclick = (e) => {
       const deckId = (this.root.querySelector('.rematch-deck') as HTMLSelectElement).value;
-      this.room.send('rematch', { deckId });
+      this.room.send('rematch', deckOptions(deckId));
       (e.target as HTMLButtonElement).disabled = true;
       (this.root.querySelector('.rematch-status') as HTMLElement).textContent = this.vsAI ? 'Shuffling…' : 'Waiting for opponent…';
     };

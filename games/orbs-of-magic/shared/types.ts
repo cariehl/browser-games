@@ -39,6 +39,9 @@ export interface CardInst { iid: number; cardId: string; costMod: number }
 export interface PlayerState {
   name: string;
   deckId: string;
+  deckName: string;
+  deckColors: Color[];
+  deckIcon: string;
   deck: string[];        // card ids, top = end of array. Hidden in views.
   hand: CardInst[];      // hidden from the opponent in views
   mana: number;
@@ -50,6 +53,8 @@ export interface PlayerState {
   graveyard: string[];   // card ids of friendly units that died
   isAI?: boolean;
   spellsCast: number;
+  sanctumDamageDealt: number; // damage dealt to the enemy Sanctum this game
+  alliesLost: number;        // friendly units (including tokens) that died this game
 }
 
 export type Phase = 'mulligan' | 'action' | 'over';
@@ -69,6 +74,7 @@ export interface GameState {
   lastPlayed: { player: number; cardId: string } | null;
 }
 
+/** Log text may reference cards as {{cardId}}; the client turns those into hoverable names. */
 export interface LogEntry { p: number; text: string; round: number }
 
 /** A target picked by a player: a hex, a unit or a Sanctum. null = skipped optional target. */
@@ -103,4 +109,5 @@ export type GameEvent =
   | { t: 'pass'; p: number }
   | { t: 'fx'; kind: string; at: Hex | null; p?: number; uid?: number }
   | { t: 'mana'; p: number }
+  | { t: 'levelUp'; uid: number; unit: Unit }
   | { t: 'gameOver'; winner: number };

@@ -23,7 +23,8 @@ export function cardHTML(d: CardDef, o: CardRenderOpts = {}) {
   const cost = o.cost ?? d.cost;
   const costCls = cost < d.cost ? 'cheaper' : cost > d.cost ? 'pricier' : '';
   const kw = (o.unit ? o.unit.kw : d.kw) ?? [];
-  const typeLabel = d.type === 'unit' ? 'Unit' : d.type === 'spell' ? 'Spell' : 'Order';
+  const isChamp = !!(d.champion || d.levelOf);
+  const typeLabel = isChamp ? (d.levelOf ? '★★ Champion' : '★ Champion') : d.type === 'unit' ? 'Unit' : d.type === 'spell' ? 'Spell' : 'Order';
   let stats = '';
   if (d.type === 'unit') {
     const atk = o.unit ? o.unit.atk + o.unit.tempAtk : d.atk!;
@@ -36,11 +37,11 @@ export function cardHTML(d: CardDef, o: CardRenderOpts = {}) {
       <span class="mini">${speed !== 2 ? `<i title="Speed">👣${speed}</i>` : ''}${range > 1 ? `<i title="Range">🎯${range}</i>` : ''}</span>
       <span class="hp ${hpCls}">${hp}</span></div>`;
   }
-  return `<div class="card ${d.color} ${d.type} ${o.extraClass ?? ''}" style="--col:${col.hex}" ${o.iid !== undefined ? `data-iid="${o.iid}"` : ''}>
+  return `<div class="card ${d.color} ${d.type} ${isChamp ? 'champion' : ''} ${o.extraClass ?? ''}" style="--col:${col.hex}" ${o.iid !== undefined ? `data-iid="${o.iid}"` : ''}>
     <div class="cost ${costCls}">${cost}</div>
     <div class="art"><span>${d.icon}</span></div>
     <div class="name">${esc(d.name)}</div>
-    <div class="type">${typeLabel} · ${col.name}${d.token ? ' · Token' : ''}</div>
+    <div class="type">${typeLabel} · ${col.name}${d.token && !d.levelOf ? ' · Token' : ''}</div>
     <div class="text">${kw.length ? `<div class="kws">${keywordLine(kw)}</div>` : ''}${richText(d.text)}${!d.text && !kw.length && d.flavor ? `<i class="flavor">${esc(d.flavor)}</i>` : ''}</div>
     ${stats}
   </div>`;
@@ -56,4 +57,28 @@ export function keywordHelp(kw: Keyword[]) {
 
 export function unitCardHTML(u: Unit) {
   return cardHTML(cardDef(u.cardId), { unit: u });
+}
+
+/** Reminder text for game terms that appear in card text (not keywords). */
+const TERM_HELP: [RegExp, string, string][] = [
+  [/\bArrival\b/, '✨ Arrival', 'Happens when you play this unit from your hand.'],
+  [/\bLast Breath\b/, '🕯️ Last Breath', 'Happens when this unit dies.'],
+  [/\bFreeze\b/, '❄️ Freeze', 'The unit loses its next order (this round if it hasn\'t acted yet, otherwise next round).'],
+  [/\bRoot\b/, '🕸️ Root', "The unit can't move, but can still attack."],
+  [/\bReady\b/, '🔁 Ready', 'The unit can be ordered again this round, even if it already acted or was just summoned.'],
+  [/\b[Ss]acrifice\b/, '🩸 Sacrifice', 'Destroy one of your own units.'],
+  [/\bReturn\b.*\bhand\b/, '🌊 Return', 'Send the unit back to its owner\'s hand. Damage and buffs are lost.'],
+  [/empty mana crystal/, '💎 Empty mana crystal', 'Raises your max mana by 1 (up to 10). It refills next round.'],
+  [/\bLevel up\b/, '⭐ Level up', 'When the condition is met while this champion is on the board, it transforms into its stronger form and fully heals.'],
+];
+
+/** Keyword reminders plus reminders for other terms used in the card's text. */
+export function cardHelp(d: CardDef, kw: Keyword[] = d.kw ?? []) {
+  const terms = TERM_HELP.filter(([re]) => re.test(d.text))
+    .map(([, name, text]) => `<div class="kwhelp"><b>${name}</b> ${esc(text)}</div>`).join('');
+  const extra: string[] = [];
+  if ((d.range ?? 1) > 1) extra.push(`<div class="kwhelp"><b>🏹 Ranged ${d.range}</b> Attacks units up to ${d.range} hexes away. Melee units can't strike back.</div>`);
+  if (d.speed && d.speed !== 2) extra.push(`<div class="kwhelp"><b>👣 Speed ${d.speed}</b> Moves up to ${d.speed} hexes per order (normal is 2).</div>`);
+  if (d.type === 'order') extra.push(`<div class="kwhelp"><b>📜 Order</b> Like a spell, but it commands your units. Can be paid with spell mana.</div>`);
+  return keywordHelp(kw) + extra.join('') + terms;
 }

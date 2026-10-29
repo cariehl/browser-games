@@ -4,7 +4,7 @@ import { cardDef } from '../shared/cards';
 import { Game } from '../shared/engine';
 
 const [a = 'wildfire', b = 'silver_vanguard', seed = '1'] = process.argv.slice(2);
-const g = Game.create({ name: 'A', deckId: a, isAI: true }, { name: 'B', deckId: b, isAI: true }, Number(seed));
+const g = Game.create({ name: 'A', deck: a, isAI: true }, { name: 'B', deck: b, isAI: true }, Number(seed));
 let lastRound = 0;
 while (g.s.phase !== 'over' && g.s.round < 30) {
   const p = g.s.phase === 'mulligan' ? g.s.players.findIndex((x) => !x.mulliganDone) : g.s.turn;

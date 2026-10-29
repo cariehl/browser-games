@@ -91,6 +91,11 @@ class UnitVisual {
   ice: THREE.Mesh;
   roots: THREE.Mesh;
   base: THREE.Mesh;
+  status: THREE.Sprite;
+  statusCanvas = document.createElement('canvas');
+  statusTex: THREE.CanvasTexture;
+  rangeMarks = new THREE.Group();
+  rangeBadge: THREE.Sprite | null = null;
   data: Unit;
   flyHeight = 0;
   canActNow = false;
@@ -116,7 +121,7 @@ class UnitVisual {
     top.position.y = 0.25;
     this.body.add(this.base, rim, top);
 
-    this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: emojiTexture(d.icon), transparent: true }));
+    this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: emojiTexture(d.icon), transparent: true, alphaTest: 0.1 }));
     this.icon.scale.set(1.25, 1.25, 1);
     this.icon.position.y = 0.95;
     this.body.add(this.icon);
@@ -146,10 +151,52 @@ class UnitVisual {
     this.roots.rotation.x = Math.PI / 2; this.roots.position.y = 0.3; this.roots.scale.set(1.1, 1.1, 0.6);
     this.body.add(this.roots);
 
+    // Status badges (summoning sickness, frozen, rooted) float above the unit.
+    this.statusCanvas.width = 256; this.statusCanvas.height = 72;
+    this.statusTex = new THREE.CanvasTexture(this.statusCanvas);
+    this.statusTex.colorSpace = THREE.SRGBColorSpace;
+    this.status = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.statusTex, transparent: true, depthTest: false }));
+    this.status.scale.set(2.2, 0.62, 1);
+    this.status.position.y = 1.95;
+    this.status.renderOrder = 6;
+    this.body.add(this.status);
+
+    // Ranged units get a dashed blue ring around their base and a range badge.
+    if ((d.range ?? 1) > 1 || u.range > 1) this.addRangeMarks(u.range);
+
     this.group.add(this.body);
     this.flyHeight = u.kw.includes('flying') ? 0.45 : 0;
     this.place(u);
     this.refresh(u, false, 0);
+  }
+
+  addRangeMarks(range: number) {
+    const mat = new THREE.MeshBasicMaterial({ color: 0x6fc8ff });
+    for (let i = 0; i < 10; i++) {
+      const a = (i / 10) * Math.PI * 2;
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.16, 0.05, 0.07), mat);
+      m.position.set(Math.cos(a) * 0.86, 0.06, Math.sin(a) * 0.86);
+      m.rotation.y = -a + Math.PI / 2;
+      this.rangeMarks.add(m);
+    }
+    this.body.add(this.rangeMarks);
+    const c = document.createElement('canvas');
+    c.width = c.height = 96;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#1b5fb8'; ctx.beginPath(); ctx.arc(48, 48, 44, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 6; ctx.strokeStyle = '#bfe4ff'; ctx.stroke();
+    ctx.font = '40px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🏹', 40, 44);
+    ctx.font = '900 30px Inter, sans-serif'; ctx.fillStyle = '#fff'; ctx.strokeStyle = '#000'; ctx.lineWidth = 5;
+    ctx.strokeText(String(range), 70, 70); ctx.fillText(String(range), 70, 70);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.rangeBadge = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    this.rangeBadge.scale.set(0.72, 0.72, 1);
+    this.rangeBadge.position.set(-0.7, 1.35, 0);
+    this.rangeBadge.renderOrder = 6;
+    this.body.add(this.rangeBadge);
   }
 
   place(h: Hex) {
@@ -165,8 +212,31 @@ class UnitVisual {
     this.ice.visible = u.frozen;
     this.roots.visible = u.rootedUntil >= round;
     this.flyHeight = u.kw.includes('flying') ? 0.45 : 0;
-    const exhausted = u.exhausted || (u.summonedRound === round && !u.kw.includes('swift'));
-    (this.icon.material as THREE.SpriteMaterial).color.set(exhausted ? 0x8a8f9e : 0xffffff);
+    const sick = u.summonedRound === round && !u.kw.includes('swift') && !u.exhausted;
+    const exhausted = u.exhausted || sick;
+    (this.icon.material as THREE.SpriteMaterial).color.set(u.frozen ? 0x9fdcff : exhausted ? 0x6f7384 : 0xffffff);
+    // Lay spent units slightly back so "already acted" reads at a glance.
+    this.icon.material.rotation = u.exhausted && !u.frozen ? -0.35 : 0;
+
+    const sc = this.statusCanvas.getContext('2d')!;
+    sc.clearRect(0, 0, 256, 72);
+    const tags: [string, string][] = [];
+    if (u.frozen) tags.push(['❄️', '#6fd0ff']);
+    else if (sick) tags.push(['💤', '#b9a8ff']);
+    else if (u.exhausted) tags.push(['✓', '#9aa0b4']);
+    if (u.rootedUntil >= round) tags.push(['🕸️', '#8fd05a']);
+    if (u.tempAtk > 0) tags.push(['🔥', '#ffb04d']);
+    const w = 64;
+    tags.forEach(([t, col], i) => {
+      const x = 128 - (tags.length * w) / 2 + i * w + w / 2;
+      sc.fillStyle = 'rgba(10,8,20,0.8)'; sc.beginPath(); sc.arc(x, 36, 30, 0, Math.PI * 2); sc.fill();
+      sc.lineWidth = 4; sc.strokeStyle = col; sc.stroke();
+      sc.font = t === '✓' ? '900 34px Inter, sans-serif' : '34px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      sc.textAlign = 'center'; sc.textBaseline = 'middle'; sc.fillStyle = col;
+      sc.fillText(t, x, 38);
+    });
+    this.statusTex.needsUpdate = true;
+    if (u.range > 1 && !this.rangeBadge) this.addRangeMarks(u.range);
 
     const ctx = this.statCanvas.getContext('2d')!;
     ctx.clearRect(0, 0, 256, 96);
@@ -185,7 +255,6 @@ class UnitVisual {
     if (u.kw.includes('guardian')) pips.push('🛡️');
     if (u.kw.includes('deadly')) pips.push('☠️');
     if (u.kw.includes('siege')) pips.push('🏰');
-    if (u.range > 1) pips.push('🎯');
     ctx.font = '26px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
     pips.slice(0, 2).forEach((p, i) => ctx.fillText(p, 128, 32 + i * 32));
     this.statTex.needsUpdate = true;
@@ -195,8 +264,10 @@ class UnitVisual {
     const fly = this.flyHeight;
     this.body.position.y = fly + (fly ? Math.sin(time * 2 + this.data.uid) * 0.08 : 0);
     this.icon.position.y = 0.95 + Math.sin(time * 1.6 + this.data.uid * 1.3) * 0.04;
+    // Ready ring: units that can still act this round. Pulses for your units on your turn.
     const m = this.ring.material as THREE.MeshBasicMaterial;
-    m.opacity = this.canActNow && myTurn && this.mine ? 0.45 + Math.sin(time * 4) * 0.25 : 0;
+    m.color.setHex(this.mine ? 0xffe066 : 0xff7a3d);
+    m.opacity = !this.canActNow ? 0 : this.mine && myTurn ? 0.6 + Math.sin(time * 4) * 0.3 : 0.35;
     this.bubble.rotation.y = time;
   }
 }
@@ -284,6 +355,7 @@ export class BoardScene {
   hoverKey: string | null = null;
   hoverSanctum: number | null = null;
   speed = 1;
+  guide: THREE.Mesh | null = null;
 
   onHexClick: (h: Hex) => void = () => {};
   onHexHover: (h: Hex | null) => void = () => {};
@@ -467,8 +539,9 @@ export class BoardScene {
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.camera.aspect = w / h;
+    // Widen the view on tall/narrow screens so the whole board stays visible.
+    this.camera.fov = Math.min(80, Math.max(42, THREE.MathUtils.radToDeg(2 * Math.atan(0.37 / (w / h)))));
     // Pull the camera back on narrow screens so the whole board fits.
-    this.camera.fov = w / h < 1.2 ? 58 : 42;
     this.camera.updateProjectionMatrix();
   }
 
@@ -531,6 +604,25 @@ export class BoardScene {
   setHighlights(map: Map<string, HL>, sanctumTarget: number | null) {
     for (const [k, t] of this.tiles) t.hl = map.get(k) ?? null;
     this.sanctums.forEach((s, i) => (s.hl = i === sanctumTarget));
+  }
+
+  /** Glowing tube showing a move path and/or an attack arc. Pass null to hide. */
+  showGuide(path: Hex[] | null, attackTo: THREE.Vector3 | null) {
+    if (this.guide) { this.scene.remove(this.guide); this.guide.geometry.dispose(); this.guide = null; }
+    if (!path || (path.length < 2 && !attackTo)) return;
+    const pts = path.map((h) => this.hexPos(h, 0.18));
+    if (attackTo) {
+      const from = pts[pts.length - 1];
+      const mid = from.clone().lerp(attackTo, 0.5); mid.y += 1.2;
+      const arc = new THREE.QuadraticBezierCurve3(from.clone().setY(0.6), mid, attackTo.clone());
+      pts.push(...arc.getPoints(12).slice(1));
+    }
+    if (pts.length < 2) return;
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.1);
+    const geo = new THREE.TubeGeometry(curve, Math.max(8, pts.length * 6), 0.06, 6, false);
+    this.guide = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: attackTo ? 0xff5a5a : 0x7fd8ff, transparent: true, opacity: 0.85, depthTest: false }));
+    this.guide.renderOrder = 4;
+    this.scene.add(this.guide);
   }
 
   // ───── input ─────
@@ -743,6 +835,21 @@ export class BoardScene {
         this.units.delete(e.uid);
         break;
       }
+      case 'levelUp': {
+        const old = this.units.get(e.uid);
+        if (old) this.scene.remove(old.group);
+        const vis = new UnitVisual(e.unit, e.unit.owner === seat);
+        this.units.set(e.uid, vis);
+        this.scene.add(vis.group);
+        sfx.levelUp();
+        const at = vis.group.position.clone().setY(0.8);
+        this.burst(at, 0xffd76a, 80, 4, 0.35, 1.2, 1.6);
+        this.burst(at, 0xffffff, 40, 2.5, 0.25, 0.9, 2);
+        this.floatText(at.clone().setY(2.2), 'LEVEL UP!', '#ffd76a', true);
+        this.shake = 0.3;
+        await this.tween(0.6, (t) => vis.group.scale.setScalar(1.8 - 0.8 * t), ease.outBack);
+        break;
+      }
       case 'bounce': {
         const vis = this.units.get(e.uid);
         if (!vis) break;
@@ -884,7 +991,7 @@ export class BoardScene {
         pos.add(new THREE.Vector3((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake, 0));
         this.shake = Math.max(0, this.shake - dt * 1.5);
       }
-      this.camera.position.lerp(pos, this.shake > 0 ? 1 : 0.08);
+      this.camera.position.lerp(pos, this.shake > 0 ? 1 : 1 - Math.exp(-dt * 4));
       this.camera.lookAt(this.camTarget);
     }
     this.composer.render();

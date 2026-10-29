@@ -16,6 +16,18 @@ npm run build
 npm start          # → http://localhost:2567
 ```
 
+### Hosting on Windows
+
+Double-click `start-server.cmd` (or run `.\start-server.ps1`). It pulls the latest code, runs `npm install` and `npm run build`, then hosts the game on http://localhost:2567 in that window. Ctrl+C stops it.
+
+| Option | What it does |
+| --- | --- |
+| `-HostOnline` | Opens a Cloudflare quick tunnel and prints a public URL for friends (copied to the clipboard). Needs `cloudflared`: on PATH, in `$env:CLOUDFLARED`, at `..\cloudflared\cloudflared.exe`, or given with `-Cloudflared <path>` |
+| `--port 8080` | Listens on another port (`$env:PORT` works too) |
+| `-SkipPull` / `-SkipInstall` / `-SkipBuild` | Skips that step |
+
+Example from cmd or a shortcut: `start-server.cmd -HostOnline`.
+
 Other scripts:
 
 | Script | What it does |
@@ -34,6 +46,8 @@ Other scripts:
 - **Ley Orbs:** three orbs hover over the centre row. Each one you stand on at the start of a round gives you +1 mana that round and deals 1 damage to the enemy Sanctum.
 - **Spell mana:** up to 3 unspent mana carries over, usable only for Spells and Orders.
 - Card types: **Units**, **Spells** (instant effects) and **Orders** (effects that command your units: ready them, buff them, make them fight).
+
+- **Champions:** each Orb has a champion that levels up mid-battle when its condition is met (Pyra: deal 8 Sanctum damage; Nerith: cast 5 spells/orders; Thornak: reach 8 max mana; Sera: control 5 units; Morvath: lose 5 allies). Hover a champion to see its progress and its leveled-up form.
 
 Keywords: Swift, Guardian, Flying, First Strike, Drain, Regenerate, Barrier, Siege, Deadly, Infiltrate, plus Freeze and Root statuses. Hover anything in-game for details.
 
@@ -60,6 +74,10 @@ Keywords: Swift, Guardian, Flying, First Strike, Drain, Regenerate, Barrier, Sie
 | Legion of Dawn | Dawn / Dusk | Go-wide |
 | Wild Hunt | Grove / Ember | Stompy |
 | Night Court | Dusk / Tide | Attrition |
+
+## Deck builder
+
+Pick **New Deck** (or **Copy & edit** on any deck) in the main menu. Decks are exactly 30 cards, up to 3 copies of a card, and at most 2 colors. Custom decks are saved in your browser and work in every mode, including online matches (the server re-validates them).
 
 ## Multiplayer
 

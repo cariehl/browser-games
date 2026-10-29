@@ -52,6 +52,10 @@ export interface CardDef {
   spellDiscount?: number;
   /** AI hint: how much the card likes to be played (added to evaluation). */
   aiBias?: number;
+  /** Champions level up into `to` once progress reaches the target. */
+  champion?: { to: string; label: string; progress: (g: Game, self: Unit) => [number, number] };
+  /** Set on a levelled-up champion: the id of its base form. */
+  levelOf?: string;
 }
 
 const friendlyUnit = (prompt = 'Choose a friendly unit'): TargetSpec => ({ kind: 'unit', side: 'friendly', prompt });
@@ -273,6 +277,47 @@ const list: CardDef[] = [
   { id: 'k_lich', name: 'Lich Queen', color: 'dusk', type: 'unit', cost: 7, atk: 5, hp: 6, kw: ['drain'], icon: '👑',
     text: 'Arrival: Destroy all other units with 2 or less health.',
     onPlay: (g, { self }) => { g.fx('shadow', null); for (const u of [...g.s.units]) if (u !== self && u.hp <= 2) g.destroy(u); } },
+
+  // ───────────────────────────── CHAMPIONS ─────────────────────────────
+  // One per Orb. Each levels up mid-battle when its condition is met.
+  { id: 'c_pyra', name: 'Pyra, the Wildfire', color: 'ember', type: 'unit', cost: 2, atk: 2, hp: 2, kw: ['swift'], icon: '🎇',
+    text: 'Level up: You have dealt 8+ damage to the enemy Sanctum this game.',
+    champion: { to: 'c_pyra2', label: 'Sanctum damage dealt', progress: (g, u) => [g.s.players[u.owner].sanctumDamageDealt, 8] } },
+  { id: 'c_pyra2', name: 'Pyra, Living Inferno', color: 'ember', type: 'unit', cost: 2, atk: 4, hp: 3, kw: ['swift', 'siege', 'flying'], icon: '☀️',
+    text: 'Leveled up! Flies over everything to burn Sanctums.', levelOf: 'c_pyra', token: true },
+  { id: 'c_nerith', name: 'Nerith, Tidecaller', color: 'tide', type: 'unit', cost: 3, atk: 2, hp: 4, range: 2, icon: '🧜‍♂️',
+    text: 'Level up: You have cast 5+ spells or orders this game.',
+    champion: { to: 'c_nerith2', label: 'Spells and orders cast', progress: (g, u) => [g.s.players[u.owner].spellsCast, 5] } },
+  { id: 'c_nerith2', name: 'Nerith, Maelstrom Lord', color: 'tide', type: 'unit', cost: 3, atk: 4, hp: 6, range: 3, icon: '🌪️',
+    text: 'At the start of each round, Freeze the strongest enemy unit.', levelOf: 'c_nerith', token: true,
+    onRoundStart: (g, self) => {
+      const es = g.unitsOf(1 - self.owner);
+      if (!es.length) return;
+      const top = es.reduce((a, b) => (g.power(b) > g.power(a) ? b : a));
+      g.fx('frost', top); g.freeze(top);
+    } },
+  { id: 'c_thornak', name: 'Thornak, the Rooted', color: 'grove', type: 'unit', cost: 4, atk: 4, hp: 5, kw: ['regenerate'], icon: '🐻',
+    text: 'Level up: You have 8+ max mana.',
+    champion: { to: 'c_thornak2', label: 'Max mana', progress: (g, u) => [g.s.players[u.owner].maxMana, 8] } },
+  { id: 'c_thornak2', name: 'Thornak, Ancient King', color: 'grove', type: 'unit', cost: 4, atk: 8, hp: 8, kw: ['regenerate', 'guardian'], icon: '🦣',
+    text: 'At the start of each round, other friendly units get +1/+1.', levelOf: 'c_thornak', token: true,
+    onRoundStart: (g, self) => { for (const u of g.unitsOf(self.owner)) if (u !== self) g.buff(u, 1, 1); } },
+  { id: 'c_sera', name: 'Sera, Shield of Dawn', color: 'dawn', type: 'unit', cost: 3, atk: 2, hp: 4, kw: ['guardian'], icon: '👸',
+    text: 'Level up: You control 5+ units.',
+    champion: { to: 'c_sera2', label: 'Units you control', progress: (g, u) => [g.unitsOf(u.owner).length, 5] } },
+  { id: 'c_sera2', name: "Sera, Dawn's Bulwark", color: 'dawn', type: 'unit', cost: 3, atk: 4, hp: 6, kw: ['guardian', 'barrier', 'firstStrike'], icon: '🌅',
+    text: 'At the start of each round, summon a 1/1 Militia Recruit next to this and give adjacent allies Barrier.', levelOf: 'c_sera', token: true,
+    onRoundStart: (g, self) => {
+      const h = g.randomEmptyNeighbor(self);
+      if (h) g.summon('d_recruit', self.owner, h);
+      for (const u of g.adjacentUnits(self)) if (u.owner === self.owner) g.giveKw(u, 'barrier');
+    } },
+  { id: 'c_morvath', name: 'Morvath, Gravecaller', color: 'dusk', type: 'unit', cost: 3, atk: 3, hp: 3, kw: ['drain'], icon: '🦇',
+    text: 'Level up: 5+ of your units have died this game.',
+    champion: { to: 'c_morvath2', label: 'Allies fallen', progress: (g, u) => [g.s.players[u.owner].alliesLost, 5] } },
+  { id: 'c_morvath2', name: 'Morvath, Soul Reaper', color: 'dusk', type: 'unit', cost: 3, atk: 5, hp: 5, kw: ['drain', 'deadly'], icon: '☠️',
+    text: 'Whenever another friendly unit dies, deal 1 damage to the enemy Sanctum.', levelOf: 'c_morvath', token: true,
+    onUnitDeath: (g, self, dead) => { if (dead.owner === self.owner) g.damageSanctum(1 - self.owner, 1, null); } },
 ];
 
 export const CARDS: Record<string, CardDef> = Object.fromEntries(list.map((c) => [c.id, c]));
