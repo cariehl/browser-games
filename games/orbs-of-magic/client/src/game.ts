@@ -2,9 +2,10 @@ import type { Room } from 'colyseus.js';
 import { COLOR_INFO, cardDef } from '../../shared/cards';
 import { allDecks, deckOptions } from './deckstore';
 import { Game, MAX_SPELL_MANA } from '../../shared/engine';
-import { ALL_HEXES, dist, inEnemyTerritory, key, same, type Hex } from '../../shared/hex';
+import { ALL_HEXES, canHitSanctum, dist, key, same, type Hex } from '../../shared/hex';
 import type { Action, GameEvent, GameState, Target, Unit } from '../../shared/types';
 import { isMuted, sfx, toggleMute } from './audio';
+import { music } from './music';
 import { cardBackHTML, cardHelp, cardHTML, esc } from './cardview';
 import type { BoardScene, HL } from './scene';
 
@@ -49,6 +50,7 @@ export class GameController {
       <div class="round-info"></div>
       <div class="corner-btns">
         <button class="icon-btn btn-log" title="Battle log">📜</button>
+        <button class="icon-btn btn-music ${music.isOn() ? '' : 'off'}" title="Music">🎵</button>
         <button class="icon-btn btn-mute" title="Sound">${isMuted() ? '🔇' : '🔊'}</button>
         <button class="icon-btn btn-help" title="How to play">❔</button>
         <button class="icon-btn btn-menu" title="Concede / leave">🏳️</button>
@@ -83,6 +85,7 @@ export class GameController {
     $(r, '.btn-skip').onclick = () => this.pickTarget(null);
     $(r, '.btn-log').onclick = () => $(r, '.log').classList.toggle('hidden');
     $(r, '.btn-mute').onclick = (e) => { (e.target as HTMLElement).textContent = toggleMute() ? '🔇' : '🔊'; };
+    $(r, '.btn-music').onclick = (e) => { (e.target as HTMLElement).classList.toggle('off', !music.toggle()); };
     $(r, '.btn-help').onclick = () => this.toggleHelp();
     $(r, '.btn-menu').onclick = () => this.confirmLeave();
     $(r, '.btn-emote').onclick = () => $(r, '.emote-list').classList.toggle('hidden');
@@ -92,8 +95,33 @@ export class GameController {
       if (e.code === 'Escape') this.setMode({ kind: 'idle' });
     };
     window.addEventListener('keydown', this.keyHandler);
+    window.addEventListener('wheel', this.wheelHandler, { passive: false });
   }
   private keyHandler: (e: KeyboardEvent) => void = () => {};
+
+  /** The mouse wheel scrolls the text of the hovered card (and then its keyword notes), so long cards are readable. */
+  private wheelHandler = (e: WheelEvent) => {
+    const hc = this.root.querySelector<HTMLElement>('.hover-card.show');
+    const over = e.target as HTMLElement;
+    if (!hc || over?.closest?.('.modal, .emote-list') || (over?.closest?.('.log') && !over.closest('.logcard'))) return;
+    const texts = [...hc.querySelectorAll<HTMLElement>('.card.big .text')].filter((t) => t.scrollHeight > t.clientHeight + 1);
+    const help = hc.querySelector<HTMLElement>('.hc-help');
+    const dy = e.deltaMode === 1 ? e.deltaY * 16 : e.deltaY;
+    const canScroll = (el: HTMLElement) => (dy > 0 ? el.scrollTop + el.clientHeight < el.scrollHeight - 1 : el.scrollTop > 0);
+    const targets = texts.some(canScroll) ? texts : help && canScroll(help) ? [help] : [];
+    if (!targets.length) return;
+    e.preventDefault();
+    for (const t of targets) t.scrollTop += dy * 0.5;
+    this.markOverflow(hc);
+  };
+
+  /** Fades the bottom (or top) edge of card text that has more to read. */
+  private markOverflow(hc: HTMLElement) {
+    for (const t of hc.querySelectorAll<HTMLElement>('.card.big .text')) {
+      t.classList.toggle('more-below', t.scrollTop + t.clientHeight < t.scrollHeight - 1);
+      t.classList.toggle('more-above', t.scrollTop > 0);
+    }
+  }
 
   private bindRoom() {
     const room = this.room;
@@ -135,6 +163,7 @@ export class GameController {
   private bindScene() {
     const s = this.scene;
     s.setMenuMode(false);
+    music.play('battle');
     s.onHexClick = (h) => this.hexClick(h);
     s.onHexHover = (h) => { this.hoverHex = h; this.updateHover(); this.updateHighlights(); };
     s.onSanctumClick = (p) => this.sanctumClick(p);
@@ -146,6 +175,7 @@ export class GameController {
     this.disposed = true;
     clearInterval(this.timerInt);
     window.removeEventListener('keydown', this.keyHandler);
+    window.removeEventListener('wheel', this.wheelHandler);
     this.scene.onHexClick = () => {}; this.scene.onHexHover = () => {};
     this.scene.onSanctumClick = () => {}; this.scene.onSanctumHover = () => {};
     this.scene.setMenuMode(true);
@@ -197,6 +227,7 @@ export class GameController {
       if (msg.events.some((e) => e.t === 'fx' && e.kind === 'start')) {
         this.rematchSent = false;
         this.hideOverlay();
+        music.duck(1, 3);
         this.scene.setMenuMode(true); this.scene.setMenuMode(false);
       }
       this.view = msg.view;
@@ -372,7 +403,7 @@ export class GameController {
       if (g.canAct(at)) { sfx.select(); this.setMode({ kind: 'unit', uid: at.uid }); }
       else {
         sfx.error();
-        this.toast(at.frozen ? 'That unit is frozen.' : at.exhausted ? 'That unit has already acted this round.' : 'Units can\'t act the round they are summoned (unless Swift).');
+        this.toast(g.isFrozen(at) ? 'That unit is Frozen.' : at.exhausted ? 'That unit has already acted this round.' : 'Units can\'t act the round they are summoned (unless Swift).');
       }
     }
   }
@@ -386,10 +417,10 @@ export class GameController {
     if (g.attackTargets(u, from).some((t) => 'sanctum' in t)) { this.send({ type: 'order', uid: u.uid, to: this.mode.moveTo, attack: { sanctum: p } }); return; }
     for (const [, path] of g.reachable(u)) {
       const dst = path[path.length - 1];
-      if (inEnemyTerritory(this.seat, dst)) { this.send({ type: 'order', uid: u.uid, to: dst, attack: { sanctum: p } }); return; }
+      if (canHitSanctum(this.seat, u.range, dst)) { this.send({ type: 'order', uid: u.uid, to: dst, attack: { sanctum: p } }); return; }
     }
     sfx.error();
-    this.toast('Units must stand in enemy territory (their two red back rows) to attack their Sanctum.');
+    this.toast('To attack the enemy Sanctum, melee units must stand on its back row. Ranged units can attack from either red row.');
   }
 
   // ───────────── highlights / hover ─────────────
@@ -406,7 +437,7 @@ export class GameController {
     if (this.hoverSanctum !== null && this.hoverSanctum !== this.seat) {
       const from = base ?? here;
       if (g.attackTargets(u, from).some((t) => 'sanctum' in t)) { this.scene.showGuide(pathTo(base), this.scene.sanctumPos(this.hoverSanctum)); return; }
-      for (const [, path] of reach) if (inEnemyTerritory(this.seat, path[path.length - 1])) { this.scene.showGuide(path, this.scene.sanctumPos(this.hoverSanctum)); return; }
+      for (const [, path] of reach) if (canHitSanctum(this.seat, u.range, path[path.length - 1])) { this.scene.showGuide(path, this.scene.sanctumPos(this.hoverSanctum)); return; }
     }
     if (target && target.owner !== this.seat) {
       const from = base ?? here;
@@ -461,6 +492,8 @@ export class GameController {
 
   private updateHover() {
     const hc = $(this.root, '.hover-card');
+    // Only re-render when the content changes, so a scrolled card keeps its place.
+    const setHC = (html: string) => { if (hc.dataset.html !== html) { hc.innerHTML = html; hc.dataset.html = html; } };
     const fc = $(this.root, '.forecast');
     fc.classList.add('hidden');
     if (!this.view) return;
@@ -468,14 +501,16 @@ export class GameController {
     if (this.previewCard) {
       const d = cardDef(this.previewCard.cardId);
       const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
-      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { extraClass: 'big', cost: this.previewCard.cost })}${lvl}</div><div class="hc-help">${cardHelp(d)}</div>`;
+      setHC(`<div class="hc-row">${cardHTML(d, { extraClass: 'big', cost: this.previewCard.cost })}${lvl}</div><div class="hc-help">${cardHelp(d)}</div>`);
       hc.classList.add('show');
+      this.markOverflow(hc);
       return;
     }
     if (this.hoverSanctum !== null) {
       const p = this.view.players[this.hoverSanctum];
-      hc.innerHTML = `<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Units standing in ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} territory (the two back rows) can attack it.</p></div>`;
+      setHC(`<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Melee units on ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} back row can attack it, and ranged units can attack it from either of ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} two back rows.</p></div>`);
       hc.classList.add('show');
+      this.markOverflow(hc);
       this.showForecast(null);
       return;
     }
@@ -483,22 +518,25 @@ export class GameController {
     if (u) {
       const d = cardDef(u.cardId);
       const status: string[] = [];
-      if (u.frozen) status.push('❄️ Frozen: skips its next order');
+      const frozen = g.isFrozen(u);
+      if (frozen) status.push(u.frozenUntil > this.view.round ? "❄️ Frozen: can't act this round or next" : "❄️ Frozen: can't act this round");
       if (g.isRooted(u)) status.push("🕸️ Rooted: can't move");
-      if (u.exhausted && !u.frozen) status.push('✓ Already acted this round');
+      if (u.exhausted && !frozen) status.push('✓ Already acted this round');
       else if (u.summonedRound === this.view.round && !u.kw.includes('swift')) status.push("💤 Just summoned: can't act until next round");
-      else if (!u.frozen) status.push('⚡ Ready to act');
+      else if (!frozen) status.push('⚡ Ready to act');
       if (u.tempAtk) status.push(`🔥 +${u.tempAtk} power this round`);
       if (d.champion) {
         const [cur, need] = d.champion.progress(g, u);
         status.push(`⭐ Level up: ${d.champion.label} ${Math.min(cur, need)}/${need}`);
       }
       const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
-      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`;
+      setHC(`<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`);
       hc.classList.add('show');
+      this.markOverflow(hc);
     } else if (this.hoverHex && this.view && [1, 4, 7].includes(this.hoverHex.c) && this.hoverHex.r === 3) {
-      hc.innerHTML = `<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`;
+      setHC(`<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`);
       hc.classList.add('show');
+      this.markOverflow(hc);
     } else hc.classList.remove('show');
     this.showForecast(u ?? null);
   }
@@ -704,6 +742,7 @@ export class GameController {
     if (this.root.querySelector('.overlay .gameover')) return;
     const win = v.winner === this.seat, draw = v.winner === -1;
     win ? sfx.victory() : draw ? sfx.pass() : sfx.defeat();
+    music.duck(0.35, 2.5);
     const cur = this.currentDeckId();
     const deckOpts = allDecks().map((d) => `<option value="${d.id}" ${d.id === cur ? 'selected' : ''}>${esc(d.name)} (${d.archetype})</option>`).join('');
     this.showOverlay(`<div class="panel gameover ${win ? 'win' : draw ? 'draw' : 'lose'}">
@@ -787,7 +826,7 @@ export const HELP_HTML = `
   <div><h4>🎯 Goal</h4><p>Reduce the enemy <b>Sanctum</b> (the big orb behind their side) from 20 to 0.</p></div>
   <div><h4>🔁 Rounds</h4><p>Each round you gain a mana crystal (up to 10) and draw a card. Players take turns doing <b>one action at a time</b>. The player with the <b>initiative</b> goes first; it swaps every round. The round ends when both players <b>pass in a row</b>, so passing just to see what your opponent does is a real tactic.</p></div>
   <div><h4>🃏 Actions</h4><p><b>Play a card</b>: Units are summoned onto your two back rows. Spells and Orders take effect immediately.<br><b>Order a unit</b>: Move it up to its speed (usually 2 hexes) and/or attack something in range. Each unit can be ordered once per round, starting the round after it is summoned.<br><b>Pass</b>.</p></div>
-  <div><h4>⚔️ Combat</h4><p>Attacker and defender damage each other at the same time, unless the defender can't reach back (ranged attacks). Damage stays on units between rounds. Reach <b>enemy territory</b> (their two back rows) to attack their Sanctum directly.</p></div>
+  <div><h4>⚔️ Combat</h4><p>Attacker and defender damage each other at the same time, unless the defender can't reach back (ranged attacks). Damage stays on units between rounds. To attack the enemy Sanctum directly, melee units must reach the enemy's <b>back row</b>. Ranged units can attack it from either of the enemy's two back rows.</p></div>
   <div><h4>🔮 Ley Orbs</h4><p>Three orbs float over the center row. Each one you stand on at the start of a round gives you <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>
   <div><h4>💧 Spell mana</h4><p>Up to 3 unspent mana carries over as <b>spell mana</b>, which can only pay for Spells and Orders.</p></div>
 </div>
@@ -801,4 +840,4 @@ export const HELP_HTML = `
   <div><b>❄️ Freeze</b> the unit loses its next order</div><div><b>🕸️ Root</b> the unit can't move</div>
 </div>
 <h4>Controls</h4>
-<p>Click a card, then a highlighted target. Click your unit, then a blue hex to move or a red target to attack (it will walk into range automatically). <b>Space</b> passes, <b>Esc</b> or right-click cancels, mouse wheel zooms. Hover anything for details.</p>`;
+<p>Click a card, then a highlighted target. Click your unit, then a blue hex to move or a red target to attack (it will walk into range automatically). <b>Space</b> passes, <b>Esc</b> or right-click cancels, the mouse wheel scrolls the text of a hovered card. Hover anything for details.</p>`;

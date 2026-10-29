@@ -96,6 +96,7 @@ class UnitVisual {
   statusTex: THREE.CanvasTexture;
   rangeMarks = new THREE.Group();
   rangeBadge: THREE.Sprite | null = null;
+  strikeBadge: THREE.Sprite | null = null;
   data: Unit;
   flyHeight = 0;
   canActNow = false;
@@ -199,6 +200,25 @@ class UnitVisual {
     this.body.add(this.rangeBadge);
   }
 
+  /** A gold dagger badge on the right shoulder marks First Strike. */
+  private addStrikeBadge() {
+    const c = document.createElement('canvas');
+    c.width = c.height = 96;
+    const ctx = c.getContext('2d')!;
+    ctx.fillStyle = '#7a3b0c'; ctx.beginPath(); ctx.arc(48, 48, 44, 0, Math.PI * 2); ctx.fill();
+    ctx.lineWidth = 6; ctx.strokeStyle = '#ffd76a'; ctx.stroke();
+    ctx.font = '46px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
+    ctx.fillText('🗡️', 48, 52);
+    const tex = new THREE.CanvasTexture(c);
+    tex.colorSpace = THREE.SRGBColorSpace;
+    this.strikeBadge = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
+    this.strikeBadge.scale.set(0.7, 0.7, 1);
+    this.strikeBadge.position.set(0.7, 1.35, 0);
+    this.strikeBadge.renderOrder = 6;
+    this.body.add(this.strikeBadge);
+  }
+
   place(h: Hex) {
     const w = toWorld(h);
     this.group.position.set(w.x, TILE_TOP, w.z);
@@ -209,19 +229,20 @@ class UnitVisual {
     const d = cardDef(u.cardId);
     this.canActNow = canAct;
     (this.bubble.visible as boolean) = u.kw.includes('barrier');
-    this.ice.visible = u.frozen;
+    const frozen = u.frozenUntil >= round;
+    this.ice.visible = frozen;
     this.roots.visible = u.rootedUntil >= round;
     this.flyHeight = u.kw.includes('flying') ? 0.45 : 0;
     const sick = u.summonedRound === round && !u.kw.includes('swift') && !u.exhausted;
     const exhausted = u.exhausted || sick;
-    (this.icon.material as THREE.SpriteMaterial).color.set(u.frozen ? 0x9fdcff : exhausted ? 0x6f7384 : 0xffffff);
+    (this.icon.material as THREE.SpriteMaterial).color.set(frozen ? 0x9fdcff : exhausted ? 0x6f7384 : 0xffffff);
     // Lay spent units slightly back so "already acted" reads at a glance.
-    this.icon.material.rotation = u.exhausted && !u.frozen ? -0.35 : 0;
+    this.icon.material.rotation = u.exhausted && !frozen ? -0.35 : 0;
 
     const sc = this.statusCanvas.getContext('2d')!;
     sc.clearRect(0, 0, 256, 72);
     const tags: [string, string][] = [];
-    if (u.frozen) tags.push(['❄️', '#6fd0ff']);
+    if (frozen) tags.push(['❄️', '#6fd0ff']);
     else if (sick) tags.push(['💤', '#b9a8ff']);
     else if (u.exhausted) tags.push(['✓', '#9aa0b4']);
     if (u.rootedUntil >= round) tags.push(['🕸️', '#8fd05a']);
@@ -237,6 +258,8 @@ class UnitVisual {
     });
     this.statusTex.needsUpdate = true;
     if (u.range > 1 && !this.rangeBadge) this.addRangeMarks(u.range);
+    if (u.kw.includes('firstStrike') && !this.strikeBadge) this.addStrikeBadge();
+    if (this.strikeBadge) this.strikeBadge.visible = u.kw.includes('firstStrike');
 
     const ctx = this.statCanvas.getContext('2d')!;
     ctx.clearRect(0, 0, 256, 96);
@@ -350,7 +373,6 @@ export class BoardScene {
   shake = 0;
   camBase = new THREE.Vector3();
   camTarget = new THREE.Vector3();
-  zoom = 1;
   motes!: THREE.Points;
   hoverKey: string | null = null;
   hoverSanctum: number | null = null;
@@ -383,7 +405,6 @@ export class BoardScene {
     canvas.addEventListener('pointermove', (e) => this.pointerMove(e));
     canvas.addEventListener('click', (e) => this.click(e));
     canvas.addEventListener('contextmenu', (e) => { e.preventDefault(); this.onRightClick(); });
-    canvas.addEventListener('wheel', (e) => { this.zoom = THREE.MathUtils.clamp(this.zoom + e.deltaY * 0.0008, 0.7, 1.25); }, { passive: true });
     this.renderer.setAnimationLoop(() => this.frame());
   }
 
@@ -881,7 +902,7 @@ export class BoardScene {
         const vis = this.units.get(e.uid);
         if (!vis) break;
         sfx.freeze();
-        vis.data.frozen = true; vis.data.exhausted = true;
+        vis.data.frozenUntil = Math.max(vis.data.frozenUntil, v.round); vis.data.exhausted = true;
         vis.refresh(vis.data, false, v.round);
         this.burst(this.unitPos(e.uid, 0.8), 0x9fe8ff, 24, 2, 0.2, 0.7);
         await this.wait(180);
@@ -891,7 +912,7 @@ export class BoardScene {
         const vis = this.units.get(e.uid);
         if (!vis) break;
         sfx.buff();
-        vis.data.exhausted = false; vis.data.frozen = false;
+        vis.data.exhausted = false; vis.data.frozenUntil = 0;
         vis.refresh(vis.data, true, v.round);
         this.burst(this.unitPos(e.uid, 0.2), 0xffe066, 20, 1.2, 0.2, 0.8, 2.5);
         await this.wait(150);
@@ -986,7 +1007,7 @@ export class BoardScene {
       this.camera.position.set(Math.sin(a) * 19, 11 + Math.sin(time * 0.2) * 1.5, Math.cos(a) * 19);
       this.camera.lookAt(0, 0, 0);
     } else {
-      const pos = this.camBase.clone().multiplyScalar(this.zoom);
+      const pos = this.camBase.clone();
       if (this.shake > 0) {
         pos.add(new THREE.Vector3((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake, 0));
         this.shake = Math.max(0, this.shake - dt * 1.5);

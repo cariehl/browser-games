@@ -58,6 +58,8 @@ export const backRow = (p: number) => (p === 0 ? 0 : ROWS - 1);
 export const enemyBackRow = (p: number) => backRow(1 - p);
 /** Units standing in the enemy's deployment zone ("enemy territory") can attack the enemy Sanctum. */
 export const inEnemyTerritory = (p: number, h: Hex) => deployRows(1 - p).includes(h.r);
+/** Ranged units can attack the enemy Sanctum from anywhere in enemy territory; melee units only from its back row. */
+export const canHitSanctum = (p: number, range: number, h: Hex) => (range > 1 ? inEnemyTerritory(p, h) : h.r === enemyBackRow(p));
 /** Rows that count as "your half" (for Infiltrate etc). */
 export const ownHalfRows = (p: number) => (p === 0 ? [0, 1, 2, 3] : [3, 4, 5, 6]);
 

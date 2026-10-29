@@ -10,7 +10,8 @@
     "build": "vite build",
     "start": "NODE_ENV=production tsx server/index.ts",
     "sim": "tsx scripts/sim.ts",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "replay": "tsx scripts/replay.ts"
   },
   "dependencies": {
     "@colyseus/core": "^0.16.26",

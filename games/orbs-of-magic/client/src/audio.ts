@@ -1,4 +1,6 @@
 // Tiny synthesized sound effects: no audio assets needed.
+import { connectMusic } from './music';
+
 let ctx: AudioContext | null = null;
 let master: GainNode | null = null;
 let muted = (() => { try { return localStorage.getItem('oom-muted') === '1'; } catch { return false; } })();
@@ -13,6 +15,9 @@ function ac() {
   if (ctx.state === 'suspended') ctx.resume();
   return ctx;
 }
+
+// Music plays through the same context and master volume (so the mute button covers it too).
+connectMusic(() => { const c = ac(); return { ctx: c, dest: master! }; });
 
 export function isMuted() { return muted; }
 export function toggleMute() {
