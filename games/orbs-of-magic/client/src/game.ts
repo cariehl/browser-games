@@ -487,6 +487,8 @@ export class GameController {
 
   private updateHover() {
     const hc = $(this.root, '.hover-card');
+    // Only re-render when the content changes, so a scrolled card keeps its place.
+    const setHC = (html: string) => { if (hc.dataset.html !== html) { hc.innerHTML = html; hc.dataset.html = html; } };
     const fc = $(this.root, '.forecast');
     fc.classList.add('hidden');
     if (!this.view) return;
@@ -494,14 +496,14 @@ export class GameController {
     if (this.previewCard) {
       const d = cardDef(this.previewCard.cardId);
       const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
-      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { extraClass: 'big', cost: this.previewCard.cost })}${lvl}</div><div class="hc-help">${cardHelp(d)}</div>`;
+      setHC(`<div class="hc-row">${cardHTML(d, { extraClass: 'big', cost: this.previewCard.cost })}${lvl}</div><div class="hc-help">${cardHelp(d)}</div>`);
       hc.classList.add('show');
       this.markOverflow(hc);
       return;
     }
     if (this.hoverSanctum !== null) {
       const p = this.view.players[this.hoverSanctum];
-      hc.innerHTML = `<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Units standing in ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} territory (the two back rows) can attack it.</p></div>`;
+      setHC(`<div class="sanctum-card ${this.hoverSanctum === this.seat ? 'mine' : 'theirs'}"><h3>${esc(p.name)}'s Sanctum</h3><div class="big">${p.sanctum} / 20</div><p>If it reaches 0, ${this.hoverSanctum === this.seat ? 'you lose' : 'you win'}. Units standing in ${this.hoverSanctum === this.seat ? 'your' : 'the enemy'} territory (the two back rows) can attack it.</p></div>`);
       hc.classList.add('show');
       this.markOverflow(hc);
       this.showForecast(null);
@@ -522,11 +524,11 @@ export class GameController {
         status.push(`⭐ Level up: ${d.champion.label} ${Math.min(cur, need)}/${need}`);
       }
       const lvl = d.champion ? cardHTML(cardDef(d.champion.to), { extraClass: 'big' }) : '';
-      hc.innerHTML = `<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`;
+      setHC(`<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`);
       hc.classList.add('show');
       this.markOverflow(hc);
     } else if (this.hoverHex && this.view && [1, 4, 7].includes(this.hoverHex.c) && this.hoverHex.r === 3) {
-      hc.innerHTML = `<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`;
+      setHC(`<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`);
       hc.classList.add('show');
       this.markOverflow(hc);
     } else hc.classList.remove('show');
