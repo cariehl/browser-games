@@ -8,6 +8,7 @@ import { cardHTML, esc } from './cardview';
 import { openDeckBuilder } from './deckbuilder';
 import { allDecks, deckOptions, deleteCustom, findDeck } from './deckstore';
 import { GameController, HELP_HTML } from './game';
+import { music, renderOffline } from './music';
 import { client } from './net';
 import { BoardScene } from './scene';
 
@@ -31,6 +32,7 @@ function colorDots(colors: Color[]) {
 
 function menu() {
   scene.setMenuMode(true);
+  music.play('menu');
   const decks = allDecks();
   const sel = findDeck(deckId);
   deckId = sel.id;
@@ -68,7 +70,7 @@ function menu() {
         <button class="btn btn-private">🔒 Create Private Match</button>
         <div class="join-row"><input class="code-input" placeholder="Match code"><button class="btn btn-join">Join</button></div>
         <div class="sep">Learn</div>
-        <div class="row"><button class="btn ghost btn-howto">How to Play</button><button class="btn ghost btn-library">Card Library</button><button class="btn ghost btn-orbs">The Five Orbs</button></div>
+        <div class="row"><button class="btn ghost btn-howto">How to Play</button><button class="btn ghost btn-library">Card Library</button><button class="btn ghost btn-orbs">The Five Orbs</button><button class="btn ghost btn-music-menu">🎵 Music: ${music.isOn() ? 'On' : 'Off'}</button></div>
         <div class="status dim"></div>
       </div>
     </div>
@@ -96,6 +98,7 @@ function menu() {
   q('.btn-howto').onclick = () => modal(`<div class="help">${HELP_HTML}</div>`);
   q('.btn-library').onclick = () => library('all');
   q('.btn-orbs').onclick = () => orbs();
+  q('.btn-music-menu').onclick = (e) => { (e.target as HTMLElement).textContent = `🎵 Music: ${music.toggle() ? 'On' : 'Off'}`; };
   q('.btn-view-deck').onclick = () => deckList(sel.id);
 }
 
@@ -154,6 +157,9 @@ function launch(room: Room) {
   current = new GameController(room, scene, ui, () => { current = null; menu(); }, () => deckId);
 }
 
+// Browsers only start audio after a click or key press.
+for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev, () => music.unlock(), { capture: true });
+
 async function boot() {
   let token: string | null = null;
   try { token = sessionStorage.getItem('oom-reconnect'); } catch { /* ignore */ }
@@ -165,4 +171,4 @@ async function boot() {
 boot();
 
 // Handy for debugging in the console.
-(window as unknown as { oom: unknown }).oom = { scene, cardDef, get game() { return current; } };
+(window as unknown as { oom: unknown }).oom = { scene, cardDef, music, renderOffline, get game() { return current; } };

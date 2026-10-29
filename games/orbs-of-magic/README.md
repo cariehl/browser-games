@@ -80,6 +80,15 @@ Keywords: Swift, Guardian, Flying, First Strike, Drain, Regenerate, Barrier, Sie
 | Wild Hunt | Grove / Ember | Stompy |
 | Night Court | Dusk / Tide | Attrition |
 
+## Music
+
+Two original pieces, synthesized live with Web Audio (`client/src/music.ts`), no audio files. Both are built on the same five-note **Orb motif** (A–D–E–F … E–C–D):
+
+- **Whispers of the Orbs** (menu): D dorian waltz for celesta, harp, hushed strings and glass bells.
+- **The Orb War** (battle): D minor for string ostinato, horns, timpani and flute. It moves through four 8-bar sections (gathering, the horn call, the swell, the ebb) and is mixed low so the battle stays in front.
+
+The menu and battle pieces crossfade into each other, and the battle piece fades down under the game-over screen. 🎵 toggles music (in the menu and in-game), and 🔊 mutes everything.
+
 ## Deck builder
 
 Pick **New Deck** (or **Copy & edit** on any deck) in the main menu. Decks are exactly 30 cards, up to 3 copies of a card, and at most 2 colors. Custom decks are saved in your browser and work in every mode, including online matches (the server re-validates them).

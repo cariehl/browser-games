@@ -5,6 +5,7 @@ import { Game, MAX_SPELL_MANA } from '../../shared/engine';
 import { ALL_HEXES, canHitSanctum, dist, key, same, type Hex } from '../../shared/hex';
 import type { Action, GameEvent, GameState, Target, Unit } from '../../shared/types';
 import { isMuted, sfx, toggleMute } from './audio';
+import { music } from './music';
 import { cardBackHTML, cardHelp, cardHTML, esc } from './cardview';
 import type { BoardScene, HL } from './scene';
 
@@ -49,6 +50,7 @@ export class GameController {
       <div class="round-info"></div>
       <div class="corner-btns">
         <button class="icon-btn btn-log" title="Battle log">📜</button>
+        <button class="icon-btn btn-music ${music.isOn() ? '' : 'off'}" title="Music">🎵</button>
         <button class="icon-btn btn-mute" title="Sound">${isMuted() ? '🔇' : '🔊'}</button>
         <button class="icon-btn btn-help" title="How to play">❔</button>
         <button class="icon-btn btn-menu" title="Concede / leave">🏳️</button>
@@ -83,6 +85,7 @@ export class GameController {
     $(r, '.btn-skip').onclick = () => this.pickTarget(null);
     $(r, '.btn-log').onclick = () => $(r, '.log').classList.toggle('hidden');
     $(r, '.btn-mute').onclick = (e) => { (e.target as HTMLElement).textContent = toggleMute() ? '🔇' : '🔊'; };
+    $(r, '.btn-music').onclick = (e) => { (e.target as HTMLElement).classList.toggle('off', !music.toggle()); };
     $(r, '.btn-help').onclick = () => this.toggleHelp();
     $(r, '.btn-menu').onclick = () => this.confirmLeave();
     $(r, '.btn-emote').onclick = () => $(r, '.emote-list').classList.toggle('hidden');
@@ -160,6 +163,7 @@ export class GameController {
   private bindScene() {
     const s = this.scene;
     s.setMenuMode(false);
+    music.play('battle');
     s.onHexClick = (h) => this.hexClick(h);
     s.onHexHover = (h) => { this.hoverHex = h; this.updateHover(); this.updateHighlights(); };
     s.onSanctumClick = (p) => this.sanctumClick(p);
@@ -223,6 +227,7 @@ export class GameController {
       if (msg.events.some((e) => e.t === 'fx' && e.kind === 'start')) {
         this.rematchSent = false;
         this.hideOverlay();
+        music.duck(1, 3);
         this.scene.setMenuMode(true); this.scene.setMenuMode(false);
       }
       this.view = msg.view;
@@ -737,6 +742,7 @@ export class GameController {
     if (this.root.querySelector('.overlay .gameover')) return;
     const win = v.winner === this.seat, draw = v.winner === -1;
     win ? sfx.victory() : draw ? sfx.pass() : sfx.defeat();
+    music.duck(0.35, 2.5);
     const cur = this.currentDeckId();
     const deckOpts = allDecks().map((d) => `<option value="${d.id}" ${d.id === cur ? 'selected' : ''}>${esc(d.name)} (${d.archetype})</option>`).join('');
     this.showOverlay(`<div class="panel gameover ${win ? 'win' : draw ? 'draw' : 'lose'}">
