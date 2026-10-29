@@ -1,5 +1,5 @@
 import { CARDS, cardDef, type CardDef, type TargetSpec } from './cards';
-import { DECKS } from './decks';
+import { deckColors, deckIcon, prebuiltList, validateDeck, type DeckList } from './decks';
 import {
   ALL_HEXES, LEY_ORBS, deployRows, dist, inEnemyTerritory, inBounds, key, neighbors, ownHalfRows, same, type Hex,
 } from './hex';
@@ -13,7 +13,7 @@ export const START_HAND = 4;
 
 export type ActResult = { ok: true; events: GameEvent[] } | { ok: false; error: string };
 
-export interface PlayerSetup { name: string; deckId: string; isAI?: boolean }
+export interface PlayerSetup { name: string; deck: DeckList | string; isAI?: boolean }
 
 function shuffle<T>(arr: T[], rand: () => number) {
   for (let i = arr.length - 1; i > 0; i--) {
@@ -43,13 +43,14 @@ export class Game {
     };
     const g = new Game(s);
     for (const setup of [a, b]) {
-      const deck = DECKS.find((d) => d.id === setup.deckId) ?? DECKS[0];
+      let deck = typeof setup.deck === 'string' ? prebuiltList(setup.deck) : setup.deck;
+      if (validateDeck(deck.cards)) deck = prebuiltList('');
       const cards: string[] = [];
       for (const [id, n] of deck.cards) for (let i = 0; i < n; i++) cards.push(id);
       const p: PlayerState = {
-        name: setup.name, deckId: deck.id, deck: shuffle(cards, () => g.rand()), hand: [],
+        name: setup.name, deckId: deck.id, deckName: deck.name, deckColors: deckColors(deck.cards), deckIcon: deckIcon(deck.cards), deck: shuffle(cards, () => g.rand()), hand: [],
         mana: 0, maxMana: 0, spellMana: 0, sanctum: START_SANCTUM, fatigue: 0, mulliganDone: false,
-        graveyard: [], isAI: setup.isAI, spellsCast: 0,
+        graveyard: [], isAI: setup.isAI, spellsCast: 0, sanctumDamageDealt: 0, alliesLost: 0,
       };
       s.players.push(p);
     }
@@ -296,7 +297,29 @@ export class Game {
     return { ok: false, error: 'Unknown action.' };
   }
 
+  /** Champions whose condition is met transform into their levelled-up form. */
+  checkLevelUps() {
+    for (const u of this.s.units) {
+      const d = cardDef(u.cardId);
+      if (!d.champion || u.hp <= 0) continue;
+      const [cur, need] = d.champion.progress(this, u);
+      if (cur < need) continue;
+      const to = cardDef(d.champion.to);
+      const dAtk = u.atk - (d.atk ?? 0), dHp = u.maxHp - (d.hp ?? 0);
+      u.cardId = to.id;
+      u.atk = (to.atk ?? 0) + dAtk;
+      u.maxHp = (to.hp ?? 1) + dHp;
+      u.hp = u.maxHp;
+      u.speed = to.speed ?? 2;
+      u.range = to.range ?? 1;
+      for (const k of to.kw ?? []) if (!u.kw.includes(k)) u.kw.push(k);
+      this.emit({ t: 'levelUp', uid: u.uid, unit: structuredClone(u) });
+      this.log(u.owner, `${d.name} leveled up into ${to.name}!`);
+    }
+  }
+
   private afterAction(p: number) {
+    this.checkLevelUps();
     if (this.s.phase !== 'action') return;
     this.s.passes = 0;
     this.s.turn = 1 - p;
@@ -330,6 +353,7 @@ export class Game {
     }
     for (const u of [...s.units]) if (u.hp > 0) cardDef(u.cardId).onRoundStart?.(this, u);
     this.resolveDeaths();
+    this.checkLevelUps();
     if (s.phase === 'action') this.log(-1, `Round ${s.round} begins. ${s.players[s.initiative].name} has the initiative.`);
   }
 
@@ -407,6 +431,7 @@ export class Game {
   damageSanctum(p: number, amount: number, source: Unit | null = null) {
     if (amount <= 0 || this.s.phase === 'over') return;
     this.s.players[p].sanctum -= amount;
+    this.s.players[1 - p].sanctumDamageDealt += amount;
     this.emit({ t: 'sanctumDamage', p, amount });
     if (source && this.has(source, 'drain')) this.healSanctum(source.owner, amount);
     this.checkWin();
@@ -463,7 +488,9 @@ export class Game {
   bounce(u: Unit) {
     this.s.units = this.s.units.filter((x) => x !== u);
     this.emit({ t: 'bounce', uid: u.uid });
-    if (!cardDef(u.cardId).token) this.addToHand(u.owner, u.cardId, 0);
+    const d = cardDef(u.cardId);
+    if (d.levelOf) this.addToHand(u.owner, d.levelOf, 0);
+    else if (!d.token) this.addToHand(u.owner, u.cardId, 0);
   }
 
   teleport(u: Unit, h: Hex) {
@@ -541,7 +568,9 @@ export class Game {
       for (const u of dead) {
         this.emit({ t: 'death', uid: u.uid });
         const d = cardDef(u.cardId);
-        if (!d.token) this.s.players[u.owner].graveyard.push(u.cardId);
+        if (!d.token && !d.levelOf) this.s.players[u.owner].graveyard.push(u.cardId);
+        if (d.levelOf) this.s.players[u.owner].graveyard.push(d.levelOf);
+        this.s.players[u.owner].alliesLost++;
         d.onDeath?.(this, u);
         for (const o of [...this.s.units]) if (o.hp > 0) cardDef(o.cardId).onUnitDeath?.(this, o, u);
       }

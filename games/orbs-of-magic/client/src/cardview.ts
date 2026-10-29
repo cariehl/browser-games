@@ -23,7 +23,8 @@ export function cardHTML(d: CardDef, o: CardRenderOpts = {}) {
   const cost = o.cost ?? d.cost;
   const costCls = cost < d.cost ? 'cheaper' : cost > d.cost ? 'pricier' : '';
   const kw = (o.unit ? o.unit.kw : d.kw) ?? [];
-  const typeLabel = d.type === 'unit' ? 'Unit' : d.type === 'spell' ? 'Spell' : 'Order';
+  const isChamp = !!(d.champion || d.levelOf);
+  const typeLabel = isChamp ? (d.levelOf ? '★★ Champion' : '★ Champion') : d.type === 'unit' ? 'Unit' : d.type === 'spell' ? 'Spell' : 'Order';
   let stats = '';
   if (d.type === 'unit') {
     const atk = o.unit ? o.unit.atk + o.unit.tempAtk : d.atk!;
@@ -36,11 +37,11 @@ export function cardHTML(d: CardDef, o: CardRenderOpts = {}) {
       <span class="mini">${speed !== 2 ? `<i title="Speed">👣${speed}</i>` : ''}${range > 1 ? `<i title="Range">🎯${range}</i>` : ''}</span>
       <span class="hp ${hpCls}">${hp}</span></div>`;
   }
-  return `<div class="card ${d.color} ${d.type} ${o.extraClass ?? ''}" style="--col:${col.hex}" ${o.iid !== undefined ? `data-iid="${o.iid}"` : ''}>
+  return `<div class="card ${d.color} ${d.type} ${isChamp ? 'champion' : ''} ${o.extraClass ?? ''}" style="--col:${col.hex}" ${o.iid !== undefined ? `data-iid="${o.iid}"` : ''}>
     <div class="cost ${costCls}">${cost}</div>
     <div class="art"><span>${d.icon}</span></div>
     <div class="name">${esc(d.name)}</div>
-    <div class="type">${typeLabel} · ${col.name}${d.token ? ' · Token' : ''}</div>
+    <div class="type">${typeLabel} · ${col.name}${d.token && !d.levelOf ? ' · Token' : ''}</div>
     <div class="text">${kw.length ? `<div class="kws">${keywordLine(kw)}</div>` : ''}${richText(d.text)}${!d.text && !kw.length && d.flavor ? `<i class="flavor">${esc(d.flavor)}</i>` : ''}</div>
     ${stats}
   </div>`;

@@ -116,7 +116,7 @@ class UnitVisual {
     top.position.y = 0.25;
     this.body.add(this.base, rim, top);
 
-    this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: emojiTexture(d.icon), transparent: true }));
+    this.icon = new THREE.Sprite(new THREE.SpriteMaterial({ map: emojiTexture(d.icon), transparent: true, alphaTest: 0.1 }));
     this.icon.scale.set(1.25, 1.25, 1);
     this.icon.position.y = 0.95;
     this.body.add(this.icon);
@@ -284,6 +284,7 @@ export class BoardScene {
   hoverKey: string | null = null;
   hoverSanctum: number | null = null;
   speed = 1;
+  guide: THREE.Mesh | null = null;
 
   onHexClick: (h: Hex) => void = () => {};
   onHexHover: (h: Hex | null) => void = () => {};
@@ -467,8 +468,9 @@ export class BoardScene {
     this.renderer.setSize(w, h, false);
     this.composer.setSize(w, h);
     this.camera.aspect = w / h;
+    // Widen the view on tall/narrow screens so the whole board stays visible.
+    this.camera.fov = Math.min(80, Math.max(42, THREE.MathUtils.radToDeg(2 * Math.atan(0.37 / (w / h)))));
     // Pull the camera back on narrow screens so the whole board fits.
-    this.camera.fov = w / h < 1.2 ? 58 : 42;
     this.camera.updateProjectionMatrix();
   }
 
@@ -531,6 +533,25 @@ export class BoardScene {
   setHighlights(map: Map<string, HL>, sanctumTarget: number | null) {
     for (const [k, t] of this.tiles) t.hl = map.get(k) ?? null;
     this.sanctums.forEach((s, i) => (s.hl = i === sanctumTarget));
+  }
+
+  /** Glowing tube showing a move path and/or an attack arc. Pass null to hide. */
+  showGuide(path: Hex[] | null, attackTo: THREE.Vector3 | null) {
+    if (this.guide) { this.scene.remove(this.guide); this.guide.geometry.dispose(); this.guide = null; }
+    if (!path || (path.length < 2 && !attackTo)) return;
+    const pts = path.map((h) => this.hexPos(h, 0.18));
+    if (attackTo) {
+      const from = pts[pts.length - 1];
+      const mid = from.clone().lerp(attackTo, 0.5); mid.y += 1.2;
+      const arc = new THREE.QuadraticBezierCurve3(from.clone().setY(0.6), mid, attackTo.clone());
+      pts.push(...arc.getPoints(12).slice(1));
+    }
+    if (pts.length < 2) return;
+    const curve = new THREE.CatmullRomCurve3(pts, false, 'catmullrom', 0.1);
+    const geo = new THREE.TubeGeometry(curve, Math.max(8, pts.length * 6), 0.06, 6, false);
+    this.guide = new THREE.Mesh(geo, new THREE.MeshBasicMaterial({ color: attackTo ? 0xff5a5a : 0x7fd8ff, transparent: true, opacity: 0.85, depthTest: false }));
+    this.guide.renderOrder = 4;
+    this.scene.add(this.guide);
   }
 
   // ───── input ─────
@@ -743,6 +764,21 @@ export class BoardScene {
         this.units.delete(e.uid);
         break;
       }
+      case 'levelUp': {
+        const old = this.units.get(e.uid);
+        if (old) this.scene.remove(old.group);
+        const vis = new UnitVisual(e.unit, e.unit.owner === seat);
+        this.units.set(e.uid, vis);
+        this.scene.add(vis.group);
+        sfx.levelUp();
+        const at = vis.group.position.clone().setY(0.8);
+        this.burst(at, 0xffd76a, 80, 4, 0.35, 1.2, 1.6);
+        this.burst(at, 0xffffff, 40, 2.5, 0.25, 0.9, 2);
+        this.floatText(at.clone().setY(2.2), 'LEVEL UP!', '#ffd76a', true);
+        this.shake = 0.3;
+        await this.tween(0.6, (t) => vis.group.scale.setScalar(1.8 - 0.8 * t), ease.outBack);
+        break;
+      }
       case 'bounce': {
         const vis = this.units.get(e.uid);
         if (!vis) break;
@@ -884,7 +920,7 @@ export class BoardScene {
         pos.add(new THREE.Vector3((Math.random() - 0.5) * this.shake, (Math.random() - 0.5) * this.shake, 0));
         this.shake = Math.max(0, this.shake - dt * 1.5);
       }
-      this.camera.position.lerp(pos, this.shake > 0 ? 1 : 0.08);
+      this.camera.position.lerp(pos, this.shake > 0 ? 1 : 1 - Math.exp(-dt * 4));
       this.camera.lookAt(this.camTarget);
     }
     this.composer.render();

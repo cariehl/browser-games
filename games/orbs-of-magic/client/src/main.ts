@@ -5,6 +5,8 @@ import { DECKS } from '../../shared/decks';
 import type { Color } from '../../shared/types';
 import { sfx } from './audio';
 import { cardHTML, esc } from './cardview';
+import { openDeckBuilder } from './deckbuilder';
+import { allDecks, deckOptions, deleteCustom, findDeck } from './deckstore';
 import { GameController, HELP_HTML } from './game';
 import { client } from './net';
 import { BoardScene } from './scene';
@@ -29,13 +31,15 @@ function colorDots(colors: Color[]) {
 
 function menu() {
   scene.setMenuMode(true);
-  const deckTiles = DECKS.map((d) => `
-    <button class="deck-tile ${d.id === deckId ? 'sel' : ''}" data-id="${d.id}" style="--c1:${COLOR_INFO[d.colors[0]].hex};--c2:${COLOR_INFO[d.colors[d.colors.length - 1]].hex}">
-      <span class="deck-icon">${cardDef(d.signature).icon}</span>
+  const decks = allDecks();
+  const sel = findDeck(deckId);
+  deckId = sel.id;
+  const deckTiles = decks.map((d) => `
+    <button class="deck-tile ${d.id === deckId ? 'sel' : ''} ${d.custom ? 'custom' : ''}" data-id="${d.id}" style="--c1:${COLOR_INFO[d.colors[0] ?? 'neutral'].hex};--c2:${COLOR_INFO[d.colors[d.colors.length - 1] ?? 'neutral'].hex}">
+      <span class="deck-icon">${d.icon}</span>
       <span class="deck-name">${esc(d.name)}</span>
       <span class="deck-arch">${colorDots(d.colors)} ${esc(d.archetype)}</span>
-    </button>`).join('');
-  const sel = DECKS.find((d) => d.id === deckId) ?? DECKS[0];
+    </button>`).join('') + `<button class="deck-tile new-deck"><span class="deck-icon">＋</span><span class="deck-name">New Deck</span><span class="deck-arch">Deck builder</span></button>`;
   ui.innerHTML = `
   <div class="menu">
     <div class="title"><h1>Orbs <span>of</span> Magic</h1><div class="subtitle">A tactical card battle for the five Orbs</div></div>
@@ -48,7 +52,11 @@ function menu() {
           <div class="dd-head"><b>${esc(sel.name)}</b> <span class="tag">${esc(sel.archetype)}</span> ${colorDots(sel.colors)}</div>
           <p>${esc(sel.blurb)}</p>
           <p class="dim">${esc(sel.howToPlay)}</p>
-          <button class="btn ghost small btn-view-deck">View decklist</button>
+          <div class="row left">
+            <button class="btn ghost small btn-view-deck">View decklist</button>
+            <button class="btn ghost small btn-edit-deck">${sel.custom ? 'Edit deck' : 'Copy &amp; edit'}</button>
+            ${sel.custom ? '<button class="btn ghost small btn-del-deck">Delete</button>' : ''}
+          </div>
         </div>
       </div>
       <div class="panel play-panel">
@@ -69,15 +77,21 @@ function menu() {
 
   const q = <T extends HTMLElement>(s: string) => ui.querySelector(s) as T;
   q<HTMLInputElement>('.name-input').oninput = (e) => { playerName = (e.target as HTMLInputElement).value.trim() || 'Wizard'; store.set('oom-name', playerName); };
-  ui.querySelectorAll<HTMLElement>('.deck-tile').forEach((b) => (b.onclick = () => { deckId = b.dataset.id!; store.set('oom-deck', deckId); sfx.click(); menu(); }));
+  ui.querySelectorAll<HTMLElement>('.deck-tile[data-id]').forEach((b) => (b.onclick = () => { deckId = b.dataset.id!; store.set('oom-deck', deckId); sfx.click(); menu(); }));
+  const afterBuild = (id: string | null) => { if (id) { deckId = id; store.set('oom-deck', id); } menu(); };
+  q('.new-deck').onclick = () => openDeckBuilder(ui, null, afterBuild);
+  q('.btn-edit-deck').onclick = () => openDeckBuilder(ui, sel.custom ? { id: sel.id, name: sel.name, cards: sel.cards } : { id: `custom_${Date.now()}`, name: `${sel.name} Remix`, cards: sel.cards.map(([c, n]) => [c, n]) }, afterBuild);
+  const del = ui.querySelector('.btn-del-deck') as HTMLElement | null;
+  if (del) del.onclick = () => { if (confirm(`Delete "${sel.name}"?`)) { deleteCustom(sel.id); deckId = DECKS[0].id; store.set('oom-deck', deckId); menu(); } };
   q<HTMLSelectElement>('.ai-deck-sel').onchange = (e) => { aiDeck = (e.target as HTMLSelectElement).value; store.set('oom-aideck', aiDeck); };
-  q('.btn-ai').onclick = () => start(() => client.create('duel', { name: playerName, deckId, vsAI: true, aiDeckId: aiDeck === 'random' ? undefined : aiDeck }));
-  q('.btn-quick').onclick = () => start(() => client.joinOrCreate('duel', { name: playerName, deckId }));
-  q('.btn-private').onclick = () => start(() => client.create('duel', { name: playerName, deckId, private: true }));
+  const dopts = deckOptions(deckId);
+  q('.btn-ai').onclick = () => start(() => client.create('duel', { name: playerName, ...dopts, vsAI: true, aiDeckId: aiDeck === 'random' ? undefined : aiDeck }));
+  q('.btn-quick').onclick = () => start(() => client.joinOrCreate('duel', { name: playerName, ...dopts }));
+  q('.btn-private').onclick = () => start(() => client.create('duel', { name: playerName, ...dopts, private: true }));
   q('.btn-join').onclick = () => {
     const code = q<HTMLInputElement>('.code-input').value.trim();
     if (!code) return;
-    start(() => client.joinById(code, { name: playerName, deckId }));
+    start(() => client.joinById(code, { name: playerName, ...dopts }));
   };
   q('.btn-howto').onclick = () => modal(`<div class="help">${HELP_HTML}</div>`);
   q('.btn-library').onclick = () => library('all');
@@ -96,7 +110,8 @@ function modal(html: string) {
 
 function library(filter: Color | 'all') {
   const colors: (Color | 'all')[] = ['all', 'ember', 'tide', 'grove', 'dawn', 'dusk'];
-  const cards = ALL_CARDS.filter((c) => !c.token && (filter === 'all' || c.color === filter)).sort((a, b) => a.cost - b.cost || a.name.localeCompare(b.name));
+  const sortKey = (c: (typeof ALL_CARDS)[number]) => (c.levelOf ? cardDef(c.levelOf).cost + 0.5 : c.cost);
+  const cards = ALL_CARDS.filter((c) => (!c.token || c.levelOf) && (filter === 'all' || c.color === filter)).sort((a, b) => sortKey(a) - sortKey(b) || (a.levelOf ?? a.id).localeCompare(b.levelOf ?? b.id) || (a.levelOf ? 1 : -1));
   const m = modal(`<h2>Card Library</h2>
     <div class="filters">${colors.map((c) => `<button class="btn small ${c === filter ? '' : 'ghost'}" data-c="${c}">${c === 'all' ? 'All' : COLOR_INFO[c].name}</button>`).join('')}</div>
     <div class="card-grid">${cards.map((c) => cardHTML(c)).join('')}</div>`);
@@ -104,7 +119,7 @@ function library(filter: Color | 'all') {
 }
 
 function deckList(id: string) {
-  const d = DECKS.find((x) => x.id === id)!;
+  const d = findDeck(id);
   const cards = d.cards.map(([cid, n]) => ({ c: cardDef(cid), n })).sort((a, b) => a.c.cost - b.c.cost);
   modal(`<h2>${esc(d.name)} <span class="tag">${esc(d.archetype)}</span></h2><p>${esc(d.howToPlay)}</p>
     <div class="card-grid">${cards.map(({ c, n }) => `<div class="deck-card">${cardHTML(c)}<span class="count">×${n}</span></div>`).join('')}</div>`);
@@ -136,7 +151,7 @@ async function start(join: () => Promise<Room>) {
 
 function launch(room: Room) {
   current?.dispose();
-  current = new GameController(room, scene, ui, () => { current = null; menu(); });
+  current = new GameController(room, scene, ui, () => { current = null; menu(); }, () => deckId);
 }
 
 async function boot() {
@@ -150,4 +165,4 @@ async function boot() {
 boot();
 
 // Handy for debugging in the console.
-(window as unknown as { oom: unknown }).oom = { scene, get game() { return current; } };
+(window as unknown as { oom: unknown }).oom = { scene, cardDef, get game() { return current; } };

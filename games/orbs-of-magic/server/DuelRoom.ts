@@ -1,6 +1,6 @@
 import { Room, type Client } from '@colyseus/core';
 import { chooseAction } from '../shared/ai';
-import { DECKS } from '../shared/decks';
+import { DECKS, prebuiltList, validateDeck, type DeckList } from '../shared/decks';
 import { Game, eventsFor, viewFor } from '../shared/engine';
 import type { Action, GameEvent } from '../shared/types';
 
@@ -9,9 +9,16 @@ const ACTION_TIME = 75;
 const MULLIGAN_TIME = 45;
 const EMOTES = ['Well played!', 'Good luck!', 'Hmm...', 'Oops!', 'Wow!', 'Thanks!', 'Not today!', 'Behold!'];
 
-interface Seat { sessionId: string | null; name: string; deckId: string; isAI: boolean; connected: boolean; rematch: boolean }
+interface Seat { sessionId: string | null; name: string; deck: DeckList; isAI: boolean; connected: boolean; rematch: boolean }
 
-export interface JoinOptions { name?: string; deckId?: string; vsAI?: boolean; aiDeckId?: string; private?: boolean }
+export interface JoinOptions { name?: string; deckId?: string; customDeck?: DeckList; vsAI?: boolean; aiDeckId?: string; private?: boolean }
+
+/** Pick the player's deck: a legal custom list, else the named prebuilt deck. */
+function pickDeck(opts: { deckId?: string; customDeck?: DeckList } | undefined): DeckList {
+  const c = opts?.customDeck;
+  if (c && typeof c.name === 'string' && !validateDeck(c.cards)) return { id: 'custom', name: c.name.slice(0, 30) || 'Custom Deck', cards: c.cards };
+  return prebuiltList(opts?.deckId ?? '');
+}
 
 export class DuelRoom extends Room {
   maxClients = 2;
@@ -21,14 +28,16 @@ export class DuelRoom extends Room {
   timer: ReturnType<typeof setTimeout> | null = null;
   aiTimer: ReturnType<typeof setTimeout> | null = null;
   vsAI = false;
+  aiDeckChoice: string | undefined;
 
   onCreate(options: JoinOptions) {
     this.autoDispose = true;
     this.vsAI = !!options.vsAI;
     if (this.vsAI) {
       this.maxClients = 1;
+      this.aiDeckChoice = DECKS.some((d) => d.id === options.aiDeckId) ? options.aiDeckId : undefined;
       const deck = DECKS.find((d) => d.id === options.aiDeckId) ?? DECKS[Math.floor(Math.random() * DECKS.length)];
-      this.seats[1] = { sessionId: null, name: `${deck.name} AI`, deckId: deck.id, isAI: true, connected: true, rematch: true };
+      this.seats[1] = { sessionId: null, name: `${deck.name} AI`, deck: prebuiltList(deck.id), isAI: true, connected: true, rematch: true };
     }
     if (options.private || this.vsAI) this.setPrivate(true);
     this.setMetadata({ host: options.name ?? 'Wizard' });
@@ -39,14 +48,14 @@ export class DuelRoom extends Room {
       if (seat < 0 || !EMOTES[idx]) return;
       this.broadcast('emote', { seat, text: EMOTES[idx] });
     });
-    this.onMessage('rematch', (client, opts: { deckId?: string }) => {
+    this.onMessage('rematch', (client, opts: { deckId?: string; customDeck?: DeckList }) => {
       const seat = this.seatOf(client);
       if (seat < 0 || this.game?.s.phase !== 'over') return;
       this.seats[seat].rematch = true;
-      if (opts?.deckId && DECKS.some((d) => d.id === opts.deckId)) this.seats[seat].deckId = opts.deckId;
+      if (opts?.deckId || opts?.customDeck) this.seats[seat].deck = pickDeck(opts);
       if (this.vsAI) {
-        const deck = DECKS[Math.floor(Math.random() * DECKS.length)];
-        this.seats[1].deckId = deck.id; this.seats[1].name = `${deck.name} AI`;
+        const deck = DECKS.find((d) => d.id === this.aiDeckChoice) ?? DECKS[Math.floor(Math.random() * DECKS.length)];
+        this.seats[1].deck = prebuiltList(deck.id); this.seats[1].name = `${deck.name} AI`;
       }
       this.broadcast('rematchStatus', this.seats.map((s) => s?.rematch ?? false));
       if (this.seats.every((s) => s && s.rematch)) this.startGame();
@@ -55,9 +64,8 @@ export class DuelRoom extends Room {
 
   onJoin(client: Client, options: JoinOptions) {
     const name = (options.name ?? 'Wizard').toString().slice(0, 20) || 'Wizard';
-    const deckId = DECKS.some((d) => d.id === options.deckId) ? options.deckId! : DECKS[0].id;
     const seatIdx = this.seats[0] && this.seats[0].sessionId !== null ? 1 : 0;
-    this.seats[seatIdx] = { sessionId: client.sessionId, name, deckId, isAI: false, connected: true, rematch: false };
+    this.seats[seatIdx] = { sessionId: client.sessionId, name, deck: pickDeck(options), isAI: false, connected: true, rematch: false };
     client.send('seat', { seat: seatIdx, roomId: this.roomId, vsAI: this.vsAI, emotes: EMOTES });
     if (this.seats[0] && this.seats[1]) {
       this.lock();
@@ -106,8 +114,8 @@ export class DuelRoom extends Room {
     const [a, b] = this.seats;
     for (const s of this.seats) s.rematch = s.isAI;
     this.game = Game.create(
-      { name: a.name, deckId: a.deckId, isAI: a.isAI },
-      { name: b.name, deckId: b.deckId, isAI: b.isAI },
+      { name: a.name, deck: a.deck, isAI: a.isAI },
+      { name: b.name, deck: b.deck, isAI: b.isAI },
     );
     this.sendState([{ t: 'fx', kind: 'start', at: null }]);
     this.armTimer();

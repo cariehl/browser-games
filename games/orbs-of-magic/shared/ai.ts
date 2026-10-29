@@ -13,6 +13,7 @@ const KW_VALUE: Record<string, number> = {
 };
 const ENGINE_VALUE: Record<string, number> = {
   k_siphon: 3, k_necromancer: 3, d_captain: 2, t_sea_witch: 2, e_flame_dancer: 1.5, g_sporecap: 2.5, d_bastion: 1.5,
+  c_pyra: 1.5, c_nerith: 2, c_thornak: 1.5, c_sera: 2, c_morvath: 2, c_nerith2: 3, c_thornak2: 3, c_sera2: 3, c_morvath2: 2,
   t_glacial: 1, g_boar: 0.5, e_berserker: 0.8, k_grave_imp: 0.8, e_powder_goblin: 1, g_sproutling: 0.6, e_phoenix: 1.5,
 };
 
