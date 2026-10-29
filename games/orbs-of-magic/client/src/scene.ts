@@ -3,7 +3,7 @@ import { EffectComposer } from 'three/examples/jsm/postprocessing/EffectComposer
 import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
-import { COLOR_INFO, cardDef } from '../../shared/cards';
+import { COLOR_INFO, KEYWORD_INFO, cardDef } from '../../shared/cards';
 import { ALL_HEXES, LEY_ORBS, deployRows, key, toWorld, type Hex } from '../../shared/hex';
 import type { GameEvent, GameState, Unit } from '../../shared/types';
 import { sfx } from './audio';
@@ -79,6 +79,15 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
 }
 
 // ───────────── unit visuals ─────────────
+const KW_SLOTS = 5;
+const KW_SIZE = 0.64;
+// Barrier and Flying also show on the model itself (bubble, hovering), but get a badge so every keyword reads the same way.
+const KW_ORDER = ['guardian', 'firstStrike', 'deadly', 'flying', 'barrier', 'drain', 'regenerate', 'siege', 'swift'] as const;
+const KW_COLOR: Partial<Record<string, string>> = {
+  guardian: '#7fb2ff', firstStrike: '#ffd76a', deadly: '#b07cff', flying: '#bfe9ff', barrier: '#ffe9a0',
+  drain: '#ff5a6e', regenerate: '#7ddc6a', siege: '#ff9a4d', swift: '#9ff5ff',
+};
+
 class UnitVisual {
   group = new THREE.Group();
   body = new THREE.Group();
@@ -96,7 +105,9 @@ class UnitVisual {
   statusTex: THREE.CanvasTexture;
   rangeMarks = new THREE.Group();
   rangeBadge: THREE.Sprite | null = null;
-  strikeBadge: THREE.Sprite | null = null;
+  kwCanvas = document.createElement('canvas');
+  kwTex: THREE.CanvasTexture;
+  kwBadges: THREE.Sprite;
   data: Unit;
   flyHeight = 0;
   canActNow = false;
@@ -152,6 +163,16 @@ class UnitVisual {
     this.roots.rotation.x = Math.PI / 2; this.roots.position.y = 0.3; this.roots.scale.set(1.1, 1.1, 0.6);
     this.body.add(this.roots);
 
+    // Keyword badges sit in a row under the stats, on the base, so they don't float with flyers.
+    this.kwCanvas.width = 80 * KW_SLOTS; this.kwCanvas.height = 80;
+    this.kwTex = new THREE.CanvasTexture(this.kwCanvas);
+    this.kwTex.colorSpace = THREE.SRGBColorSpace;
+    this.kwBadges = new THREE.Sprite(new THREE.SpriteMaterial({ map: this.kwTex, transparent: true, depthTest: false }));
+    this.kwBadges.scale.set(KW_SIZE * KW_SLOTS, KW_SIZE, 1);
+    this.kwBadges.position.set(0, 0.42 - 0.28 - KW_SIZE * 0.42, 0);
+    this.kwBadges.renderOrder = 6;
+    this.group.add(this.kwBadges);
+
     // Status badges (summoning sickness, frozen, rooted) float above the unit.
     this.statusCanvas.width = 256; this.statusCanvas.height = 72;
     this.statusTex = new THREE.CanvasTexture(this.statusCanvas);
@@ -200,24 +221,6 @@ class UnitVisual {
     this.body.add(this.rangeBadge);
   }
 
-  /** A gold dagger badge on the right shoulder marks First Strike. */
-  private addStrikeBadge() {
-    const c = document.createElement('canvas');
-    c.width = c.height = 96;
-    const ctx = c.getContext('2d')!;
-    ctx.fillStyle = '#7a3b0c'; ctx.beginPath(); ctx.arc(48, 48, 44, 0, Math.PI * 2); ctx.fill();
-    ctx.lineWidth = 6; ctx.strokeStyle = '#ffd76a'; ctx.stroke();
-    ctx.font = '46px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-    ctx.fillText('🗡️', 48, 52);
-    const tex = new THREE.CanvasTexture(c);
-    tex.colorSpace = THREE.SRGBColorSpace;
-    this.strikeBadge = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthTest: false }));
-    this.strikeBadge.scale.set(0.7, 0.7, 1);
-    this.strikeBadge.position.set(0.7, 1.35, 0);
-    this.strikeBadge.renderOrder = 6;
-    this.body.add(this.strikeBadge);
-  }
 
   place(h: Hex) {
     const w = toWorld(h);
@@ -258,8 +261,7 @@ class UnitVisual {
     });
     this.statusTex.needsUpdate = true;
     if (u.range > 1 && !this.rangeBadge) this.addRangeMarks(u.range);
-    if (u.kw.includes('firstStrike') && !this.strikeBadge) this.addStrikeBadge();
-    if (this.strikeBadge) this.strikeBadge.visible = u.kw.includes('firstStrike');
+    this.drawKeywords(u, sick || u.summonedRound === round);
 
     const ctx = this.statCanvas.getContext('2d')!;
     ctx.clearRect(0, 0, 256, 96);
@@ -273,14 +275,23 @@ class UnitVisual {
     };
     badge(14, atk, '#d9822b', atk > (d.atk ?? 0) ? '#b6ff9a' : atk < (d.atk ?? 0) ? '#ffb0b0' : '#fff');
     badge(158, u.hp, '#c22d43', u.hp < u.maxHp ? '#ffb0b0' : u.hp > (d.hp ?? 0) ? '#b6ff9a' : '#fff');
-    // keyword pips between the badges
-    const pips: string[] = [];
-    if (u.kw.includes('guardian')) pips.push('🛡️');
-    if (u.kw.includes('deadly')) pips.push('☠️');
-    if (u.kw.includes('siege')) pips.push('🏰');
-    ctx.font = '26px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
-    pips.slice(0, 2).forEach((p, i) => ctx.fillText(p, 128, 32 + i * 32));
     this.statTex.needsUpdate = true;
+  }
+
+  /** One round icon per combat keyword, in a fixed order so every unit's row reads the same way. */
+  private drawKeywords(u: Unit, justSummoned: boolean) {
+    const kws = KW_ORDER.filter((k) => u.kw.includes(k) && (k !== 'swift' || justSummoned)).slice(0, KW_SLOTS);
+    const c = this.kwCanvas.getContext('2d')!;
+    c.clearRect(0, 0, 80 * KW_SLOTS, 80);
+    kws.forEach((k, i) => {
+      const x = 40 * KW_SLOTS - (kws.length * 80) / 2 + 40 + i * 80;
+      c.fillStyle = 'rgba(12,10,24,0.85)'; c.beginPath(); c.arc(x, 40, 34, 0, Math.PI * 2); c.fill();
+      c.lineWidth = 5; c.strokeStyle = KW_COLOR[k] ?? '#ffd76a'; c.stroke();
+      c.font = '38px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';
+      c.textAlign = 'center'; c.textBaseline = 'middle';
+      c.fillText(KEYWORD_INFO[k].icon, x, 43);
+    });
+    this.kwTex.needsUpdate = true;
   }
 
   tick(time: number, myTurn: boolean) {

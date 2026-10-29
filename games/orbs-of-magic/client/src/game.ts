@@ -33,6 +33,11 @@ export class GameController {
   hoverHex: Hex | null = null;
   hoverSanctum: number | null = null;
   mulliganPick = new Set<number>();
+  /** The opening hand as it was when you confirmed, so the screen can show what replaced what. */
+  private mullOld: { iid: number; cardId: string }[] | null = null;
+  private mullReplaced = new Set<number>();
+  private mullSent = false;
+  private mullRevealTimer: ReturnType<typeof setTimeout> | null = null;
   timerInt: ReturnType<typeof setInterval>;
   disposed = false;
   rematchSent = false;
@@ -47,8 +52,8 @@ export class GameController {
     this.root.innerHTML = `
       <div class="pinfo opp"></div>
       <div class="opp-hand"></div>
-      <div class="round-info"></div>
       <div class="corner-btns">
+        <div class="round-info"></div>
         <button class="icon-btn btn-log" title="Battle log">📜</button>
         <button class="icon-btn btn-music ${music.isOn() ? '' : 'off'}" title="Music">🎵</button>
         <button class="icon-btn btn-mute" title="Sound">${isMuted() ? '🔇' : '🔊'}</button>
@@ -58,7 +63,7 @@ export class GameController {
       <div class="prompt hidden"><span class="prompt-text"></span><button class="btn small btn-skip hidden">Skip</button><button class="btn small ghost btn-cancel">Cancel</button></div>
       <div class="banner"></div>
       <div class="cast-show"></div>
-      <div class="pass-wrap"><svg class="timer" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46"></circle></svg><button class="pass-btn"></button><div class="timer-num"></div></div>
+      <div class="pass-wrap"><svg class="timer" viewBox="0 0 100 100"><circle cx="50" cy="50" r="46"></circle></svg><button class="pass-btn"></button><div class="timer-num"></div><div class="init" title="The player with the initiative acts first this round. It swaps every round."></div></div>
       <div class="pinfo me"></div>
       <div class="hand"></div>
       <div class="hover-card"></div>
@@ -92,7 +97,7 @@ export class GameController {
     this.keyHandler = (e: KeyboardEvent) => {
       if ((e.target as HTMLElement)?.tagName === 'INPUT') return;
       if (e.code === 'Space') { e.preventDefault(); this.pass(); }
-      if (e.code === 'Escape') this.setMode({ kind: 'idle' });
+      if (e.code === 'Escape') { $(this.root, '.help-modal').classList.add('hidden'); this.setMode({ kind: 'idle' }); }
     };
     window.addEventListener('keydown', this.keyHandler);
     window.addEventListener('wheel', this.wheelHandler, { passive: false });
@@ -226,6 +231,7 @@ export class GameController {
       }
       if (msg.events.some((e) => e.t === 'fx' && e.kind === 'start')) {
         this.rematchSent = false;
+        this.mullSent = false; this.mullOld = null;
         this.hideOverlay();
         music.duck(1, 3);
         this.scene.setMenuMode(true); this.scene.setMenuMode(false);
@@ -584,14 +590,17 @@ export class GameController {
     this.renderPlayer($(this.root, '.pinfo.opp'), 1 - this.seat);
     $(this.root, '.opp-hand').innerHTML = this.opp.hand.map(() => cardBackHTML()).join('');
     const ri = $(this.root, '.round-info');
-    ri.innerHTML = v.phase === 'mulligan' ? '<b>Mulligan</b>' : `<b>Round ${v.round}</b><span class="init ${v.initiative === this.seat ? 'mine' : 'theirs'}" title="The player with the initiative acts first this round">⚜ ${v.initiative === this.seat ? 'Your' : "Opponent's"} initiative</span>`;
+    ri.innerHTML = v.phase === 'mulligan' ? '<b>Mulligan</b>' : `<b>Round ${v.round}</b>`;
+    const init = $(this.root, '.pass-wrap .init');
+    init.className = `init ${v.initiative === this.seat ? 'mine' : 'theirs'}`;
+    init.textContent = `⚜ ${v.initiative === this.seat ? 'Your' : "Opponent's"} initiative`;
     this.renderHand();
     this.renderPass();
     this.renderLog();
     this.updatePrompt();
     if (v.phase === 'mulligan') this.renderMulligan();
     else if (v.phase === 'over') this.renderGameOver();
-    else if (this.root.querySelector('.overlay .mulligan')) this.hideOverlay();
+    else if (this.root.querySelector('.overlay .mulligan')) this.finishMulligan();
     this.scene.myTurn = this.myTurn;
     for (const u of v.units) { const vis = this.scene.units.get(u.uid); if (vis) vis.canActNow = this.canActUnit(u); }
   }
@@ -676,7 +685,7 @@ export class GameController {
     c.style.strokeDashoffset = `${len * (1 - left / total)}`;
     c.classList.toggle('urgent', left < 15);
     $(this.root, '.timer-num').textContent = left < 20 && this.view.phase === 'action' ? `${Math.ceil(left)}` : '';
-    if (this.view.phase === 'mulligan') { const t = this.root.querySelector('.mull-timer'); if (t) t.textContent = `${Math.ceil(left)}s`; }
+    if (this.view.phase === 'mulligan') { const t = this.root.querySelector('.mull-timer'); if (t) t.textContent = this.me.mulliganDone || this.mullSent ? '' : `${Math.ceil(left)}s`; }
   }
 
   private renderLog() {
@@ -711,9 +720,43 @@ export class GameController {
     } else el.classList.add('hidden');
   }
 
+  /** Your hand after the mulligan, with each replacement in the slot of the card it replaced. */
+  private mulliganResultHTML(waiting: boolean) {
+    const old = this.mullOld ?? [];
+    const kept = new Set(old.map((c) => c.iid));
+    const fresh = this.me.hand.filter((c) => !kept.has(c.iid));
+    let next = 0;
+    const slots = old.map((c) => {
+      if (!this.mullReplaced.has(c.iid)) return `<div class="mull-card kept">${cardHTML(cardDef(c.cardId))}</div>`;
+      const n = fresh[next++];
+      if (!n || waiting && !this.me.mulliganDone) return `<div class="mull-card pending"><div class="card back"></div></div>`;
+      return `<div class="mull-card fresh" style="--i:${next}">${cardHTML(cardDef(n.cardId))}<div class="new-tag">New</div></div>`;
+    }).join('');
+    const n = this.mullReplaced.size;
+    return `<div class="panel mulligan wide">
+      <h2>${n ? `Replaced ${n} card${n > 1 ? 's' : ''}` : 'Keeping your hand'}</h2>
+      <div class="mull-cards">${slots}</div>
+      ${waiting ? '<div class="mull-wait"><div class="spinner small"></div> Waiting for your opponent…</div>' : '<button class="btn big btn-mull-go">Let\'s go ▸</button>'}
+    </div>`;
+  }
+
+  /** The mulligan just ended: linger on the new hand briefly, if anything was replaced. */
+  private finishMulligan() {
+    if (!this.mullOld || !this.mullReplaced.size) { this.hideOverlay(); this.mullOld = null; return; }
+    if (this.mullRevealTimer) return;
+    this.showOverlay(this.mulliganResultHTML(false));
+    const done = () => {
+      if (this.mullRevealTimer) clearTimeout(this.mullRevealTimer);
+      this.mullRevealTimer = null; this.mullOld = null;
+      if (this.root.querySelector('.overlay .mulligan')) this.hideOverlay();
+    };
+    (this.root.querySelector('.btn-mull-go') as HTMLElement).onclick = () => { sfx.click(); done(); };
+    this.mullRevealTimer = setTimeout(done, 3200);
+  }
+
   private renderMulligan() {
-    if (this.me.mulliganDone) {
-      this.showOverlay(`<div class="panel mulligan"><div class="spinner"></div><h2>Waiting for your opponent…</h2></div>`);
+    if (this.me.mulliganDone || this.mullSent) {
+      this.showOverlay(this.mullOld ? this.mulliganResultHTML(true) : `<div class="panel mulligan"><div class="spinner"></div><h2>Waiting for your opponent…</h2></div>`);
       return;
     }
     const cards = this.me.hand.map((ci) => `<div class="mull-card ${this.mulliganPick.has(ci.iid) ? 'replace' : ''}" data-iid="${ci.iid}">${cardHTML(cardDef(ci.cardId))}<div class="x">↻ Replace</div></div>`).join('');
@@ -731,9 +774,13 @@ export class GameController {
       this.renderMulligan();
     }));
     (this.root.querySelector('.btn-keep') as HTMLElement).onclick = () => {
+      this.mullOld = this.me.hand.map((c) => ({ iid: c.iid, cardId: c.cardId }));
+      this.mullReplaced = new Set(this.mulliganPick);
+      this.mullSent = true;
       this.room.send('action', { type: 'mulligan', iids: [...this.mulliganPick] });
       this.mulliganPick.clear();
       sfx.select();
+      this.renderMulligan(); // swaps the countdown for the result straight away
     };
   }
 
@@ -767,10 +814,11 @@ export class GameController {
   // ───────────── little UI bits ─────────────
   private showOverlay(html: string) {
     const o = $(this.root, '.overlay');
-    o.innerHTML = html;
+    // Re-rendering the same content would restart its animations (and lose focus), so skip it.
+    if (o.dataset.html !== html || o.classList.contains('hidden')) { o.innerHTML = html; o.dataset.html = html; }
     o.classList.remove('hidden');
   }
-  private hideOverlay() { $(this.root, '.overlay').classList.add('hidden'); $(this.root, '.overlay').innerHTML = ''; }
+  private hideOverlay() { const o = $(this.root, '.overlay'); o.classList.add('hidden'); o.innerHTML = ''; delete o.dataset.html; }
 
   toast(text: string) {
     const t = $(this.root, '.toast');
@@ -814,9 +862,10 @@ export class GameController {
   private toggleHelp() {
     const h = $(this.root, '.help-modal');
     if (!h.classList.contains('hidden')) { h.classList.add('hidden'); return; }
-    h.innerHTML = `<div class="panel help">${HELP_HTML}<button class="btn btn-close-help">Got it</button></div>`;
+    h.innerHTML = `<div class="panel help"><button class="close btn-close-help" title="Close (Esc)">✕</button>${HELP_HTML}</div>`;
     h.classList.remove('hidden');
     (h.querySelector('.btn-close-help') as HTMLElement).onclick = () => h.classList.add('hidden');
+    h.onclick = (e) => { if (e.target === h) h.classList.add('hidden'); };
   }
 }
 
