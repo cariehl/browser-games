@@ -2,6 +2,7 @@
  "alloy_blade": {
   "id": "alloy_blade",
   "display_name": "Alloy blade",
+  "description": "A blade pressed from alloy plating. Holds an edge far better than scrap.",
   "stackable": false,
   "color": [
    0.55,
@@ -18,6 +19,7 @@
  "alloy_chestplate": {
   "id": "alloy_chestplate",
   "display_name": "Alloy chestplate",
+  "description": "Alloy plating shaped to a pilot's chest. Solid.",
   "stackable": false,
   "color": [
    0.6,
@@ -33,6 +35,7 @@
  "alloy_gauntlets": {
   "id": "alloy_gauntlets",
   "display_name": "Alloy gauntlets",
+  "description": "Alloy gauntlets. Heavy, but my hands are worth it.",
   "stackable": false,
   "color": [
    0.6,
@@ -48,6 +51,7 @@
  "alloy_greaves": {
   "id": "alloy_greaves",
   "display_name": "Alloy greaves",
+  "description": "Alloy leg plates. They clank with every step.",
   "stackable": false,
   "color": [
    0.6,
@@ -63,6 +67,7 @@
  "alloy_helmet": {
   "id": "alloy_helmet",
   "display_name": "Alloy helmet",
+  "description": "An alloy helmet. It dents so my head doesn't.",
   "stackable": false,
   "color": [
    0.6,
@@ -78,6 +83,7 @@
  "alloy_pistol": {
   "id": "alloy_pistol",
   "display_name": "Alloy pistol",
+  "description": "An alloy-framed pistol that fires gas cartridges. Steadier than a pipe.",
   "stackable": false,
   "color": [
    0.55,
@@ -95,6 +101,7 @@
  "alloy_plating": {
   "id": "alloy_plating",
   "display_name": "Alloy plating",
+  "description": "Thick plating stripped from old hulls. Armor, weapons and walkers all start here.",
   "color": [
    0.42,
    0.55,
@@ -107,6 +114,7 @@
  "breacher_plate": {
   "id": "breacher_plate",
   "display_name": "Breacher plate",
+  "description": "A breacher's armor, cut down to fit a pilot. Very heavy, and very worth it.",
   "stackable": false,
   "color": [
    0.66,
@@ -135,6 +143,7 @@
  "coolant": {
   "id": "coolant",
   "display_name": "Coolant",
+  "description": "Cold, blue, and very good at keeping machines from cooking.",
   "color": [
    0.35,
    0.75,
@@ -150,6 +159,7 @@
  "deadeye_injector": {
   "id": "deadeye_injector",
   "display_name": "Deadeye injector",
+  "description": "Steadies the aim for a while. A firearms boost in a needle.",
   "stackable": false,
   "color": [
    0.35,
@@ -169,6 +179,7 @@
  "edge_injector": {
   "id": "edge_injector",
   "display_name": "Edge injector",
+  "description": "A rush of fighting focus in a needle. Hits land harder for a while.",
   "stackable": false,
   "color": [
    0.95,
@@ -188,6 +199,7 @@
  "empty_injector": {
   "id": "empty_injector",
   "display_name": "Empty injector",
+  "description": "Empty. The bio-still can fill it again.",
   "stackable": false,
   "color": [
    0.62,
@@ -200,6 +212,7 @@
  "gas_cartridge": {
   "id": "gas_cartridge",
   "display_name": "Gas cartridge",
+  "description": "Compressed vent gas, ready to be fired out of a pistol.",
   "stackable": true,
   "color": [
    0.62,
@@ -212,6 +225,7 @@
  "glowroot": {
   "id": "glowroot",
   "display_name": "Glowroot",
+  "description": "A root that glows with the ichor it drank. Splicers love it.",
   "stackable": false,
   "color": [
    0.6,
@@ -225,6 +239,7 @@
  "healing_injector": {
   "id": "healing_injector",
   "display_name": "Healing injector",
+  "description": "Patches a pilot up in a hurry. A small hurry.",
   "stackable": false,
   "color": [
    0.92,
@@ -241,6 +256,7 @@
  "ichor": {
   "id": "ichor",
   "display_name": "Ichor",
+  "description": "Warm, glowing and faintly sticky. Splicers brew with it; nobody's sure what it is.",
   "stackable": true,
   "color": [
    0.72,
@@ -256,6 +272,7 @@
  "pipe_pistol": {
   "id": "pipe_pistol",
   "display_name": "Pipe pistol",
+  "description": "A length of pipe that fires gas cartridges. It mostly points the right way.",
   "stackable": false,
   "color": [
    0.5,
@@ -272,6 +289,7 @@
  "relic_blade": {
   "id": "relic_blade",
   "display_name": "Relic blade",
+  "description": "A blade in the old fleet pattern. It still hums faintly.",
   "stackable": false,
   "color": [
    0.78,
@@ -288,6 +306,7 @@
  "relic_chestplate": {
   "id": "relic_chestplate",
   "display_name": "Relic chestplate",
+  "description": "A chestplate in the old fleet pattern, wired with relic circuitry.",
   "stackable": false,
   "color": [
    0.7,
@@ -303,6 +322,7 @@
  "relic_circuitry": {
   "id": "relic_circuitry",
   "display_name": "Relic circuitry",
+  "description": "Circuit boards from the fleet's day. Nobody makes these any more; we just take them.",
   "stackable": false,
   "color": [
    0.82,
@@ -316,6 +336,7 @@
  "relic_gauntlets": {
   "id": "relic_gauntlets",
   "display_name": "Relic gauntlets",
+  "description": "Gauntlets in the old fleet pattern. They fit like they were printed for me.",
   "stackable": false,
   "color": [
    0.7,
@@ -331,6 +352,7 @@
  "relic_greaves": {
   "id": "relic_greaves",
   "display_name": "Relic greaves",
+  "description": "Greaves in the old fleet pattern. Light, and quieter than scrap.",
   "stackable": false,
   "color": [
    0.7,
@@ -346,6 +368,7 @@
  "relic_helmet": {
   "id": "relic_helmet",
   "display_name": "Relic helmet",
+  "description": "A helmet in the old fleet pattern. Its visor still flickers on.",
   "stackable": false,
   "color": [
    0.7,
@@ -361,6 +384,7 @@
  "relic_pistol": {
   "id": "relic_pistol",
   "display_name": "Relic pistol",
+  "description": "A fleet-pattern sidearm. Better than a pipe, and it knows it.",
   "stackable": false,
   "color": [
    0.78,
@@ -378,6 +402,7 @@
  "rustcap": {
   "id": "rustcap",
   "display_name": "Rustcap",
+  "description": "A mushroom that eats rust. Tastes like a bolt, I imagine.",
   "stackable": false,
   "color": [
    0.78,
@@ -391,6 +416,7 @@
  "scrap_blade": {
   "id": "scrap_blade",
   "display_name": "Scrap blade",
+  "description": "Sharpened scrap with a grip. It'll do.",
   "stackable": false,
   "color": [
    0.72,
@@ -406,6 +432,7 @@
  "scrap_chestplate": {
   "id": "scrap_chestplate",
   "display_name": "Scrap chestplate",
+  "description": "Scrap bolted into a chestplate. Better than nothing, just.",
   "stackable": false,
   "color": [
    0.58,
@@ -420,6 +447,7 @@
  "scrap_gauntlets": {
   "id": "scrap_gauntlets",
   "display_name": "Scrap gauntlets",
+  "description": "Scrap gauntlets. They pinch.",
   "stackable": false,
   "color": [
    0.58,
@@ -434,6 +462,7 @@
  "scrap_greaves": {
   "id": "scrap_greaves",
   "display_name": "Scrap greaves",
+  "description": "Scrap strapped round my legs. Officially armor.",
   "stackable": false,
   "color": [
    0.58,
@@ -448,6 +477,7 @@
  "scrap_helmet": {
   "id": "scrap_helmet",
   "display_name": "Scrap helmet",
+  "description": "A helmet made from a bucket. Probably a bucket.",
   "stackable": false,
   "color": [
    0.58,
@@ -462,6 +492,7 @@
  "scrap_metal": {
   "id": "scrap_metal",
   "display_name": "Scrap metal",
+  "description": "Twisted metal from the yard. Where everything starts.",
   "color": [
    0.58,
    0.56,
@@ -474,6 +505,7 @@
  "seep_moss": {
   "id": "seep_moss",
   "display_name": "Seep moss",
+  "description": "Moss from an ichor seep. Damp, always.",
   "stackable": false,
   "color": [
    0.55,
@@ -487,6 +519,7 @@
  "servo_actuator": {
   "id": "servo_actuator",
   "display_name": "Servo actuator",
+  "description": "A heavy servo from a breacher's joint. Walkers need strong knees.",
   "stackable": false,
   "color": [
    0.9,
@@ -500,6 +533,7 @@
  "servo_blade": {
   "id": "servo_blade",
   "display_name": "Servo blade",
+  "description": "A blade on a servo arm, which swings it harder than I can.",
   "stackable": false,
   "color": [
    0.85,
@@ -516,6 +550,7 @@
  "servo_grease": {
   "id": "servo_grease",
   "display_name": "Servo grease",
+  "description": "Thick grease for servo joints. It gets everywhere.",
   "stackable": false,
   "color": [
    0.3,
@@ -529,6 +564,7 @@
  "servo_pistol": {
   "id": "servo_pistol",
   "display_name": "Servo pistol",
+  "description": "A pistol with a servo-driven action. Fast, heavy and loud.",
   "stackable": false,
   "color": [
    0.88,
@@ -546,6 +582,7 @@
  "surge_injector": {
   "id": "surge_injector",
   "display_name": "Surge injector",
+  "description": "A big dose of repair gel, for when a healing injector won't cut it.",
   "stackable": false,
   "color": [
    1.0,
@@ -562,6 +599,7 @@
  "vent_gas": {
   "id": "vent_gas",
   "display_name": "Vent gas",
+  "description": "Pressurised gas from a vent. Ammo, fuel, and a bad smell.",
   "stackable": true,
   "color": [
    0.36,
@@ -577,6 +615,7 @@
  "vent_salt": {
   "id": "vent_salt",
   "display_name": "Vent salt",
+  "description": "Salt crusted round a ventbloom's roots. Splicers use it to set a brew.",
   "stackable": true,
   "color": [
    0.9,
@@ -590,6 +629,7 @@
  "ventbloom": {
   "id": "ventbloom",
   "display_name": "Ventbloom",
+  "description": "A flower grown on vent gas. It smells like the vent, too.",
   "stackable": false,
   "color": [
    0.45,
