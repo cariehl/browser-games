@@ -9,12 +9,13 @@ import { allDecks, deckOptions, deleteCustom, findDeck } from './deckstore';
 import { GameController, HELP_HTML } from './game';
 import { music, renderOffline } from './music';
 import { LocalRoom, type RoomLike } from './localroom';
-import { LOCAL_AI, ONLINE, client } from './net';
+import { LOCAL_AI, PICK_SERVER, inviteLink, normalizeServerUrl, onlineClient, pingServer, serverUrl, serverUrlProblem, setServerUrl } from './net';
 import { BoardScene } from './scene';
 
 const ui = document.getElementById('ui')!;
 const scene = new BoardScene(document.getElementById('scene') as HTMLCanvasElement);
 let current: GameController | null = null;
+const q = <T extends HTMLElement>(s: string) => ui.querySelector(s) as T;
 
 const store = {
   get(k: string, d: string) { try { return localStorage.getItem(k) ?? d; } catch { return d; } },
@@ -25,6 +26,25 @@ const WIZARD_NAMES = ['Arcanist', 'Spellwright', 'Orbkeeper', 'Starweaver', 'Run
 let playerName = store.get('oom-name', `${WIZARD_NAMES[Math.floor(Math.random() * WIZARD_NAMES.length)]}${Math.floor(Math.random() * 90 + 10)}`);
 let deckId = store.get('oom-deck', DECKS[0].id);
 let aiDeck = store.get('oom-aideck', 'random');
+// The address in the server box, kept across menu re-renders. The last server checked, so it's pinged once.
+let serverDraft = '';
+let pinged: string | null = null;
+
+function onlineHTML() {
+  const buttons = `<button class="btn big btn-quick">⚡ Quick Match</button>
+        <button class="btn btn-private">🔒 Create Private Match</button>
+        <div class="join-row"><input class="code-input" placeholder="Match code"><button class="btn btn-join">Join</button></div>`;
+  if (!PICK_SERVER) return buttons;
+  const url = serverUrl();
+  if (url) {
+    return `<div class="server-row"><span class="dim">Server</span> <b class="server-host" title="${esc(url)}">${esc(new URL(url).host)}</b>
+        <button class="btn ghost small btn-invite" title="A link to this page that connects to this server">Copy link</button>
+        <button class="btn ghost small btn-server-change">Change</button></div>
+        ${buttons}`;
+  }
+  return `<p class="dim offline-note">To play online, enter the address of a game server (the URL a friend's server prints).</p>
+        <div class="join-row"><input class="server-input" placeholder="https://….trycloudflare.com" value="${esc(serverDraft)}"><button class="btn btn-server-connect">Connect</button></div>`;
+}
 
 function colorDots(colors: Color[]) {
   return colors.map((c) => `<i class="dot" style="--c:${COLOR_INFO[c].hex}" title="${COLOR_INFO[c].name}"></i>`).join('');
@@ -65,9 +85,7 @@ function menu() {
         <button class="btn big btn-ai">🤖 Battle the AI</button>
         <label class="ai-deck">AI deck <select class="ai-deck-sel"><option value="random">Random</option>${DECKS.map((d) => `<option value="${d.id}" ${aiDeck === d.id ? 'selected' : ''}>${esc(d.name)} (${d.archetype})</option>`).join('')}</select></label>
         <div class="sep">Online</div>
-        ${ONLINE ? `<button class="btn big btn-quick">⚡ Quick Match</button>
-        <button class="btn btn-private">🔒 Create Private Match</button>
-        <div class="join-row"><input class="code-input" placeholder="Match code"><button class="btn btn-join">Join</button></div>` : `<p class="dim offline-note">Online play needs a game server. This version runs entirely in your browser, so you can battle the AI. See the README to host a server for friends.</p>`}
+        ${onlineHTML()}
         <div class="sep">Learn</div>
         <div class="row"><button class="btn ghost btn-howto">How to Play</button><button class="btn ghost btn-library">Card Library</button><button class="btn ghost btn-orbs">The Five Orbs</button></div>
         <div class="sep">Settings</div>
@@ -78,7 +96,6 @@ function menu() {
     <div class="modal hidden"></div>
   </div>`;
 
-  const q = <T extends HTMLElement>(s: string) => ui.querySelector(s) as T;
   q<HTMLInputElement>('.name-input').oninput = (e) => { playerName = (e.target as HTMLInputElement).value.trim() || 'Wizard'; store.set('oom-name', playerName); };
   ui.querySelectorAll<HTMLElement>('.deck-tile[data-id]').forEach((b) => (b.onclick = () => { deckId = b.dataset.id!; store.set('oom-deck', deckId); sfx.click(); menu(); }));
   const afterBuild = (id: string | null) => { if (id) { deckId = id; store.set('oom-deck', id); } menu(); };
@@ -90,10 +107,12 @@ function menu() {
   const dopts = deckOptions(deckId);
   q('.btn-ai').onclick = () => start(async () => {
     const aiDeckId = aiDeck === 'random' ? undefined : aiDeck;
+    const client = onlineClient();
     return LOCAL_AI || !client ? new LocalRoom({ name: playerName, ...dopts, aiDeckId }) : client.create('duel', { name: playerName, ...dopts, vsAI: true, aiDeckId });
   });
-  if (client) {
-    const online = client;
+  const status = q('.status');
+  const online = onlineClient();
+  if (online) {
     q('.btn-quick').onclick = () => start(() => online.joinOrCreate('duel', { name: playerName, ...dopts }));
     q('.btn-private').onclick = () => start(() => online.create('duel', { name: playerName, ...dopts, private: true }));
     q('.btn-join').onclick = () => {
@@ -102,11 +121,43 @@ function menu() {
       start(() => online.joinById(code, { name: playerName, ...dopts }));
     };
   }
+  if (PICK_SERVER) bindServerPicker(status);
   q('.btn-howto').onclick = () => modal(`<div class="help">${HELP_HTML}</div>`);
   q('.btn-library').onclick = () => library('all');
   q('.btn-orbs').onclick = () => orbs();
   q('.btn-music-menu').onclick = (e) => { (e.target as HTMLElement).textContent = `🎵 Music: ${music.toggle() ? 'On' : 'Off'}`; };
   q('.btn-view-deck').onclick = () => deckList(sel.id);
+}
+
+function bindServerPicker(status: HTMLElement) {
+  const url = serverUrl();
+  if (url) {
+    q('.btn-server-change').onclick = () => { serverDraft = url; pinged = null; setServerUrl(null); menu(); };
+    q('.btn-invite').onclick = async () => {
+      try { await navigator.clipboard.writeText(inviteLink()); status.textContent = 'Link copied. Anyone who opens it plays through this server.'; } catch { status.textContent = inviteLink(); }
+    };
+    if (pinged !== url) {
+      pinged = url;
+      pingServer(url).then((ok) => { if (!ok && serverUrl() === url) status.textContent = `Can't reach ${new URL(url).host} right now. Is the server running?`; });
+    }
+    return;
+  }
+  const input = q<HTMLInputElement>('.server-input');
+  const connect = async () => {
+    serverDraft = input.value;
+    const next = normalizeServerUrl(input.value);
+    if (!next) { status.textContent = 'Enter a server address, like https://example.trycloudflare.com'; return; }
+    const problem = serverUrlProblem(next);
+    if (problem) { status.textContent = problem; return; }
+    status.textContent = 'Checking the server…';
+    if (!(await pingServer(next))) { status.textContent = `Couldn't reach ${next}. Check the address and that the server is running.`; return; }
+    pinged = next;
+    setServerUrl(next);
+    menu();
+  };
+  q('.btn-server-connect').onclick = connect;
+  input.onkeydown = (e) => { if (e.key === 'Enter') connect(); };
+  input.oninput = () => { serverDraft = input.value; };
 }
 
 function modal(html: string) {
@@ -170,6 +221,7 @@ for (const ev of ['pointerdown', 'keydown'] as const) window.addEventListener(ev
 async function boot() {
   let token: string | null = null;
   try { token = sessionStorage.getItem('oom-reconnect'); } catch { /* ignore */ }
+  const client = onlineClient();
   if (token && client) {
     try { const room = await client.reconnect(token); launch(room); return; } catch { try { sessionStorage.removeItem('oom-reconnect'); } catch { /* ignore */ } }
   }
