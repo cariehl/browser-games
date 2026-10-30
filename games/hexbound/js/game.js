@@ -64,7 +64,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         <div class="sel-opts">
           <label>Party <select id="sel-party">${parties.map((p, i) => `<option value="${i}" ${i === pIdx ? 'selected' : ''}>${esc(p.name)} — ${p.heroes.map(h => G.Build.CLASSES[h.cls].name).join(', ')}</option>`).join('')}</select></label>
           <button class="btn sm" id="sel-edit">Edit parties</button>
-          <span class="diff"><span class="diff-h">Difficulty</span>${Object.entries(DIFF).map(([k, d]) => `<label class="radio ${G.Settings.difficulty === k ? 'on' : ''}" title="${d.desc}"><input type="radio" name="diff" value="${k}" ${G.Settings.difficulty === k ? 'checked' : ''}>${d.label}</label>`).join('')}<small class="diff-note">${(DIFF[G.Settings.difficulty] || DIFF.normal).desc} Minions keep 1 HP.</small></span>
+          <span class="diff"><span class="diff-row"><span class="diff-h">Difficulty</span>${Object.entries(DIFF).map(([k, d]) => `<label class="radio ${G.Settings.difficulty === k ? 'on' : ''}" title="${d.desc}"><input type="radio" name="diff" value="${k}" ${G.Settings.difficulty === k ? 'checked' : ''}>${d.label}</label>`).join('')}</span><small class="diff-note">${(DIFF[G.Settings.difficulty] || DIFF.normal).desc} Minions keep 1 HP.</small></span>
         </div>
         <div class="sel-party">${parties[pIdx].heroes.map(h => { const C = G.Build.CLASSES[h.cls]; const bad = G.validateHero(h); return `<div class="mini cls-${h.cls}"><span class="ico">${G.ICON[h.cls]}</span><b>${esc(h.name)}</b><small>${G.Build.ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name}</small>${bad.length ? `<em class="bad">${esc(bad[0])}</em>` : ''}</div>`; }).join('')}</div>
         <div class="scen-cards">${G.Scenarios.map((s, i) => `
@@ -110,7 +110,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       <h4>Enemies</h4>
       <p><b>Minions</b> die to any hit but ignore damage on a miss. <b>Marked</b> creatures take −2 attacking anyone but whoever marked them, and Fighters punish them. Watch for hazards — fire, frosting, exploding barrels — and push enemies into them!</p>
       <h4>Controls</h4>
-      <p>Left-click: select / act · Right-click or Esc: cancel · Drag: pan · Right-drag or Q/E: rotate · Wheel: zoom · WASD: pan · 1–9: powers · X: shift · C: charge · Z: undo move step · Space: end turn</p>
+      <p>Left-click: select / act · Right-click or Esc: cancel · Drag: pan · Right-drag or Q/E: rotate · Wheel: zoom · Home or ⌂: reset camera · WASD: pan · 1–9: powers · X: shift · C: charge · Z: undo move step · Space: end turn</p>
       </div></div>
       <div class="modal-btns"><button class="btn" data-close>Got it</button></div>`);
     return m;
@@ -159,7 +159,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function deployPhase() {
     ui.mode = 'deploy';
-    $('#hud-prompt').innerHTML = `<b>Deploy your party.</b> Click a hero, then any green hex in your starting zone. Click another hero to swap. <button class="btn sm" id="btn-begin">Begin Battle ▶</button>`;
+    $('#hud-prompt').innerHTML = `<b>Deploy your party.</b> Click a hero, then any green hex in your starting zone. Click another hero to swap.<div class="prompt-btns"><button class="btn sm" id="btn-begin">Begin Battle ▶</button></div>`;
     $('#hud-prompt').classList.add('on');
     $('#btn-begin').onclick = beginBattle;
     $('#hud-bottom').classList.remove('on');
@@ -218,6 +218,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       updateHudLight();
     }
     flushLog(); R().syncAll(); updateHud();
+    // a ranged attack zoomed out to frame its target: settle back to the view from before
+    if (B === myB) R().restoreView();
   }
 
   async function advance() {
@@ -418,6 +420,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (h) { const tg = B.telegraphs.find(t => Hex.dist(t.center, h) <= t.size); if (tg) tipHtml += `<br><b class="warn">⚠ ${tg.name} lands here next Golem turn!</b>`; }
     R().setHighlights(hl);
     tip.innerHTML = tipHtml; tip.classList.toggle('on', !!tipHtml);
+    keywordsFor(tip, 'left');
+  }
+  // side popups explaining the statuses, rules and terrain words a tooltip mentions
+  function keywordsFor(el, side, skip) {
+    const K = G.Keywords;
+    if (!el || !el.classList.contains('on')) { K.hide(); return; }
+    const list = K.expand(K.find(el.textContent, skip));
+    if (list.length) K.show(list, el.getBoundingClientRect(), side); else K.hide();
   }
   function dmgRange(u, p, t, ca) {
     const spec = E().damageSpec(B, u, p, t);
@@ -468,7 +478,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     return `<b>${esc(t.name)}</b> <small>${esc(role)}</small>
       <div>HP ${Math.max(t.hp, t.side === 'hero' ? t.hp : 0)}/${t.maxHp}${t.tempHp ? ` (+${t.tempHp} temp)` : ''}${E().bloodied(t) && t.hp > 0 ? ' <b class="warn">Bloodied</b>' : ''}${t.side === 'hero' ? ` · Surges ${t.surges}` : ''}</div>
       <div class="defs">AC ${E().defense(B, t, 'AC')} · Fort ${E().defense(B, t, 'Fort')} · Ref ${E().defense(B, t, 'Ref')} · Will ${E().defense(B, t, 'Will')} · Speed ${E().speedOf(t)}</div>
-      ${conds.length ? `<div class="conds">${conds.map(c => `<span>${esc(c.label || c.c)}${c.amt && !c.label ? ' ' + c.amt : ''} <i>(${durTxt[c.dur] || ''})</i></span>`).join('')}</div>` : ''}
+      ${conds.length ? `<div class="conds">${conds.map(c => `<span>${G.Keywords.mark((c.label || (c.c === 'cagrant' ? 'exposed' : c.c === 'vuln' ? 'vulnerable' : c.c)) + (c.amt && !c.label ? ' ' + c.amt : ''))} <i>(${durTxt[c.dur] || ''})</i></span>`).join('')}</div>` : ''}
       ${t.monster ? `<div class="mpows">${t.powers.map(p => `<span>${esc(p.name)}${p.recharge ? (t.recharge[p.id] === false ? ' <i>(recharging)</i>' : ` <i>(recharge ${p.recharge}+)</i>`) : ''}</span>`).join(' · ')}</div>${G.Monsters[t.id].desc ? `<small>${esc(G.Monsters[t.id].desc)}</small>` : ''}` : ''}
       ${E().isDying(t) ? `<div class="warn">Dying — death saves failed: ${t.deathFails || 0}/3</div>` : ''}`;
   }
@@ -576,7 +586,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       <div id="hud-banner"></div>
       <div id="hud-turn"></div>
       <div id="hud-story"></div>
-      <div id="hud-cam"><button class="btn sm ghost" data-cam="l" title="Rotate (Q)">⟲</button><button class="btn sm ghost" data-cam="r" title="Rotate (E)">⟳</button><button class="btn sm ghost" data-cam="i" title="Zoom in">＋</button><button class="btn sm ghost" data-cam="o" title="Zoom out">－</button><button class="btn sm ghost" data-cam="f" title="Focus active">◎</button></div>`;
+      <div id="hud-cam"><button class="btn sm ghost" data-cam="l" title="Rotate (Q)">⟲</button><button class="btn sm ghost" data-cam="r" title="Rotate (E)">⟳</button><button class="btn sm ghost" data-cam="i" title="Zoom in">＋</button><button class="btn sm ghost" data-cam="o" title="Zoom out">－</button><button class="btn sm ghost" data-cam="f" title="Focus active">◎</button><button class="btn sm ghost" data-cam="h" title="Reset camera (Home)">⌂</button></div>`;
     $('#hud-menu').onclick = battleMenu;
     $('#log-toggle').onclick = () => $('#hud-log').classList.toggle('min');
     document.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => {
@@ -584,6 +594,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (k === 'l') R().rotate(-Math.PI / 6); if (k === 'r') R().rotate(Math.PI / 6);
       if (k === 'i') R().zoom(0.85); if (k === 'o') R().zoom(1.18);
       if (k === 'f' && (ui.hero || B.active)) R().focus((ui.hero || B.active).pos);
+      if (k === 'h') R().resetCamera();
     });
   }
   function battleMenu() {
@@ -631,7 +642,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const box = $('#hud-init'); if (!box) return;
     const n = B.order.length, cur = B.order[B.turnIdx];
     const start = Math.max(0, B.turnIdx);
-    const chip = (e) => `<span class="ichip ${e.u.side} ${cur === e ? 'cur' : ''} ${E().isDying(e.u) ? 'dying' : ''}" data-uid="${e.u.uid}" data-key="${chipKey(e)}" title="${esc(e.u.name)}${e.u.side === 'hero' ? ' · ' + esc(heroLine(e.u)) : ''} · initiative ${Math.round(e.init)}${e.second ? ' (second turn)' : ''}">${e.u.side === 'hero' ? G.ICON[e.u.cls] : monIcon(e.u)}<i>${esc(shortName(e.u.name))}</i>${E().isDying(e.u) ? `<b class="ic-dying">☠${e.u.deathFails || 0}</b>` : ''}</span>`;
+    const chip = (e) => `<span class="ichip ${e.u.side} ${cur === e ? 'cur' : ''} ${E().isDying(e.u) ? 'dying' : ''}" data-uid="${e.u.uid}" data-key="${chipKey(e)}" title="${esc(e.u.name)}${e.u.side === 'hero' ? ' · ' + esc(heroLine(e.u)) : ''} · initiative ${Math.round(e.init)}${e.second ? ' (second turn)' : ''}">${e.u.side === 'hero' ? G.ICON[e.u.cls] : monIcon(e.u)}<i>${esc(shortName(e.u.name))}</i><em class="ic-init">${Math.floor(e.init)}</em>${E().isDying(e.u) ? `<b class="ic-dying">☠${e.u.deathFails || 0}</b>` : ''}</span>`;
     let html = '';
     for (let k = 0; k < n; k++) {
       const i = (start + k) % n;
@@ -674,44 +685,78 @@ var G = (typeof G !== 'undefined') ? G : {};
       { transform: 'none', opacity: 1 }], { duration: 700 / G.Settings.speed, easing: 'ease-in-out' });
     return new Promise(res => { a.onfinish = () => { fl.remove(); reveal(); G.Audio.play('click'); res(); }; });
   }
-  // A d20 that tumbles over a unit's head and lands on its initiative total.
-  function initDie(uid, total, ms) {
+  // A d20 that tumbles over a unit's head and lands on its initiative total. It follows the unit on
+  // screen while the camera moves, and its size scales with the roll (bigger roll, bigger die).
+  function initDie(uid, total, ms, scale = 1) {
     const p = R().unitPage(uid); if (!p) return null;
     const el = document.createElement('div'); el.className = 'initdie'; el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+    el.style.setProperty('--s', scale.toFixed(2));
     el.innerHTML = `<span>?</span>`; document.body.appendChild(el);
     const sp = el.firstChild; const t0 = performance.now();
+    let alive = true;
+    const extras = [];
+    const track = () => {
+      if (!alive) return;
+      const q = R().unitPage(uid);
+      if (q) { for (const n of [el, ...extras]) { n.style.left = q.x + 'px'; n.style.top = q.y + 'px'; } d.pos = q; }
+      requestAnimationFrame(track);
+    };
     const iv = setInterval(() => { if (performance.now() - t0 >= ms) { clearInterval(iv); sp.textContent = total; el.classList.add('landed'); } else sp.textContent = 1 + Math.floor(Math.random() * 20); }, 60);
-    return { el, pos: p, done: () => { clearInterval(iv); el.remove(); } };
+    const d = {
+      el, pos: p,
+      // extra elements (like the winner's flare) that ride along with the die
+      attach: (n) => { n.style.left = d.pos.x + 'px'; n.style.top = d.pos.y + 'px'; document.body.appendChild(n); extras.push(n); },
+      done: () => { alive = false; clearInterval(iv); el.remove(); extras.forEach(n => n.remove()); },
+    };
+    requestAnimationFrame(track);
+    return d;
   }
+  // 0.8× for the lowest roll on the field up to 1.35× for the highest
+  const dieScale = (v, lo, hi) => 0.8 + 0.55 * (hi > lo ? Math.max(0, Math.min(1, (v - lo) / (hi - lo))) : 0.5);
   async function rollInitiative(ev) {
     turnBanner(null, 'Roll Initiative!');
     G.Audio.play('dice');
     for (const e of B.order) hiddenChips.add(chipKey(e));
     updateTop();
     await sleep(700);
+    const vals = ev.rolls.map(r => r.init), lo = Math.min(...vals), hi = Math.max(...vals);
     const dice = new Map();
     for (const r of ev.rolls) {
-      const d = initDie(r.u, r.init, 900 / G.Settings.speed);
+      const d = initDie(r.u, r.init, 900 / G.Settings.speed, dieScale(r.init, lo, hi));
       if (d) dice.set(r.u, d);
       await sleep(90);
     }
-    await sleep(1500);
+    await sleep(1000);
+    // the winner goes first: give its die a little celebration
+    const first = B.order[0], win = first && dice.get(first.u.uid);
+    if (win) {
+      win.el.classList.add('winner');
+      const fl = document.createElement('div'); fl.className = 'initwin';
+      fl.innerHTML = `${'<i></i>'.repeat(10)}<b>Goes first!</b>`;
+      fl.querySelectorAll('i').forEach((r, k) => r.style.setProperty('--a', (k * 36) + 'deg'));
+      win.attach(fl);
+      G.Audio.play('sting');
+      await sleep(900);
+      fl.classList.add('out');
+    }
     for (const e of B.order) {
       const d = dice.get(e.u.uid);
       flyChip(chipKey(e), d && d.pos);
-      if (d && !e.second) { d.el.classList.add('out'); setTimeout(d.done, 300); }
-      await sleep(220);
+      if (d && !e.second) { d.el.classList.add('out'); setTimeout(d.done, 200 / G.Settings.speed); }
+      await sleep(110);
     }
-    await sleep(600);
+    await sleep(350);
     for (const d of dice.values()) d.done();
     hiddenChips.clear();
   }
   async function joinInitiative(ev) {
     const e = B.order.find(x => x.u.uid === ev.u); if (!e) return;
     hiddenChips.add(chipKey(e)); renderTracker();
-    const d = initDie(ev.u, ev.init.init, 700 / G.Settings.speed);
+    // size against everyone already in the order
+    const vals = B.order.map(x => x.init), lo = Math.min(...vals), hi = Math.max(...vals);
+    const d = initDie(ev.u, ev.init.init, 700 / G.Settings.speed, dieScale(ev.init.init, lo, hi));
     G.Audio.play('dice');
-    await sleep(1300);
+    await sleep(1100);
     if (d) d.el.classList.add('out');
     await flyChip(chipKey(e), d && d.pos);
     if (d) d.done();
@@ -730,7 +775,18 @@ var G = (typeof G !== 'undefined') ? G : {};
         <div class="ph-meta"><span title="Healing surges">♥${u.surges}</span><span class="${u.used.__sw ? 'off' : ''}" title="Second Wind">SW</span><span class="${u.used.__ap ? 'off' : ''}" title="Action Point">AP</span>${u.conds.filter(c => c.c !== 'dying').slice(0, 5).map(c => `<span class="cnd" title="${esc(c.label || c.c)}">${esc((c.label || c.c).split(' ')[0])}</span>`).join('')}</div>
       </div>`;
     }).join('');
-    $('#hud-party').querySelectorAll('.pcardh').forEach(c => c.onclick = () => { const u = B.units.find(x => x.uid === +c.dataset.uid); if (u && !u.dead) R().focus(u.pos); });
+    $('#hud-party').querySelectorAll('.pcardh').forEach(c => {
+      const u = B.units.find(x => x.uid === +c.dataset.uid);
+      c.onclick = () => { if (u && !u.dead) R().focus(u.pos); };
+      // explain this hero's statuses beside the card
+      c.onmouseenter = () => {
+        const K = G.Keywords, list = [];
+        for (const x of u.conds) { const id = K.COND[x.c] || K.find(x.label || '')[0]; if (id && !list.includes(id)) list.push(id); }
+        if (E().bloodied(u) && u.hp > 0) list.push('bloodied');
+        K.show(K.expand(list), c.getBoundingClientRect(), 'right');
+      };
+      c.onmouseleave = () => G.Keywords.hide();
+    });
   }
   function updateBottom() {
     const bot = $('#hud-bottom');
@@ -790,14 +846,35 @@ var G = (typeof G !== 'undefined') ? G : {};
     on('#b-end', endHeroTurn);
     on('#b-undo', doUndoMove);
     on('#b-done', doneMoving);
-    bot.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => selectPower(powers[+b.dataset.pi]));
+    bot.querySelectorAll('[data-pi]').forEach(b => {
+      b.onclick = () => selectPower(powers[+b.dataset.pi]);
+      b.onmouseenter = () => showPowerTip(b);
+      b.onmouseleave = hidePowerTip;
+    });
+    // the bar re-renders under the cursor; keep the hovered power's tooltip up
+    const hov = bot.querySelector('.pow:hover');
+    if (hov) showPowerTip(hov); else hidePowerTip();
   }
+  // Power tooltips float on <body> so the scrolling power bar can't clip them.
+  function showPowerTip(btn) {
+    const src = btn.querySelector('.ptip'); if (!src) return;
+    let f = $('#ptipf');
+    if (!f) { f = document.createElement('div'); f.id = 'ptipf'; document.body.appendChild(f); }
+    f.className = 'on ' + [...btn.classList].filter(c => /^k-/.test(c)).join(' ');
+    f.innerHTML = src.innerHTML;
+    const r = btn.getBoundingClientRect(), w = f.offsetWidth, h = f.offsetHeight;
+    f.style.left = Math.max(4, Math.min(window.innerWidth - w - 4, r.left)) + 'px';
+    f.style.top = Math.max(4, r.top - h - 10) + 'px';
+    // the card already shows its cadence; explain the rules words instead
+    keywordsFor(f, 'right', ['atwill', 'encounter', 'daily']);
+  }
+  function hidePowerTip() { const f = $('#ptipf'); if (f && f.classList.contains('on')) { f.classList.remove('on'); G.Keywords.hide(); } }
 
   // Rules lines, then a separator, then the power's plain-language description.
   function powerTip(p, u) {
     const lines = G.Build.describe(p, u);
     if (p.text && lines[lines.length - 1] === p.text) lines.pop();
-    return `<div class="ptip-rules">${lines.map(esc).join('<br>')}</div>${p.text ? `<div class="ptip-desc">${esc(p.text)}</div>` : ''}`;
+    return `<div class="ptip-rules">${lines.map(G.Keywords.mark).join('<br>')}</div>${p.text ? `<div class="ptip-desc">${G.Keywords.mark(p.text)}</div>` : ''}`;
   }
 
   function powerBanner(u, name, kind) {
@@ -831,7 +908,8 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function dismissStory() {
     clearTimeout(story.t);
-    const s = $('#hud-story'); if (s) s.classList.remove('on', 'sticky');
+    // the button stays (disabled) and fades out with the panel instead of vanishing first
+    const s = $('#hud-story'); if (s) { s.classList.remove('on', 'sticky'); const b = $('#story-ok', s); if (b) b.disabled = true; }
     const r = storyDone; storyDone = null; if (r) r();
   }
   function storyEvent(text) { return story('', text, { autoMs: G.Settings.autoHeroes ? Math.max(2500, text.length * 55) : 0 }); }

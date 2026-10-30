@@ -28,6 +28,8 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
   One build covers all three scenarios — level 3 and 5 choices unlock automatically.
 - **AI** (`js/ai.js`): scores every reachable hex × power × target by expected value; artillery keeps its
   distance, skirmishers hunt flanks, leaders heal, monsters ignore the fallen with area attacks.
+- **Keyword popups** (`js/keywords.js`): tooltips for units, terrain and powers get side panels explaining
+  the statuses and rules words they mention (prone, marked, combat advantage, difficult terrain…).
 - **Juice**: hit-chance previews, flank hints, opportunity-attack path warnings, dice popups, crits with
   camera shake, multi-kill and overkill banners, boss barks, Momentum rerolls, synthesized sound.
 
