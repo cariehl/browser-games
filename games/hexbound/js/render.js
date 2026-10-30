@@ -769,7 +769,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const pips = [0, 1, 2].map(i => `<span class="${i < fails ? 'x' : ''}">${i < fails ? '✖' : '○'}</span>`).join('');
     const nat20 = ev.roll === 20;
     el.classList.add(nat20 ? 'nat20' : ev.ok ? 'ok' : 'fail');
-    res.innerHTML = nat20 ? 'Rallies from death\'s door!' : ev.ok ? `Clings to life <em>${pips}</em>` : fails >= 3 ? `Slips away… <em>${pips}</em>` : `${ev.roll == null ? 'Struck while dying' : 'Failed'} <em>${pips}</em>`;
+    res.innerHTML = nat20 ? 'Rallies from death\'s door!' : ev.ok ? `Clings to life <em>${pips}</em>` : fails >= 3 ? `Slips away… <em>${pips}</em>` : `${ev.roll == null ? 'Struck while dying' : ev.crit ? 'Natural 1: two failures' : 'Failed'} <em>${pips}</em>`;
     G.Audio && G.Audio.play(nat20 ? 'sting' : ev.ok ? 'buff' : 'down');
     if (!ev.ok) { flashUnit(v, 0x801010, 400); cam.shake = Math.max(cam.shake, fails >= 3 ? 0.4 : 0.15); }
     await wait(1700);

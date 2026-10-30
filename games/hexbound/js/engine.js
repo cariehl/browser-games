@@ -206,21 +206,25 @@ var G = (typeof G !== 'undefined') ? G : {};
     }
     return v;
   }
-  function hasCA(B, att, tgt, ctx = {}) {
-    if (tgt.object) return false;
-    if (hasCond(tgt, 'cagrant') || hasCond(tgt, 'blinded')) {
-      const g = condsOf(tgt, 'cagrant');
-      if (hasCond(tgt, 'blinded') || g.some(x => !x.vs || x.vs === att.uid || (x.vs === 'side' && x.side === att.side) || x.vs === 'any')) return true;
+  // why att has combat advantage against tgt (a short label), or null
+  function caReason(B, att, tgt, ctx = {}) {
+    if (tgt.object) return null;
+    if (hasCond(tgt, 'blinded')) return 'blinded';
+    if (hasCond(tgt, 'cagrant')) {
+      const g = condsOf(tgt, 'cagrant').find(x => !x.vs || x.vs === att.uid || (x.vs === 'side' && x.side === att.side) || x.vs === 'any');
+      if (g) return 'exposed';
     }
-    if (hasCond(tgt, 'dazed') || hasCond(tgt, 'stunned') || hasCond(tgt, 'asleep') || isDying(tgt) || hasCond(tgt, 'immobilized') && false) return true;
-    if (hasCond(tgt, 'prone') && ctx.melee) return true;
-    if (ctx.hidden || hasCond(att, 'hidden')) return true;
-    if (att.firstStrike && !tgt.actedThisFight) return true;
+    for (const c of ['dazed', 'stunned', 'asleep']) if (hasCond(tgt, c)) return c;
+    if (isDying(tgt)) return 'helpless';
+    if (hasCond(tgt, 'prone') && ctx.melee) return 'prone';
+    if (ctx.hidden || hasCond(att, 'hidden')) return 'hidden';
+    if (att.firstStrike && !tgt.actedThisFight) return 'First Strike';
     if (ctx.melee || ctx.adjacentCheck !== false) {
-      if (flanking(B, att, tgt)) return true;
+      if (flanking(B, att, tgt)) return 'flanking';
     }
-    return false;
+    return null;
   }
+  function hasCA(B, att, tgt, ctx = {}) { return !!caReason(B, att, tgt, ctx); }
   function flanking(B, att, tgt, attPos) {
     const ap = attPos || att.pos;
     if (!ap || udist(att, tgt, ap) !== 1) return false;
@@ -633,7 +637,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const pr = powerRange(u, p);
     ctx.melee = ctx.melee || pr.kind === 'melee';
     ctx.ranged = pr.kind === 'ranged' || pr.kind === 'areaBurst';
-    ctx.ca = ctx.ca != null ? ctx.ca : hasCA(B, u, t, ctx);
+    if (ctx.ca == null) { ctx.caWhy = caReason(B, u, t, ctx); ctx.ca = !!ctx.caWhy; }
     const mk = condsOf(u, 'marked')[0];
     ctx.includesMarker = !mk || (ctx.allTargets || [t]).some(x => x.uid === mk.src);
     yield* traitRun(B, u, 'onAttack', t, p, ctx);
@@ -648,7 +652,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       hit = roll !== 1 && (crit || roll + ab.total >= dv);
     };
     evalRoll();
-    fx(B, { t: 'roll', u: u.uid, tgt: t.uid, roll, bonus: ab.total, parts: ab.parts, def: dv, vs, hit, crit, power: p.name });
+    fx(B, { t: 'roll', u: u.uid, tgt: t.uid, roll, bonus: ab.total, parts: ab.parts, def: dv, vs, hit, crit, power: p.name, caWhy: ctx.caWhy });
     // rerolls: heroes may spend momentum or an encounter reroll after a miss
     if (!hit && u.side === 'hero' && !ctx.noReroll && !ctx.oa && B.active === u) {
       const canElf = traitSum(B, u, 'hasReroll') > 0;
@@ -674,7 +678,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       fx(B, { t: 'roll', u: u.uid, tgt: t.uid, roll, bonus: ab.total, parts: ab.parts, def: dv, vs, hit, crit, power: p.name, reroll: true });
     }
     const st = B.stats[u.uid];
-    log(B, `${u.name} → ${t.name}: ${p.name} — d20 ${roll} + ${ab.total} = ${roll + ab.total} vs ${vs} ${dv}: ${crit ? 'CRITICAL HIT!' : hit ? 'hit' : 'miss'}${ctx.ca ? ' (advantage)' : ''}`, hit ? 'hit' : 'miss');
+    log(B, `${u.name} → ${t.name}: ${p.name} — d20 ${roll} + ${ab.total} = ${roll + ab.total} vs ${vs} ${dv}: ${crit ? 'CRITICAL HIT!' : hit ? 'hit' : 'miss'}${ctx.ca ? ` (advantage${ctx.caWhy ? ': ' + ctx.caWhy : ''})` : ''}`, hit ? 'hit' : 'miss');
     t.actedThisFight = t.actedThisFight; // noop
     const res = { hit, crit, roll, total: roll + ab.total, def: dv, dmg: 0 };
     if (hit) {
@@ -689,9 +693,9 @@ var G = (typeof G !== 'undefined') ? G : {};
         total += condSum(u, 'dmgBonus', { target: t });
         res.dmg = yield* dealDamage(B, u, t, total, { dtype: p.dtype, crit });
       }
-      if (!t.dead || t.side === 'hero') {
-        for (const e of (p.hit || [])) yield* applyEffect(B, u, t, e, p, ctx);
-      }
+      // a killing blow still carries the power's other effects (cleave, temp HP for an ally, ...);
+      // only the effects that land on the fallen target itself are lost
+      for (const e of (p.hit || [])) yield* applyEffect(B, u, t, e, p, ctx);
       if (p.onHit) { const r = p.onHit(B, u, t, ctx, res); if (r && r.next) yield* r; }
       yield* traitRun(B, u, 'onHit', t, p, ctx, res);
       if (!u.dead) yield* traitRun(B, t, 'onHitBy', u, p, ctx, res);
@@ -722,7 +726,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       subjects = alliesOf(B, u).filter(a => !a.object && canAct(a) && udist(a, t) === 1).slice(0, 1);
     }
     for (const s of subjects) {
-      if (!s || s.dead) continue;
+      // 'fn' effects aimed at a fallen target still run: they usually spill onto others (cleave, splash)
+      if (!s || (s.dead && !(e.t === 'fn' && s === t))) continue;
       const stat = (k) => (u.abil ? mod(u.abil[k]) : 0);
       const num = (v) => typeof v === 'number' ? v : typeof v === 'string' ? (ABIL.includes(v) ? stat(v) : rollDice(parseDice(v.replace(/(STR|CON|DEX|INT|WIS|CHA)/g, (m) => stat(m)), u)).total) : (v && v.call ? v(B, u, s) : 0);
       switch (e.t) {
@@ -759,7 +764,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           const hexes = [...r.values()].filter(v => !v.noEnd && v.cost > 0).map(v => v.h);
           if (!hexes.length) break;
           const ch = yield { choice: 'hex', unit: u, about: s, label: `${s === u ? 'Shift' : 'Shift ' + s.name} up to ${e.n}`, hexes, optional: true, auto: () => G.AI ? G.AI.autoShift(B, s, hexes) : null };
-          if (ch) { const node = r.get(Hex.hk(ch)); if (node) { log(B, `${s.name} shifts.`, 'move'); yield* moveAlong(B, s, pathFrom(node), 'shift'); } }
+          if (ch) { const node = r.get(Hex.hk(ch)); if (node) { log(B, `${s.name} shifts${threatening(B, s).length ? ' (a careful step: shifting never provokes)' : ''}.`, 'move'); yield* moveAlong(B, s, pathFrom(node), 'shift'); } }
           break;
         }
         case 'teleport': {
@@ -1102,6 +1107,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   function* startTurn(B, u, ent) {
     for (const o of B.units) o.oaUsed = false;
+    u.actedThisFight = true; // First Strike only works on creatures that haven't had a turn yet
     B.turnNo = (B.turnNo || 0) + 1;
     u.act = { std: 1, move: 1, minor: 1 };
     u.turnFlags = {}; u.moving = null;
@@ -1138,9 +1144,11 @@ var G = (typeof G !== 'undefined') ? G : {};
       const r = d(20);
       if (r === 20) { log(B, `${u.name} rallies from death's door! (20)`, 'heal'); fx(B, { t: 'save', u: u.uid, ok: true, c: 'death', roll: r, fails: u.deathFails || 0 }); u.surges > 0 ? spendSurge(B, null, u) : heal(B, null, u, 1); }
       else if (r < 10) {
-        u.deathFails = (u.deathFails || 0) + 1;
-        log(B, `${u.name} fails a death save (${r}). [${u.deathFails}/3]`, 'death');
-        fx(B, { t: 'save', u: u.uid, ok: false, c: 'death', roll: r, fails: u.deathFails });
+        // a natural 1 is a critical failure: two failed saves
+        const n = r === 1 ? 2 : 1;
+        u.deathFails = (u.deathFails || 0) + n;
+        log(B, r === 1 ? `${u.name} critically fails a death save (1): two failures! [${Math.min(3, u.deathFails)}/3]` : `${u.name} fails a death save (${r}). [${u.deathFails}/3]`, 'death');
+        fx(B, { t: 'save', u: u.uid, ok: false, c: 'death', roll: r, fails: u.deathFails, crit: r === 1 });
         if (u.deathFails >= 3) { yield* kill(B, null, u); return false; }
       } else { log(B, `${u.name} clings to life (${r}).`, 'save'); fx(B, { t: 'save', u: u.uid, ok: true, c: 'death', roll: r, fails: u.deathFails || 0 }); }
       if (isDying(u)) return false;
@@ -1216,7 +1224,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     ABIL, mod, d, parseDice, rollDice, avgDice, makeRng, setRng: (r) => { rand = r; }, TERRAIN,
     newBattle, addUnit, makeMonster, spawnMonster, tile, terr, unitAt, enemiesOf, alliesOf, hasCond, condsOf, condSum,
     bloodied, isDying, helpless, canAct, canReact, passable, los, threatening, addCond, removeCond, log, fx,
-    speedOf, defense, hasCA, flanking, traitSum, traitRun, powerRange, atkStat, attackBonus, damageSpec,
+    speedOf, defense, hasCA, caReason, flanking, traitSum, traitRun, powerRange, atkStat, attackBonus, damageSpec,
     validTarget, areaHexes, areaTargets, isArea, canSpend, spend, canUse, powerReady, reach, pathFrom, freeHexesWithin,
     udist, hdist, footprint, occupies, canPass, moveLeft, commitMove, canUndoMove, undoMove, chargePath,
     moveAlong, forcedMove, forcedOptions, dealDamage, heal, spendSurge, giveTemp, attackRoll, applyEffect, savingThrows,

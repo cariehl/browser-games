@@ -32,7 +32,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   const melee = (o) => Object.assign({ tgt: 'melee', range: 1, weapon: true, atk: { stat: 'STR', vs: 'AC' }, dmg: '1W' }, o);
   const wpn = (o) => Object.assign({ tgt: 'melee', range: 1, weapon: true, adapt: true, atk: { stat: 'WPN', vs: 'AC' }, dmg: '1W' }, o);
   const impl = (o) => Object.assign({ tgt: 'ranged', range: 10, implement: true }, o);
-  const buffAlliesVs = (amt, dur = 'eont') => ({ t: 'fn', fn: (B, u, t) => { for (const a of E().alliesOf(B, u)) if (!a.object) E().addCond(B, a, 'atkBonus', { amt, vs: t.uid, dur, src: u.uid, stack: true }); E().log(B, `Allies gain +${amt} to attack ${t.name}.`, 'cond'); } });
+  const buffAlliesVs = (amt, dur = 'eont') => ({ t: 'fn', fn: (B, u, t) => { if (t.dead) return; for (const a of E().alliesOf(B, u)) if (!a.object) E().addCond(B, a, 'atkBonus', { amt, vs: t.uid, dur, src: u.uid, stack: true }); E().log(B, `Allies gain +${amt} to attack ${t.name}.`, 'cond'); } });
   const allyCanAttack = (B, u, t) => {
     const cands = E().alliesOf(B, u).filter(a => !a.object && E().canAct(a) && a.powers.some(p => (p.basicMelee || p.basicRanged) && E().validTarget(B, a, p, t)));
     cands.sort((a, b) => (b.role === 'Striker') - (a.role === 'Striker'));
@@ -53,7 +53,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     },
     rogue: {
       name: 'Rogue', role: 'Striker', hp: 12, hpLvl: 5, surges: 6, def: { Ref: 2 }, armor: 'leather', primary: ['DEX', 'CHA', 'STR'],
-      blurb: 'Knife in the dark. Deals Sneak Attack damage once per turn whenever you have combat advantage — flank, or strike the dazed and the prone.',
+      blurb: 'Knife in the dark. Deals Sneak Attack damage once per turn whenever you have combat advantage — flank, or strike the dazed and the prone. First Strike: combat advantage against any enemy that hasn\'t had a turn yet.',
       features: ['Sneak Attack', 'First Strike'], traits: ['sneakAttack'], color: 0x2c3e50,
       subs: {
         shadow: { name: 'Shadowblade', weapon: 'dagger', traits: ['shadowblade'], blurb: 'Daggers. Sneak Attack dice become d8s.' },
@@ -466,9 +466,10 @@ var G = (typeof G !== 'undefined') ? G : {};
       };
       if (build.cls === 'cleric' && build.sub === 'lightbringer') u.healBonus += Math.max(0, m('WIS'));
       // lore: cleric heals +WIS already in power bonus
-      const basics = [Object.assign({}, P.basic_melee), Object.assign({}, P.basic_stone)];
-      if (weapon.ranged) { basics[1] = Object.assign({}, P.basic_ranged, { range: weapon.range, name: `Ranged Basic Attack (${weapon.name})` }); basics[0] = Object.assign({}, P.basic_melee, { dmg: '1d4', weapon: false, noWeaponDie: true }); }
-      else if (weapon.thrown) basics[1] = Object.assign({}, P.basic_ranged, { range: weapon.thrown, name: `Thrown ${weapon.name}` });
+      // basic attacks are named for the weapon they're made with
+      const basics = [Object.assign({}, P.basic_melee, { name: weapon.name }), Object.assign({}, P.basic_stone)];
+      if (weapon.ranged) { basics[1] = Object.assign({}, P.basic_ranged, { range: weapon.range, name: weapon.name }); basics[0] = Object.assign({}, P.basic_melee, { name: `${weapon.name} (melee)`, dmg: '1d4', weapon: false, noWeaponDie: true, text: `A jab with the ${weapon.name.toLowerCase()}: 1d4, no weapon die.` }); }
+      else if (weapon.thrown) basics[1] = Object.assign({}, P.basic_ranged, { range: weapon.thrown, name: `${weapon.name} (thrown)` });
       u.powers = basics.concat(chosen.map(id => Build.concrete(u, P[id], feats)));
       return u;
     },
