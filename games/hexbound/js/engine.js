@@ -835,9 +835,17 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   // ---------- Using powers (main entry) ----------
   // aim: {unit} for single target, {hex} for area/blast, nothing for self
+  // A power that does nothing but move its user (Tumble, Blink Step, Fleet Pursuit) can be taken back like a move
+  const isMovePower = (p) => p.tgt === 'self' && !p.atk && !p.hit && !p.pre && !p.after && !p.onHit && !p.zone && !p.shiftAfter &&
+    (p.eff || []).length > 0 && p.eff.every(e => (e.on || 'self') === 'self' && (e.t === 'shift' || e.t === 'teleport'));
   function* usePower(B, u, p, aim = {}) {
     if (!canUse(B, u, p)) { log(B, `${u.name} can't use ${p.name} now.`, 'miss'); return false; }
     commitMove(u);
+    const undo = isMovePower(p) && {
+      pos: u.pos, conds: u.conds.slice(), act: Object.assign({}, u.act), cost: 0, moved: u.turnFlags && u.turnFlags.moved, acted: u.actedThisFight,
+      power: { id: p.id, used: u.used[p.id], uses: u.uses[p.id], recharge: u.recharge && u.recharge[p.id], teleport: p.eff.some(e => e.t === 'teleport') },
+    };
+    const logLen = B.log.length;
     spend(u, p.action || 'standard');
     if (p.kind === 'encounter' || p.kind === 'daily') u.used[p.id] = true;
     if (p.uses) u.uses[p.id] = (u.uses[p.id] || 0) + 1;
@@ -901,6 +909,11 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (multi >= 3) gainMomentum(B, 1, u);
     }
     if (p.shiftAfter && !u.dead && !isDying(u)) yield* applyEffect(B, u, u, { t: 'shift', n: p.shiftAfter, on: 'self' }, p, ctx);
+    if (undo && !u.dead) {
+      // locked in if the move did anything beyond moving (a hazard, a reaction from an enemy)
+      undo.locked = isDying(u) || B.log.slice(logLen).some(l => l.cls !== 'move' && l.cls !== 'power');
+      u.moving = { kind: 'power', budget: 0, spent: 0, legs: [undo] };
+    }
     checkEnd(B);
     return true;
   }
@@ -948,6 +961,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     }
     return true;
   }
+  const powerName = (u, id) => (u.powers.find(p => p.id === id) || { name: 'the move' }).name;
   function* undoMove(B, u) {
     if (!canUndoMove(u)) return false;
     const m = u.moving, leg = m.legs.pop();
@@ -955,7 +969,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (u.turnFlags) u.turnFlags.moved = leg.moved;
     m.spent -= leg.cost;
     if (!m.legs.length) { u.act = leg.act; u.moving = null; }
-    fx(B, { t: 'step', u: u.uid, to: u.pos, kind: 'undo' });
+    const pw = leg.power;
+    if (pw) {
+      // give the power back too
+      const put = (o, v) => { if (v === undefined) delete o[pw.id]; else o[pw.id] = v; };
+      put(u.used, pw.used); put(u.uses, pw.uses); if (u.recharge) put(u.recharge, pw.recharge);
+      log(B, `${u.name} takes back ${powerName(u, pw.id)}.`, 'move');
+    }
+    fx(B, pw && pw.teleport ? { t: 'teleport', u: u.uid, to: u.pos } : { t: 'step', u: u.uid, to: u.pos, kind: 'undo' });
     return true;
   }
 
