@@ -1,6 +1,6 @@
 const fs = require('fs'), vm = require('vm'), path = require('path');
 global.G = {};
-for (const f of ['js/hex.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/ai.js'])
+for (const f of ['js/hex.js', 'js/data/items.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/ai.js'])
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), { filename: f });
 const E = G.Engine;
 const scen = G.Scenarios.find(s => s.id === (process.argv[2] || 'golem'));

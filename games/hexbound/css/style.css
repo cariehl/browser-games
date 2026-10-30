@@ -1,7 +1,7 @@
 :root {
   --bg: #15121c; --bg2: #1e1a28; --panel: rgba(24, 20, 33, 0.92); --line: #4a3f5e; --gold: #e8c26a; --gold2: #b8913c;
   --text: #f1eadb; --muted: #a99fb8; --hero: #4aa3ff; --enemy: #ff5a4a; --good: #6ee08a; --warn: #ffb347; --bad: #ff6a5a;
-  --atwill: #3f8f4f; --encounter: #b23a3a; --daily: #3a3a46; --basic: #5a5a6a; --utility: #2f6f9a;
+  --atwill: #3f8f4f; --encounter: #b23a3a; --daily: #3a3a46; --basic: #5a5a6a; --utility: #2f6f9a; --item: #b0803a;
   --fighter: #c0392b; --rogue: #6c7a89; --ranger: #27ae60; --cleric: #f1c40f; --warlord: #9b59b6; --wizard: #3498db;
   color-scheme: dark;
 }
@@ -270,6 +270,15 @@ label.inline { display: flex; align-items: center; gap: 8px; margin-top: 8px; fo
 .pow.on { border-color: var(--gold); box-shadow: 0 0 14px rgba(232, 194, 106, .55); transform: translateY(-6px); }
 .pow.dis { opacity: .45; } .pow.used { opacity: .25; filter: grayscale(1); }
 .pow b { font-size: 12.5px; line-height: 1.15; } .pow small { font-size: 10px; color: var(--muted); } .pow em { font-size: 10.5px; color: var(--gold); font-style: normal; margin-top: auto; }
+.hb-pack { display: flex; flex-wrap: wrap; align-items: center; gap: 4px; margin-top: 6px; padding-top: 6px; border-top: 1px solid var(--line); max-width: 420px; }
+.hb-pack-l { font-family: Cinzel, serif; font-size: 11px; color: var(--gold); margin-right: 2px; }
+.pack-it { display: flex; align-items: center; gap: 5px; padding: 3px 8px 3px 5px; border-radius: 6px; border: 1px solid var(--line); border-left: 3px solid var(--item); background: #221d2d; color: var(--text); font: inherit; cursor: pointer; transition: transform .1s; }
+.pack-it:hover { transform: translateY(-2px); } .pack-it.on { border-color: var(--gold); box-shadow: 0 0 10px rgba(232, 194, 106, .5); }
+.pack-it.dis { opacity: .5; } .pack-it.used { opacity: .3; filter: grayscale(1); } .pack-it.up:not(.dis) { border-color: #d9822b; }
+.pack-it .pi-ico { font-size: 15px; } .pack-it b { font-size: 12px; } .pack-it small { font-size: 10px; color: var(--muted); }
+.ph-meta .pk-ico { background: #3a3020; }
+.k-item { border-top-color: var(--item) !important; }
+#ptipf .ptip-flv { margin-top: 6px; color: var(--muted); font-size: 11px; }
 .pk { position: absolute; top: 3px; right: 6px; font-size: 10px; color: var(--muted); }
 .ptip { display: none; position: absolute; bottom: calc(100% + 8px); left: 0; width: 250px; background: #0f0c14; border: 1px solid var(--gold2); border-radius: 6px; padding: 8px; font-size: 11.5px; z-index: 5; pointer-events: none; }
 

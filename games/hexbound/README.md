@@ -23,6 +23,10 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
   3. *The Grand Bakery* — Level 5 vs **The Pastry Golem**: a three-phase solo boss with telegraphed
      Grand Soufflé slams, frosting sprays that glaze the floor, ovens that spawn gingerbread guards,
      cream puffs that burst when popped, jam jars, and a cinnamon roll that bowls you over.
+- **Items** (`js/data/items.js`): each hero starts every fight with one random consumable in their pack:
+  potions (minor action: a healing draught, a bark-skin tonic, a clarity draught, a speed philter),
+  throwables (standard action: fire, frost and thunder bursts, a snare, blinding dust) or a field
+  dressing that can revive a dying ally. Item attacks use the item's bonus + level, not an ability score.
 - **Party builder** (`js/builder.js`): point-buy abilities, ancestry, class/subclass, feats per level,
   power picks per slot; parties are saved in the browser and can be exported/imported as a code.
   One build covers all three scenarios — level 3 and 5 choices unlock automatically.

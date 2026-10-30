@@ -387,7 +387,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     combatLeader: { allyInit: () => 2 },
     tactician: { grantAtkMod: (B, u) => Math.max(0, M(u, 'INT')) },
     inspiring: {},
-    evoker: { dmgMod: (B, u, ctx) => (ctx.power && E().isArea(ctx.power)) ? 2 : 0 },
+    evoker: { dmgMod: (B, u, ctx) => (ctx.power && E().isArea(ctx.power) && ctx.power.kind !== 'item') ? 2 : 0 },
     hexbinder: { savePen: () => 2 },
     human: {},
     dwarf: { forcedResist: () => 1 },
@@ -494,7 +494,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     },
     describe(p, u) {
       const bits = [];
-      const kindName = { atwill: 'At-Will', encounter: 'Encounter', daily: 'Daily', basic: 'Basic' }[p.kind] || p.kind;
+      const kindName = { atwill: 'At-Will', encounter: 'Encounter', daily: 'Daily', basic: 'Basic', item: 'Consumable' }[p.kind] || p.kind;
       const act = { standard: 'Standard', move: 'Move', minor: 'Minor', free: 'Free' }[p.action || 'standard'];
       let tg = '';
       if (p.tgt === 'melee') tg = `Melee ${p.range || 1}`;
@@ -504,8 +504,9 @@ var G = (typeof G !== 'undefined') ? G : {};
       else if (p.tgt === 'areaBurst') tg = `Area burst ${p.size} within ${p.range}`;
       else if (p.tgt === 'self') tg = 'Personal';
       if (p.adapt && !u) tg += ' (or weapon range)';
-      bits.push(`${kindName}${p.uses ? ` (${p.uses}/fight)` : ''} · ${act} · ${tg}`);
-      if (p.atk) {
+      bits.push(`${kindName}${p.uses && p.kind !== 'item' ? ` (${p.uses}/fight)` : ''} · ${act} · ${tg}`);
+      if (p.atk && p.kind === 'item') bits.push(`Attack: ${u ? '+' + (p.atk.bonus + u.level) : '+' + p.atk.bonus + ' + level'} vs ${p.atk.vs}`);
+      else if (p.atk) {
         const st = p.atk.stat === 'WPN' ? 'STR/DEX' : p.atk.stat === 'BEST' ? 'STR/CON/DEX' : p.atk.stat;
         bits.push(`Attack: ${st}${p.atk.bonus ? ' +' + p.atk.bonus : ''} vs ${p.atk.vs}${p.hits > 1 ? ` (×${p.hits})` : ''}`);
       }
@@ -523,13 +524,13 @@ var G = (typeof G !== 'undefined') ? G : {};
           case 'cond': return `${who === 'target' ? '' : who + ': '}${e.label || e.c}${dur}`;
           case 'ongoing': return `ongoing ${e.amt} damage (save ends)`;
           case 'mark': return 'marked' + dur;
-          case 'heal': return `${who} ${e.surge ? 'spends a surge' : 'heals'}`;
+          case 'heal': return `${who} ${e.flat != null ? `spends a surge to regain ${e.flat} HP` : e.surge ? 'spends a surge' : 'heals'}`;
           case 'temp': return `${who} gains temp HP${e.revive ? ' (revives the dying)' : ''}`;
           case 'shift': return `${who} shifts ${e.n}`;
           case 'teleport': return `teleport ${e.n}`;
           case 'swap': return 'swap places';
           case 'grantAttack': return `${who} makes a basic attack`;
-          case 'save': return `${who} makes a saving throw`;
+          case 'save': return `${who} ${e.all ? 'saves against every save-ends effect' : 'makes a saving throw'}${e.bonus ? ` (+${e.bonus})` : ''}`;
           default: return '';
         }
       }).filter(Boolean).join(', ');

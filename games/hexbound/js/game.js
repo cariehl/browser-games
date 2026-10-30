@@ -106,6 +106,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       </div><div>
       <h4>Staying alive</h4>
       <p>Heroes have <b>healing surges</b>: Second Wind (once per fight) and Cleric heals spend one to restore ¼ of max HP. Warlords rally instead: Inspiring Word grants <b>temporary HP</b> without spending a surge. At 0 HP you fall <b>dying</b> and roll death saves (10+ holds on, a natural 1 counts as two failures); three failures and you're gone. Being hit while dying is a failure too, a crit is two. Enemies who step out of a hero's reach provoke an opportunity attack just like heroes do. Any heal brings you back, and so does a Warlord's rally.</p>
+      <p><b>Pack</b>: every hero starts with one random consumable, shown under their action buttons: a potion (minor action: heal, temp HP, shake off effects, extra speed), a throwable (standard action: fire, frost, thunder, snares, blinding dust) or a field dressing that can revive a dying ally. Each item can be used once.</p>
       <p><b>Action Point</b>: once per fight, take an extra standard action. <b>Momentum</b> (◆) is earned by kills and crits; spend 2 to reroll a missed attack.</p>
       <h4>Enemies</h4>
       <p><b>Minions</b> die to any hit but ignore damage on a miss. <b>Marked</b> creatures take −2 attacking anyone but whoever marked them, and Fighters punish them. Watch for hazards — fire, frosting, exploding barrels — and push enemies into them!</p>
@@ -787,7 +788,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       return `<div class="pcardh cls-${u.cls} ${ui.hero === u ? 'cur' : ''} ${u.dead ? 'dead' : ''} ${dying ? 'dying' : ''}" data-uid="${u.uid}">
         <div class="ph-top"><span class="ico">${G.ICON[u.cls]}</span><b>${esc(u.name)}</b><span class="ph-lv" title="${esc(`Level ${u.level} ${heroLine(u)}`)}">${G.Build.CLASSES[u.cls].name}</span></div>
         <div class="bar"><i style="width:${pct}%" class="${pct <= 50 ? 'bl' : ''} ${pct <= 25 ? 'cr' : ''}"></i>${u.tempHp ? `<em style="width:${Math.min(100, u.tempHp / u.maxHp * 100)}%"></em>` : ''}<span>${u.dead ? 'DEAD' : dying ? `DYING (${u.deathFails || 0}/3)` : `${u.hp}/${u.maxHp}${u.tempHp ? ' +' + u.tempHp : ''}`}</span></div>
-        <div class="ph-meta"><span title="Healing surges">♥${u.surges}</span><span class="${u.used.__sw ? 'off' : ''}" title="Second Wind">SW</span><span class="${u.used.__ap ? 'off' : ''}" title="Action Point">AP</span>${u.conds.filter(c => c.c !== 'dying').slice(0, 5).map(c => `<span class="cnd" title="${esc(c.label || c.c)}">${esc((c.label || c.c).split(' ')[0])}</span>`).join('')}</div>
+        <div class="ph-meta"><span title="Healing surges">♥${u.surges}</span><span class="${u.used.__sw ? 'off' : ''}" title="Second Wind">SW</span><span class="${u.used.__ap ? 'off' : ''}" title="Action Point">AP</span>${packItems(u).map(p => `<span class="pk-ico ${itemLeft(u, p) ? '' : 'off'}" title="${esc(`Pack: ${p.name}${itemLeft(u, p) ? '' : ' (used)'}`)}">${p.icon}</span>`).join('')}${u.conds.filter(c => c.c !== 'dying').slice(0, 5).map(c => `<span class="cnd" title="${esc(c.label || c.c)}">${esc((c.label || c.c).split(' ')[0])}</span>`).join('')}</div>
       </div>`;
     }).join('');
     $('#hud-party').querySelectorAll('.pcardh').forEach(c => {
@@ -822,8 +823,9 @@ var G = (typeof G !== 'undefined') ? G : {};
     const moveOn = (kind) => canMove(u, kind) || (u.moving && u.moving.kind !== kind && E().canSpend(u, 'move') && E().speedOf(u) > 0);
     const left = (kind) => { const n = E().moveLeft(u, kind); return n != null ? ` (${n} left)` : ''; };
     const prone = E().hasCond(u, 'prone');
-    const powers = u.powers.filter(p => !p.passive);
+    const powers = u.powers.filter(p => !p.passive && p.kind !== 'item');
     const keyOf = (i) => i < 9 ? String(i + 1) : '';
+    const items = packItems(u);
     bot.innerHTML = `
       <div class="hb-left">
         <div class="hb-name cls-${u.cls}" title="${esc(`Level ${u.level} ${heroLine(u)}`)}">${G.ICON[u.cls]} ${esc(u.name)}</div>
@@ -838,6 +840,11 @@ var G = (typeof G !== 'undefined') ? G : {};
           <button class="btn act ap" id="b-ap" ${!ui.busy && !u.used.__ap ? '' : 'disabled'} title="Gain an extra standard action this turn (free action, once per fight).">Action Point</button>
           <button class="btn act end" id="b-end" ${ui.busy ? 'disabled' : ''} title="End your turn. Unused actions are lost.">End Turn <kbd>␣</kbd></button>
         </div>
+        <div class="hb-pack"><span class="hb-pack-l">Pack</span>${items.length ? items.map((p, i) => {
+          const left = itemLeft(u, p), ok = left && E().canUse(B, u, p) && !ui.busy, up = ok && upcost(p.action);
+          return `<button class="pack-it k-item ${ok ? '' : 'dis'} ${left ? '' : 'used'} ${ui.power === p ? 'on' : ''} ${up ? 'up' : ''}" data-ii="${i}"><span class="pi-ico">${p.icon}</span><b>${esc(p.name)}</b><small>${left ? (p.action || 'standard') : 'used'}</small>
+            <div class="ptip">${powerTip(p, u)}${p.flavor ? `<div class="ptip-flv">${esc(p.flavor)}</div>` : ''}${up ? `<div class="ptip-up">Uses your ${up} action (your ${p.action} action is spent).</div>` : ''}</div></button>`;
+        }).join('') : '<span class="muted">empty</span>'}</div>
       </div>
       <div class="hb-powers">${powers.map((p, i) => {
         const ok = E().canUse(B, u, p) && !ui.busy;
@@ -866,10 +873,17 @@ var G = (typeof G !== 'undefined') ? G : {};
       b.onmouseenter = () => showPowerTip(b);
       b.onmouseleave = hidePowerTip;
     });
+    bot.querySelectorAll('[data-ii]').forEach(b => {
+      b.onclick = () => selectPower(items[+b.dataset.ii]);
+      b.onmouseenter = () => showPowerTip(b);
+      b.onmouseleave = hidePowerTip;
+    });
     // the bar re-renders under the cursor; keep the hovered power's tooltip up
-    const hov = bot.querySelector('.pow:hover');
+    const hov = bot.querySelector('.pow:hover, .pack-it:hover');
     if (hov) showPowerTip(hov); else hidePowerTip();
   }
+  const packItems = (u) => u.powers.filter(p => p.kind === 'item');
+  const itemLeft = (u, p) => (u.uses[p.id] || 0) < (p.uses || 1);
   // Power tooltips float on <body> so the scrolling power bar can't clip them.
   function showPowerTip(btn) {
     const src = btn.querySelector('.ptip'); if (!src) return;
@@ -971,7 +985,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     else if (k === 'x') setMode(ui.mode === 'shift' ? 'move' : 'shift');
     else if (k === 'c') setMode(ui.mode === 'charge' ? 'move' : 'charge');
     else if (k === 'z') doUndoMove();
-    else if (/^[1-9]$/.test(k)) { const powers = u.powers.filter(p => !p.passive); const p = powers[+k - 1]; if (p) selectPower(p); }
+    else if (/^[1-9]$/.test(k)) { const powers = u.powers.filter(p => !p.passive && p.kind !== 'item'); const p = powers[+k - 1]; if (p) selectPower(p); }
   });
 
   function init() {

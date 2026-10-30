@@ -85,6 +85,10 @@ var G = (typeof G !== 'undefined') ? G : {};
     party.forEach((build, i) => {
       const u = G.Build.makeHero(build, scen.level);
       u.pos = heroStarts[i] || heroStarts[0];
+      // the pack: opts.items[i] picks this hero's items (an id or a list); otherwise one at random
+      const pick = opts.items && opts.items[i];
+      u.pack = pick != null ? [].concat(pick).filter(id => G.Items[id]) : [randomItem()];
+      u.pack.forEach((id, k) => u.powers.push(itemPower(id, u.pack.slice(0, k).filter(x => x === id).length)));
       addUnit(B, u);
     });
     for (const sp of scen.enemies) {
@@ -94,6 +98,16 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const sp of (scen.objects || [])) addUnit(B, makeMonster(sp.id, Hex.fromOffset(sp.at[0], sp.at[1]), sp));
     return B;
   }
+
+  // ---------- Items ----------
+  const ITEM_IDS = () => Object.keys(G.Items || {});
+  function randomItem() { const ids = ITEM_IDS(); return ids[Math.floor(rand() * ids.length)]; }
+  // a carried item becomes a one-use power; several of the same item get their own ids
+  function itemPower(id, n = 0) {
+    const def = G.Items[id];
+    return Object.assign({ id: 'item_' + id + (n ? '_' + n : ''), name: def.name, icon: def.icon, cat: def.cat, flavor: def.flavor, kind: 'item', item: id, uses: 1, noMod: true }, def.power);
+  }
+  const isItem = (p) => p.kind === 'item';
 
   function addUnit(B, u) {
     u.uid = ++uid; u.conds = u.conds || []; u.used = u.used || {}; u.uses = u.uses || {};
@@ -261,6 +275,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   function attackBonus(B, u, p, tgt, ctx = {}) {
     let b = 0, parts = [];
     if (u.monster) { b = p.atk.bonus || 0; parts.push(['base', b]); }
+    else if (isItem(p)) { b = (p.atk.bonus || 0) + u.level; parts.push(['item', b]); }
     else {
       const s = atkStat(u, p);
       const m = mod(u.abil[s]); const half = Math.floor(u.level / 2);
@@ -382,7 +397,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (isArea(p) || powerRange(u, p).kind === 'self') return true;
       return B.units.some(t => !t.dead && validTarget(B, u, p, t));
     };
-    return u.powers.some(p => (p.action || 'standard') === 'minor' && canUse(B, u, p) && aimable(p));
+    // items are optional: an unopened potion shouldn't keep the turn from ending
+    return u.powers.some(p => (p.action || 'standard') === 'minor' && !isItem(p) && canUse(B, u, p) && aimable(p));
   }
 
   // ---------- Movement ----------
@@ -766,7 +782,10 @@ var G = (typeof G !== 'undefined') ? G : {};
         case 'mark': addCond(B, s, 'marked', { dur: e.dur || 'eont', src: u.uid }); break;
         case 'heal': {
           const bonus = num(e.bonus || 0) + (u.healBonus || 0);
-          if (e.surge) spendSurge(B, u, s, bonus); else heal(B, u, s, e.amt === 'surgeValue' ? s.surgeValue + bonus : num(e.amt) + bonus);
+          if (e.flat != null) { // a surge spent for a fixed amount instead of the surge value
+            if (s.surges > 0) { s.surges--; heal(B, u, s, num(e.flat)); } else log(B, `${s.name} has no healing surges left!`, 'miss');
+          } else if (e.surge && e.revive && isDying(s) && s.surges <= 0) heal(B, u, s, 1);
+          else if (e.surge) spendSurge(B, u, s, bonus); else heal(B, u, s, e.amt === 'surgeValue' ? s.surgeValue + bonus : num(e.amt) + bonus);
           break;
         }
         case 'temp': {
@@ -800,7 +819,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         }
         case 'grantAttack': yield* grantAttack(B, u, s, t, { atk: num(e.atk || 0), dmg: e.dmg ? num(e.dmg) : 0 }); break;
         case 'save': { // immediate saving throw
-          yield* savingThrows(B, s, num(e.bonus || 0), true);
+          yield* savingThrows(B, s, num(e.bonus || 0), !e.all);
           break;
         }
         case 'zone': {
@@ -854,7 +873,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   // ---------- Using powers (main entry) ----------
   // aim: {unit} for single target, {hex} for area/blast, nothing for self
   // A power that does nothing but move its user (Tumble, Blink Step, Fleet Pursuit) can be taken back like a move
-  const isMovePower = (p) => p.tgt === 'self' && !p.atk && !p.hit && !p.pre && !p.after && !p.onHit && !p.zone && !p.shiftAfter &&
+  const isMovePower = (p) => !isItem(p) && p.tgt === 'self' && !p.atk && !p.hit && !p.pre && !p.after && !p.onHit && !p.zone && !p.shiftAfter &&
     (p.eff || []).length > 0 && p.eff.every(e => (e.on || 'self') === 'self' && (e.t === 'shift' || e.t === 'teleport'));
   function* usePower(B, u, p, aim = {}) {
     if (!canUse(B, u, p)) { log(B, `${u.name} can't use ${p.name} now.`, 'miss'); return false; }
@@ -1272,7 +1291,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     udist, hdist, footprint, occupies, canPass, moveLeft, commitMove, canUndoMove, undoMove, chargePath,
     moveAlong, forcedMove, forcedOptions, dealDamage, heal, spendSurge, giveTemp, attackRoll, applyEffect, savingThrows,
     usePower, doMove, doCharge, chargeOptions, secondWind, actionPoint, hasMinorUse, startBattle, nextTurn, startTurn, endTurn, checkEnd,
-    runAuto, gainMomentum, grantAttack, kill, enterHex, isHostile,
+    runAuto, gainMomentum, grantAttack, kill, enterHex, isHostile, itemPower, randomItem, isItem,
   };
 })();
 if (typeof module !== 'undefined') module.exports = G;
