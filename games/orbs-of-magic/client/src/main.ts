@@ -11,6 +11,7 @@ import { music, renderOffline } from './music';
 import { LocalRoom, type RoomLike } from './localroom';
 import { LOCAL_AI, PICK_SERVER, inviteLink, normalizeServerUrl, onlineClient, pingServer, serverUrl, serverUrlProblem, setServerUrl } from './net';
 import { BoardScene } from './scene';
+import { marked } from 'marked';
 
 const ui = document.getElementById('ui')!;
 const scene = new BoardScene(document.getElementById('scene') as HTMLCanvasElement);
@@ -29,6 +30,19 @@ let aiDeck = store.get('oom-aideck', 'random');
 // The address in the server box, kept across menu re-renders. The last server checked, so it's pinged once.
 let serverDraft = '';
 let pinged: string | null = null;
+
+const REPO_URL = 'https://github.com/cariehl/orbs-of-magic-threejs';
+const GITHUB_ICON = '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+
+// The Pages build sits in a folder of cariehl.github.io, and the site keeps Cooper's commentary
+// beside it at commentary/orbs.md. No file (or a server-hosted build) means no Commentary button.
+let commentary: Promise<string | null> | null = null;
+function loadCommentary() {
+  commentary ??= fetch(new URL('../commentary/orbs.md', location.href), { cache: 'no-cache' })
+    .then(async (r) => (r.ok && !(r.headers.get('content-type') ?? '').includes('text/html') ? (await r.text()).trim() || null : null))
+    .catch(() => null);
+  return commentary;
+}
 
 function onlineHTML() {
   const buttons = `<button class="btn big btn-quick">⚡ Quick Match</button>
@@ -64,6 +78,12 @@ function menu() {
     </button>`).join('');
   ui.innerHTML = `
   <div class="menu">
+    ${PICK_SERVER ? `<div class="menu-corner left">
+      <a class="btn ghost small" href="../" title="Back to cariehl.github.io">← Back</a>
+      <a class="icon-btn link-btn" href="${REPO_URL}" target="_blank" rel="noopener" title="Source code on GitHub" aria-label="GitHub">${GITHUB_ICON}</a>
+      <button class="btn ghost small btn-commentary hidden">📝 Commentary</button>
+    </div>` : ''}
+    <div class="menu-corner right"><button class="icon-btn btn-help" title="How to Play" aria-label="How to Play">?</button></div>
     <div class="title"><h1>Orbs <span>of</span> Magic</h1><div class="subtitle">A tactical card battle for the five Orbs</div></div>
     <div class="menu-body">
       <div class="panel deck-picker">
@@ -122,7 +142,15 @@ function menu() {
     };
   }
   if (PICK_SERVER) bindServerPicker(status);
-  q('.btn-howto').onclick = () => modal(`<div class="help">${HELP_HTML}</div>`);
+  q('.btn-howto').onclick = q('.btn-help').onclick = () => modal(`<div class="help">${HELP_HTML}</div>`);
+  if (PICK_SERVER) {
+    loadCommentary().then((md) => {
+      const btn = ui.querySelector('.btn-commentary') as HTMLElement | null;
+      if (!md || !btn) return;
+      btn.classList.remove('hidden');
+      btn.onclick = () => modal(`<div class="commentary">${marked.parse(md, { async: false })}</div>`);
+    });
+  }
   q('.btn-library').onclick = () => library('all');
   q('.btn-orbs').onclick = () => orbs();
   q('.btn-music-menu').onclick = (e) => { (e.target as HTMLElement).textContent = `🎵 Music: ${music.toggle() ? 'On' : 'Off'}`; };
