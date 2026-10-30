@@ -704,14 +704,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     const base = screenOf(st.h, Math.min(...st.items.map(x => x.yOff)));
     let floor = 0;
     for (const it of st.items) {
-      // each line drifts up on its own; it is only pushed when the newer line below would overlap most of it
+      // each line drifts up on its own; it is only pushed (gently) when the newer line below would cover it
       const target = Math.max(floor, (now - it.born) / 1000 * 26);
       // older lines ease toward their new spot rather than jumping when a line is added
       it.lift = it.fresh ? target : it.lift + (target - it.lift) * k; it.fresh = false;
       it.el.style.left = base.x + 'px'; it.el.style.top = (base.y - it.lift) + 'px';
       const left = it.end - now;
       it.el.style.opacity = left < FADE ? Math.max(0, left / FADE) : '';
-      floor = it.lift + it.hgt * 0.7;
+      floor = it.lift + it.hgt * 0.9;
     }
     return true;
   }
