@@ -43,12 +43,12 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (dq > dr && dq > ds) q = -r - s; else if (dr > ds) r = -q - s;
       return { q, r };
     },
-    line(a, b) {
+    // side = +1 / -1 picks which way to break ties when the line runs exactly along a hex edge
+    line(a, b, side = 1) {
       const n = Hex.dist(a, b); const out = [];
       for (let i = 0; i <= n; i++) {
         const t = n === 0 ? 0 : i / n;
-        // nudge to avoid ambiguous edges
-        out.push(Hex.round(a.q + (b.q - a.q) * t + 1e-6, a.r + (b.r - a.r) * t + 2e-6));
+        out.push(Hex.round(a.q + (b.q - a.q) * t + side * 1e-6, a.r + (b.r - a.r) * t + side * 2e-6));
       }
       return out;
     },

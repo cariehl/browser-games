@@ -13,7 +13,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   const WEAPONS = {
     longsword: { name: 'Longsword', die: [1, 8], prof: 3 },
     greataxe: { name: 'Greataxe', die: [1, 12], prof: 2, highCrit: '1d12' },
-    dagger: { name: 'Dagger', die: [1, 4], prof: 3 },
+    dagger: { name: 'Dagger', die: [1, 4], prof: 3, thrown: 5 },
     shortsword: { name: 'Short Sword', die: [1, 6], prof: 3 },
     longbow: { name: 'Longbow', die: [1, 10], prof: 2, ranged: true, range: 15 },
     twinblades: { name: 'Paired Blades', die: [1, 8], prof: 3 },
@@ -105,7 +105,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   // Fighter
   add('fighter', 'atwill', [
-    melee({ id: 'f_cleave', name: 'Cleaving Strike', hit: [{ t: 'fn', fn: function* (B, u, t) { const o = E().enemiesOf(B, u).find(e => e !== t && G.Hex.dist(e.pos, u.pos) === 1); if (o) yield* E().dealDamage(B, u, o, Math.max(1, M(u, 'STR')), { label: 'cleave' }); } }], text: 'An adjacent enemy other than the target also takes STR damage.' }),
+    melee({ id: 'f_cleave', name: 'Cleaving Strike', hit: [{ t: 'fn', fn: function* (B, u, t) { const o = E().enemiesOf(B, u).find(e => e !== t && E().udist(e, u) === 1); if (o) yield* E().dealDamage(B, u, o, Math.max(1, M(u, 'STR')), { label: 'cleave' }); } }], text: 'An adjacent enemy other than the target also takes STR damage.' }),
     melee({ id: 'f_drive', name: 'Driving Strike', hit: [{ t: 'push', n: 1 }, { t: 'shift', n: 1, on: 'self' }], text: 'Push 1, then you may shift 1 to follow.' }),
     melee({ id: 'f_measured', name: 'Measured Strike', atk: { stat: 'STR', vs: 'AC', bonus: 2 }, noMod: true, text: 'Accurate (+2) but only weapon dice for damage.' }),
     melee({ id: 'f_pin', name: 'Pinning Strike', hit: [{ t: 'cond', c: 'slowed' }] }),
@@ -256,7 +256,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   ]);
   add('wizard', 'enc1', [
     impl({ id: 'z_fan', name: 'Fan of Flame', tgt: 'closeBlast', size: 5, atk: { stat: 'INT', vs: 'Ref' }, dmg: '2d6', dtype: 'fire' }),
-    impl({ id: 'z_orb', name: 'Concussive Orb', range: 20, atk: { stat: 'INT', vs: 'Fort' }, dmg: '2d8', dtype: 'force', hit: [{ t: 'fn', fn: function* (B, u, t) { for (const e of E().enemiesOf(B, u).filter(e => e !== t && G.Hex.dist(e.pos, t.pos) === 1)) yield* E().dealDamage(B, u, e, E().rollDice(E().parseDice('1d6')).total, { dtype: 'force', label: 'shockwave' }); } }], text: 'Enemies adjacent to the target take 1d6 force.' }),
+    impl({ id: 'z_orb', name: 'Concussive Orb', range: 20, atk: { stat: 'INT', vs: 'Fort' }, dmg: '2d8', dtype: 'force', hit: [{ t: 'fn', fn: function* (B, u, t) { for (const e of E().enemiesOf(B, u).filter(e => e !== t && E().udist(e, t) === 1)) yield* E().dealDamage(B, u, e, E().rollDice(E().parseDice('1d6')).total, { dtype: 'force', label: 'shockwave' }); } }], text: 'Enemies adjacent to the target take 1d6 force.' }),
   ]);
   add('wizard', 'enc3', [
     impl({ id: 'z_shackles', name: 'Rime Shackles', atk: { stat: 'INT', vs: 'Fort' }, dmg: '2d8', dtype: 'cold', hit: [{ t: 'cond', c: 'immobilized', dur: 'save' }] }),
@@ -268,7 +268,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   ]);
   add('wizard', 'daily5', [
     impl({ id: 'z_inferno', name: 'Inferno Sphere', range: 20, tgt: 'areaBurst', size: 2, atk: { stat: 'INT', vs: 'Ref' }, dmg: '4d6', dtype: 'fire', miss: 'half' }),
-    impl({ id: 'z_chain', name: 'Chained Lightning', atk: { stat: 'INT', vs: 'Ref' }, dmg: '2d8', dtype: 'lightning', miss: 'half', after: function* (B, u, ts) { const t = ts[0]; if (!t) return; const arc = Object.assign({}, P.z_chain, { dmg: '1d8', miss: null, after: null, name: 'Lightning Arc' }); const near = E().enemiesOf(B, u).filter(e => e !== t && G.Hex.dist(e.pos, t.pos) <= 3).slice(0, 2); for (const e of near) { E().fx(B, { t: 'attack', u: u.uid, tgt: e.uid, kind: 'ranged', dtype: 'lightning' }); yield* E().attackRoll(B, u, arc, e, {}); } }, text: 'Arcs to up to 2 more enemies within 3 of the target (1d8+INT).' }),
+    impl({ id: 'z_chain', name: 'Chained Lightning', atk: { stat: 'INT', vs: 'Ref' }, dmg: '2d8', dtype: 'lightning', miss: 'half', after: function* (B, u, ts) { const t = ts[0]; if (!t) return; const arc = Object.assign({}, P.z_chain, { dmg: '1d8', miss: null, after: null, name: 'Lightning Arc' }); const near = E().enemiesOf(B, u).filter(e => e !== t && E().udist(e, t) <= 3).slice(0, 2); for (const e of near) { E().fx(B, { t: 'attack', u: u.uid, tgt: e.uid, kind: 'ranged', dtype: 'lightning' }); yield* E().attackRoll(B, u, arc, e, {}); } }, text: 'Arcs to up to 2 more enemies within 3 of the target (1d8+INT).' }),
   ]);
   add('wizard', 'util2', [
     { id: 'z_blink', name: 'Blink Step', action: 'move', tgt: 'self', eff: [{ on: 'self', t: 'teleport', n: 4 }] },
@@ -280,7 +280,9 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   // basic attacks for everyone
   P.basic_melee = { id: 'basic_melee', name: 'Melee Basic Attack', kind: 'basic', basicMelee: true, basic: true, tgt: 'melee', range: 1, weapon: true, atk: { stat: 'STR', vs: 'AC' }, dmg: '1W' };
-  P.basic_ranged = { id: 'basic_ranged', name: 'Ranged Basic Attack', kind: 'basic', basicRanged: true, basic: true, tgt: 'ranged', range: 10, weapon: true, atk: { stat: 'DEX', vs: 'AC' }, dmg: '1d6' };
+  P.basic_ranged = { id: 'basic_ranged', name: 'Ranged Basic Attack', kind: 'basic', basicRanged: true, basic: true, tgt: 'ranged', range: 10, weapon: true, atk: { stat: 'DEX', vs: 'AC' }, dmg: '1W' };
+  // what a hero without a bow or throwing weapon falls back on
+  P.basic_stone = { id: 'basic_ranged', name: 'Thrown Stone', kind: 'basic', basicRanged: true, basic: true, improvised: true, tgt: 'ranged', range: 5, atk: { stat: 'DEX', vs: 'AC' }, dmg: '1d4', text: 'No ranged weapon: hurl whatever is to hand. No proficiency or enhancement bonus.' };
 
   // ---------- Ancestries ----------
   const ANCESTRIES = {
@@ -327,7 +329,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       onEnemyAction: function* (B, u, actor, info) {
         if (u.ccRound === B.turnNo || !E().canReact(u) || actor.dead) return;
         if (!actor.conds.some(c => c.c === 'marked' && c.src === u.uid)) return;
-        if (G.Hex.dist(actor.pos, u.pos) !== 1) return;
+        if (E().udist(actor, u) !== 1) return;
         if (!(info.shift || (info.attack && !(info.targets || []).includes(u)))) return;
         u.ccRound = B.turnNo;
         E().log(B, `${u.name}'s Combat Challenge punishes ${actor.name}!`, 'oa');
@@ -343,7 +345,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       atkMod: (B, u, ctx) => weaponish(ctx.power) ? 1 : 0,
       onKill: function* (B, u, victim) {
         if (B.active !== u || u.turnFlags.cleave) return;
-        const o = E().enemiesOf(B, u).find(e => G.Hex.dist(e.pos, u.pos) === 1);
+        const o = E().enemiesOf(B, u).find(e => E().udist(e, u) === 1);
         if (!o) return; u.turnFlags.cleave = true;
         E().fx(B, { t: 'banner', text: 'Cleave!', u: u.uid, cls: 'crit' });
         E().fx(B, { t: 'attack', u: u.uid, tgt: o.uid, kind: 'melee' });
@@ -464,8 +466,9 @@ var G = (typeof G !== 'undefined') ? G : {};
       };
       if (build.cls === 'cleric' && build.sub === 'lightbringer') u.healBonus += Math.max(0, m('WIS'));
       // lore: cleric heals +WIS already in power bonus
-      const basics = [P.basic_melee, P.basic_ranged].map(p => Object.assign({}, p));
-      if (weapon.ranged) { basics[1] = Object.assign({}, P.basic_ranged, { dmg: '1W', range: weapon.range }); basics[0] = Object.assign({}, P.basic_melee, { dmg: '1d4', weapon: false, noWeaponDie: true }); }
+      const basics = [Object.assign({}, P.basic_melee), Object.assign({}, P.basic_stone)];
+      if (weapon.ranged) { basics[1] = Object.assign({}, P.basic_ranged, { range: weapon.range, name: `Ranged Basic Attack (${weapon.name})` }); basics[0] = Object.assign({}, P.basic_melee, { dmg: '1d4', weapon: false, noWeaponDie: true }); }
+      else if (weapon.thrown) basics[1] = Object.assign({}, P.basic_ranged, { range: weapon.thrown, name: `Thrown ${weapon.name}` });
       u.powers = basics.concat(chosen.map(id => Build.concrete(u, P[id], feats)));
       return u;
     },
