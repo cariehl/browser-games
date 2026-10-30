@@ -192,7 +192,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     const isWater = t.terrain === 'water' || t.terrain === 'bridge';
     const m = new THREE.Mesh(hexGeo, mat(tileColor(t), isWater ? { roughness: 0.25, metalness: 0.1, transparent: true, opacity: 0.92 } : (['frosting', 'jam'].includes(t.terrain) ? { roughness: 0.3 } : {})));
     const p = px(t);
-    m.position.set(p.x, y, p.z); m.scale.y = y + 0.6;
+    const by = t.terrain === 'bridge' ? topY({ terrain: 'water' }) : y; // bridge decks sit above the water surface
+    m.position.set(p.x, by, p.z); m.scale.y = by + 0.6;
     m.receiveShadow = true;
     scene.add(m); tileMeshes.set(k, m);
     if (['fire', 'flames', 'oven'].includes(t.terrain)) m.material.emissive = new THREE.Color(t.terrain === 'flames' ? 0x6a1a00 : 0x220800);
@@ -213,9 +214,21 @@ var G = (typeof G !== 'undefined') ? G : {};
         break;
       }
       case 'bridge': {
-        for (let i = -2; i <= 2; i++) { const pl = new THREE.Mesh(new THREE.BoxGeometry(1.5, 0.08, 0.3), mat(0x8b6a43)); pl.position.set(0, 0.0, i * 0.33); g.add(pl); }
-        const rail1 = new THREE.Mesh(new THREE.BoxGeometry(0.08, 0.3, 1.6), mat(0x6b4a2b)); rail1.position.set(0.7, 0.15, 0); g.add(rail1);
-        const rail2 = rail1.clone(); rail2.position.x = -0.7; g.add(rail2); break;
+        // One half-span per link, from the tile centre to the shared edge, so neighbouring pieces meet flush.
+        // The end pieces reach onto the bank and ramp down to it.
+        for (const lk of bridgeLinks(t)) {
+          const seg = new THREE.Group(); seg.rotation.y = lk.yaw; g.add(seg);
+          const len = lk.bank ? 1.3 : SQ3 / 2 + 0.02;
+          const drop = lk.bank ? y - topY(lk.tile) : 0;
+          const deck = new THREE.Group(); deck.rotation.x = drop ? Math.atan2(drop, len) * 0.9 : 0; seg.add(deck);
+          const nb = Math.max(2, Math.round(len / 0.24));
+          for (let i = 0; i < nb; i++) { const pl = new THREE.Mesh(new THREE.BoxGeometry(1.25, 0.08, len / nb - 0.03), mat(new THREE.Color(0x8b6a43).offsetHSL(0, 0, (rnd(i + 20) - 0.5) * 0.08))); pl.position.set(0, 0, (i + 0.5) * len / nb); deck.add(pl); }
+          for (const sx of [0.6, -0.6]) {
+            const rail = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.07, len), mat(0x6b4a2b)); rail.position.set(sx, 0.32, len / 2); deck.add(rail);
+            const post = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.36, 0.1), mat(0x5a3a20)); post.position.set(sx, 0.16, lk.bank ? len - 0.12 : 0); deck.add(post);
+          }
+        }
+        break;
       }
       case 'wall': { const w = new THREE.Mesh(hexGeo, mat(0x8f857b)); w.scale.set(0.98, 1.4, 0.98); w.position.y = 1.4; g.add(w); break; }
       case 'wagon': {
@@ -270,6 +283,23 @@ var G = (typeof G !== 'undefined') ? G : {};
     } else hlMeshes.get(k).position.y = y + 0.03;
   }
 
+  // Directions a bridge tile spans: to each neighbouring bridge tile, plus out to the bank at the open ends.
+  function bridgeLinks(t) {
+    const at = (h) => B.tiles.get(Hex.hk(h));
+    const yawTo = (h) => { const a = px(t), b = px(h); return Math.atan2(b.x - a.x, b.z - a.z); };
+    const nbs = Hex.neighbors(t).map(h => ({ h, tile: at(h) })).filter(n => n.tile);
+    const links = nbs.filter(n => n.tile.terrain === 'bridge').map(n => ({ yaw: yawTo(n.h) }));
+    const land = nbs.filter(n => n.tile.terrain !== 'bridge' && n.tile.terrain !== 'water');
+    const bankOpposite = (yaw) => {
+      let best = null, bd = 0.4;
+      for (const n of land) { const d = -Math.cos(yawTo(n.h) - yaw); if (d > bd) { bd = d; best = n; } }
+      return best && { yaw: yawTo(best.h), bank: true, tile: best.tile };
+    };
+    if (links.length === 1) { const b = bankOpposite(links[0].yaw); if (b) links.push(b); }
+    else if (!links.length && land.length) { const a = { yaw: yawTo(land[0].h), bank: true, tile: land[0].tile }; links.push(a); const b = bankOpposite(a.yaw); if (b) links.push(b); }
+    return links;
+  }
+
   // ---------- units ----------
   function addUnitView(u) {
     const g = new THREE.Group();
@@ -287,6 +317,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const sel = new THREE.Mesh(new THREE.RingGeometry(0.66 * big, 0.8 * big, 32), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
     sel.rotation.x = -Math.PI / 2; sel.position.y = 0.08; g.add(sel);
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; } });
+    sel.castShadow = false; // the (usually invisible) selection ring shouldn't cast a ring-shaped shadow
     scene.add(g);
     const label = document.createElement('div');
     label.className = 'ulabel ' + (u.side === 'hero' ? 'hero' : u.object ? 'obj' : 'enemy') + (u.solo ? ' solo' : '') + (u.minion ? ' minion' : '');
@@ -304,10 +335,30 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function facing(v, h) { const a = px(v.pos), b = px(h); v.body.rotation.y = Math.atan2(b.x - a.x, b.z - a.z); }
 
+  // Recurve longbow: two curved limbs meeting at a wrapped grip, with a taut string. Held upright at (x, y, z).
+  function longbow(x, y, z) {
+    const g = new THREE.Group(); g.position.set(x, y, z);
+    const wood = mat(0x9a6434), dark = mat(0x3a2414);
+    const R = 0.55, arc = 1.05;
+    for (const sy of [1, -1]) {
+      const limb = new THREE.Mesh(new THREE.TorusGeometry(R, 0.022, 5, 10, arc), wood);
+      // arc starts at the grip and curves up (or down), bowing away from the string
+      limb.position.set(-R, 0, 0); limb.scale.y = sy; g.add(limb);
+      const ex = -R + R * Math.cos(arc), ey = sy * R * Math.sin(arc);
+      const tip = new THREE.Mesh(new THREE.ConeGeometry(0.03, 0.1, 4), dark); tip.position.set(ex + 0.02, ey + sy * 0.03, 0); tip.rotation.z = sy > 0 ? -0.5 : Math.PI + 0.5; g.add(tip);
+      if (sy > 0) g.userData.top = { x: ex, y: ey }; else g.userData.bot = { x: ex, y: ey };
+    }
+    const grip = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.16, 6), dark); g.add(grip);
+    const t = g.userData.top, b = g.userData.bot;
+    const str = new THREE.Mesh(new THREE.CylinderGeometry(0.006, 0.006, t.y - b.y, 3), new THREE.MeshBasicMaterial({ color: 0xf0ead8 })); str.position.set(t.x, 0, 0); g.add(str);
+    g.rotation.y = -Math.PI / 3; // back of the bow faces forward (string toward the archer), angled so it reads in profile
+    return g;
+  }
+
   function buildBody(u) {
     const L = u.look || {}; const g = new THREE.Group(); let height = 1.5;
     const add = (geo, color, x, y, z, o) => { const m = new THREE.Mesh(geo, mat(color, o)); m.position.set(x, y, z); g.add(m); return m; };
-    const Cyl = (a, b, h, s = 8) => new THREE.CylinderGeometry(a, b, h, s);
+    const Cyl = (a, b, h, s = 8, open = false) => new THREE.CylinderGeometry(a, b, h, s, 1, open);
     const Sph = (r, s = 10) => new THREE.SphereGeometry(r, s, Math.max(6, s - 2));
     switch (L.kind || (u.side === 'hero' ? 'hero' : 'human')) {
       case 'hero': case undefined: {
@@ -318,21 +369,40 @@ var G = (typeof G !== 'undefined') ? G : {};
         add(Cyl(0.28, 0.36, 0.75), col, 0, 0.45, 0);
         add(Cyl(0.22, 0.28, 0.25), col, 0, 0.92, 0);
         const head = add(Sph(0.22), skin, 0, 1.18, 0);
-        if (L.ancestry === 'elf') { add(new THREE.ConeGeometry(0.05, 0.22, 4), skin, 0.22, 1.24, 0).rotation.z = -1.1; add(new THREE.ConeGeometry(0.05, 0.22, 4), skin, -0.22, 1.24, 0).rotation.z = 1.1; }
+        // Headgear wraps the head (slightly larger, centred on it) and leaves the face (+z) open, so nothing clips through.
+        const HY = 1.18;
+        const helmet = (color, o = {}) => {
+          const cap = add(new THREE.SphereGeometry(0.245, 12, 8, 0, Math.PI * 2, 0, Math.PI * 0.5), color, 0, HY, 0, Object.assign({ metalness: 0.6, roughness: 0.4, side: THREE.DoubleSide }, o));
+          cap.rotation.x = -0.18;
+          const rim = add(new THREE.TorusGeometry(0.245, 0.025, 4, 16), color, 0, HY, 0, Object.assign({ metalness: 0.6, roughness: 0.4 }, o)); rim.rotation.x = Math.PI / 2 - 0.18;
+          return cap;
+        };
+        const hood = (color) => {
+          const h = add(new THREE.SphereGeometry(0.255, 12, 9, Math.PI / 2 + 0.95, Math.PI * 2 - 1.9, 0, Math.PI * 0.68), color, 0, HY + 0.01, -0.01, { side: THREE.DoubleSide });
+          const tip = add(new THREE.ConeGeometry(0.1, 0.22, 6), color, 0, HY + 0.12, -0.25); tip.rotation.x = -2.0;
+          add(Cyl(0.3, 0.26, 0.08, 10), color, 0, 0.98, -0.02);
+          return h;
+        };
+        if (L.ancestry === 'elf') { add(new THREE.ConeGeometry(0.05, 0.24, 4), skin, 0.29, 1.22, 0.04).rotation.z = -1.2; add(new THREE.ConeGeometry(0.05, 0.24, 4), skin, -0.29, 1.22, 0.04).rotation.z = 1.2; }
         if (L.ancestry === 'dwarf') add(new THREE.ConeGeometry(0.18, 0.35, 6), 0x8a5a2a, 0, 1.0, 0.16).rotation.x = Math.PI;
-        if (L.ancestry === 'emberkin') { add(new THREE.ConeGeometry(0.06, 0.25, 5), 0xf0e0c0, 0.12, 1.42, -0.05).rotation.x = -0.4; add(new THREE.ConeGeometry(0.06, 0.25, 5), 0xf0e0c0, -0.12, 1.42, -0.05).rotation.x = -0.4; }
+        if (L.ancestry === 'emberkin') for (const sx of [1, -1]) { const hn = add(new THREE.ConeGeometry(0.05, 0.26, 5), 0xf0e0c0, sx * 0.13, 1.42, 0.02); hn.rotation.set(-0.7, 0, -sx * 0.35); }
         if (L.ancestry === 'orc') { add(new THREE.ConeGeometry(0.035, 0.1, 4), 0xffffff, 0.08, 1.1, 0.19); add(new THREE.ConeGeometry(0.035, 0.1, 4), 0xffffff, -0.08, 1.1, 0.19); }
         // class flair
         if (L.cls === 'wizard') { add(new THREE.ConeGeometry(0.28, 0.6, 8), 0x1f3a7a, 0, 1.55, 0); add(Cyl(0.03, 0.03, 1.5, 5), 0x6b4a2b, 0.42, 0.75, 0.1); const orb = add(Sph(0.11), 0x8fd3ff, 0.42, 1.55, 0.1, { emissive: 0x2a7aff, emissiveIntensity: 0.9 }); }
         if (L.cls === 'cleric') { const halo = add(new THREE.TorusGeometry(0.2, 0.03, 6, 16), 0xffe066, 0, 1.48, 0, { emissive: 0xffd000, emissiveIntensity: 0.8 }); halo.rotation.x = Math.PI / 2; add(Cyl(0.04, 0.04, 0.5, 5), 0x999999, 0.38, 0.75, 0.15); add(Sph(0.11, 6), 0xcccccc, 0.38, 1.02, 0.15); }
-        if (L.cls === 'rogue') { add(new THREE.ConeGeometry(0.27, 0.4, 8), 0x1a1a24, 0, 1.38, -0.02); add(new THREE.BoxGeometry(0.05, 0.4, 0.02), 0xdddddd, 0.36, 0.7, 0.15); add(new THREE.BoxGeometry(0.05, 0.4, 0.02), 0xdddddd, -0.36, 0.7, 0.15); }
-        if (L.cls === 'ranger') { add(new THREE.ConeGeometry(0.26, 0.38, 8), 0x2f5a2a, 0, 1.38, -0.02); if (L.sub === 'archer') { const bow = add(new THREE.TorusGeometry(0.5, 0.025, 4, 12, Math.PI), 0x6b4a2b, -0.36, 0.8, 0.1); bow.rotation.z = Math.PI / 2; } else { add(new THREE.BoxGeometry(0.06, 0.6, 0.02), 0xdddddd, 0.36, 0.7, 0.15); add(new THREE.BoxGeometry(0.06, 0.6, 0.02), 0xdddddd, -0.36, 0.7, 0.15); } }
+        if (L.cls === 'rogue') { hood(0x1a1a24); add(new THREE.BoxGeometry(0.05, 0.4, 0.02), 0xdddddd, 0.36, 0.7, 0.15); add(new THREE.BoxGeometry(0.05, 0.4, 0.02), 0xdddddd, -0.36, 0.7, 0.15); }
+        if (L.cls === 'ranger') {
+          hood(0x2f5a2a);
+          // quiver on the back
+          const qv = add(Cyl(0.08, 0.07, 0.5, 8), 0x5a3a20, 0.12, 0.85, -0.3); qv.rotation.z = -0.35;
+          for (let i = 0; i < 3; i++) { const f = add(new THREE.BoxGeometry(0.02, 0.12, 0.07), [0xe8e0d0, 0xc0392b, 0xe8e0d0][i], 0.21 + i * 0.025, 1.14 + i * 0.01, -0.3 + (i - 1) * 0.04); f.rotation.z = -0.35; }
+          if (L.sub === 'archer') g.add(longbow(-0.4, 0.82, 0.12)); else { add(new THREE.BoxGeometry(0.06, 0.6, 0.02), 0xdddddd, 0.36, 0.7, 0.15); add(new THREE.BoxGeometry(0.06, 0.6, 0.02), 0xdddddd, -0.36, 0.7, 0.15); } }
         if (L.cls === 'fighter') {
-          add(Sph(0.24, 8), 0x9aa0a8, 0, 1.22, 0, { metalness: 0.6, roughness: 0.4 }).scale.y = 0.85;
+          helmet(0x9aa0a8); add(new THREE.BoxGeometry(0.035, 0.16, 0.03), 0x9aa0a8, 0, HY + 0.02, 0.245, { metalness: 0.6, roughness: 0.4 });
           if (L.sub === 'shield') { const sh = add(Cyl(0.36, 0.36, 0.06, 6), 0x9a2a1f, -0.38, 0.7, 0.12); sh.rotation.z = Math.PI / 2; add(new THREE.BoxGeometry(0.07, 0.8, 0.03), 0xdddddd, 0.4, 0.8, 0.15); }
           else { add(Cyl(0.03, 0.03, 1.3, 5), 0x6b4a2b, 0.4, 0.75, 0.1); add(new THREE.BoxGeometry(0.35, 0.3, 0.04), 0xcccccc, 0.5, 1.3, 0.1); }
         }
-        if (L.cls === 'warlord') { add(Sph(0.24, 8), 0xc0a040, 0, 1.22, 0, { metalness: 0.6 }).scale.y = 0.85; add(new THREE.BoxGeometry(0.04, 0.25, 0.25), 0xc0392b, 0, 1.45, 0); const cape = add(new THREE.PlaneGeometry(0.6, 0.85), 0x6a1a8a, 0, 0.6, -0.33, { side: THREE.DoubleSide }); cape.rotation.x = 0.15; add(new THREE.BoxGeometry(0.07, 0.8, 0.03), 0xdddddd, 0.4, 0.8, 0.15); }
+        if (L.cls === 'warlord') { helmet(0xc0a040); add(new THREE.BoxGeometry(0.04, 0.16, 0.3), 0xc0392b, 0, HY + 0.3, -0.05); const cape = add(new THREE.PlaneGeometry(0.6, 0.85), 0x6a1a8a, 0, 0.6, -0.33, { side: THREE.DoubleSide }); cape.rotation.x = 0.15; add(new THREE.BoxGeometry(0.07, 0.8, 0.03), 0xdddddd, 0.4, 0.8, 0.15); }
         g.scale.setScalar(sc); height = 1.75 * sc; break;
       }
       case 'goblin': {
@@ -381,9 +451,9 @@ var G = (typeof G !== 'undefined') ? G : {};
         height = 0.9; break;
       }
       case 'jar': {
-        add(Cyl(0.3, 0.3, 0.65, 12), 0xa4133c, 0, 0.33, 0, { transparent: true, opacity: 0.85, roughness: 0.15 });
-        add(Cyl(0.32, 0.32, 0.12, 12), 0xf0e6d0, 0, 0.71, 0);
-        add(Cyl(0.33, 0.33, 0.1, 12, true), 0xff6b9a, 0, 0.72, 0);
+        add(Cyl(0.3, 0.3, 0.62, 12), 0xa4133c, 0, 0.32, 0, { transparent: true, opacity: 0.85, roughness: 0.15 });
+        add(Cyl(0.32, 0.32, 0.12, 12), 0xf0e6d0, 0, 0.72, 0);
+        add(Cyl(0.335, 0.335, 0.07, 12, true), 0xff6b9a, 0, 0.7, 0, { side: THREE.DoubleSide });
         height = 0.9; break;
       }
       case 'golem': {
@@ -452,13 +522,16 @@ var G = (typeof G !== 'undefined') ? G : {};
   // ---------- highlights ----------
   const HL = {
     reach: [0x3a9bff, 0.16], shift: [0x3ae0ff, 0.32], dash: [0x3a6bff, 0.16], target: [0xff4a4a, 0.42], area: [0xff9a2a, 0.45], path: [0xffffff, 0.55],
-    ally: [0x4aff8a, 0.4], flank: [0xffc83a, 0.4], deploy: [0x7affb0, 0.35], choice: [0xd07aff, 0.45], telegraph: [0xff1a1a, 0.5], zone: [0x8bd448, 0.3], hover: [0xffee66, 0.55], danger: [0xff7a3a, 0.3],
+    ally: [0x4aff8a, 0.4],
+    // power range / area tints: helpful (green), harmful (red), mixed (orange); kept pale so they read differently from blue move range
+    range_help: [0x8affa8, 0.32], range_harm: [0xff7a70, 0.32], range_mixed: [0xffb860, 0.34],
+    area_help: [0x4aff8a, 0.45], area_harm: [0xff5a4a, 0.45], flank: [0xffc83a, 0.4], deploy: [0x7affb0, 0.35], choice: [0xd07aff, 0.45], telegraph: [0xff1a1a, 0.5], zone: [0x8bd448, 0.3], hover: [0xffee66, 0.55], danger: [0xff7a3a, 0.3],
   };
   let hlState = {};
   function setHighlights(state) { hlState = state || {}; applyHL(); }
   function applyHL() {
     for (const m of hlMeshes.values()) { m.visible = false; m.userData.kind = null; }
-    const order = ['zone', 'deploy', 'dash', 'reach', 'flank', 'shift', 'danger', 'ally', 'target', 'choice', 'area', 'telegraph', 'path', 'hover'];
+    const order = ['zone', 'deploy', 'dash', 'reach', 'range_help', 'range_harm', 'range_mixed', 'flank', 'shift', 'danger', 'ally', 'target', 'choice', 'area', 'area_help', 'area_harm', 'telegraph', 'path', 'hover'];
     for (const kind of order) {
       const list = hlState[kind]; if (!list) continue;
       for (const h of list) {
@@ -560,13 +633,18 @@ var G = (typeof G !== 'undefined') ? G : {};
     el.style.animationDuration = (dur / S()) + 'ms';
     overlay.appendChild(el); setTimeout(() => el.remove(), dur / S() + 50);
   }
+  // Speech bubbles stack per unit: a new line appears at the bottom and pushes older ones up.
   function bubble(uid, text, dur = 2600) {
     const v = unitViews.get(uid); if (!v) return;
     const el = document.createElement('div'); el.className = 'bubble'; el.textContent = text;
     overlay.appendChild(el);
-    const upd = () => { const s = screenOf(v.pos, v.height + 0.9); el.style.left = s.x + 'px'; el.style.top = s.y + 'px'; };
-    upd(); const iv = setInterval(upd, 30);
-    setTimeout(() => { clearInterval(iv); el.remove(); }, dur);
+    const stack = v.bubbles || (v.bubbles = []);
+    stack.unshift(el);
+    for (const b of stack) b.classList.toggle('old', b !== el);
+    const lift = (b) => { let y = 0; for (const o of stack) { if (o === b) break; y += o.offsetHeight + 12; } return y; };
+    const upd = () => { const s = screenOf(v.pos, v.height + 0.9); for (const b of stack) { b.style.left = s.x + 'px'; b.style.top = (s.y - lift(b)) + 'px'; } };
+    upd(); const iv = setInterval(() => { if (stack[0] === el) upd(); }, 30);
+    setTimeout(() => { clearInterval(iv); el.remove(); const i = stack.indexOf(el); if (i >= 0) stack.splice(i, 1); if (stack.length) upd(); }, dur);
   }
   function burst(h, color, n = 14, opts = {}) {
     const p = px(h); const t = B.tiles.get(Hex.hk(h)); const y = topY(t) + (opts.y || 0.7);
