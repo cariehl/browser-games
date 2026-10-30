@@ -102,10 +102,10 @@ var G = (typeof G !== 'undefined') ? G : {};
       <h4>Powers</h4>
       <p><span class="k k-atwill">At-Will</span> any time. <span class="k k-encounter">Encounter</span> once per fight. <span class="k k-daily">Daily</span> your big once-per-fight finisher. Attacks roll d20 + bonus against one of four defenses: <b>AC, Fortitude, Reflex, Will</b>.</p>
       <h4>Combat advantage (+2)</h4>
-      <p>Flank an enemy (an ally directly opposite you — gold hexes while moving), or hit enemies that are prone, dazed, stunned or exposed. Rogues deal big Sneak Attack damage with it.</p>
+      <p>Flank an enemy (an ally directly opposite you — gold hexes while moving), or hit enemies that are prone, dazed, stunned or exposed. Rogues deal big Sneak Attack damage with it, and their <b>First Strike</b> gives them advantage against any enemy that hasn't had a turn yet.</p>
       </div><div>
       <h4>Staying alive</h4>
-      <p>Heroes have <b>healing surges</b>: Second Wind (once per fight) and leader heals spend one to restore ¼ of max HP. At 0 HP you fall <b>dying</b> and roll death saves; three failures and you're gone. Any heal brings you back.</p>
+      <p>Heroes have <b>healing surges</b>: Second Wind (once per fight) and leader heals spend one to restore ¼ of max HP. At 0 HP you fall <b>dying</b> and roll death saves (10+ holds on, a natural 1 counts as two failures); three failures and you're gone. Being hit while dying is a failure too, a crit is two. Enemies who step out of a hero's reach provoke an opportunity attack just like heroes do. Any heal brings you back.</p>
       <p><b>Action Point</b>: once per fight, take an extra standard action. <b>Momentum</b> (◆) is earned by kills and crits; spend 2 to reroll a missed attack.</p>
       <h4>Enemies</h4>
       <p><b>Minions</b> die to any hit but ignore damage on a miss. <b>Marked</b> creatures take −2 attacking anyone but whoever marked them, and Fighters punish them. Watch for hazards — fire, frosting, exploding barrels — and push enemies into them!</p>
@@ -201,7 +201,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (r.done) { ui.busy = false; return r.value; }
       const ch = r.value;
       let ans;
-      if (ch && ch.choice) {
+      if (ch && ch.beat) await sleep(ch.beat);
+      else if (ch && ch.choice) {
         if (ch.unit && ch.unit.side === 'hero' && !G.Settings.autoHeroes) ans = await askChoice(ch);
         else ans = ch.auto ? ch.auto() : undefined;
       }
@@ -433,7 +434,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     }
     const pr = E().powerRange(u, p);
     const ctx = Object.assign({ melee: pr.kind === 'melee', ranged: pr.kind === 'ranged' }, extra);
-    ctx.ca = E().hasCA(B, u, t, ctx);
+    const caWhy = E().caReason(B, u, t, ctx); ctx.ca = !!caWhy;
     const ab = E().attackBonus(B, u, p, t, ctx);
     const dv = t.object ? t.def[p.atk.vs] : E().defense(B, t, p.atk.vs, ctx);
     const need = Math.max(2, Math.min(20, dv - ab.total));
@@ -443,7 +444,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     return `<b>${esc(p.name)}</b> → ${esc(t.name)}${t.minion ? ' <i>(minion)</i>' : ''}
       <div class="tp-big ${chance >= 60 ? 'good' : chance >= 40 ? 'ok' : 'bad'}">${chance}% <small>to hit</small></div>
       <small>d20 ${sgn(ab.total)} vs ${p.atk.vs} ${dv} — need ${need}+<br>${ab.parts.map(([k, v]) => `${k} ${sgn(v)}`).join(' · ')}</small>
-      ${ctx.ca ? '<div class="good">✔ Combat advantage</div>' : ''}
+      ${ctx.ca ? `<div class="good">✔ Combat advantage (${esc(caWhy)})</div>` : ''}
       ${dr ? `<div>Damage ${dr.mn}–${dr.mx}${p.hits > 1 ? ` ×${p.hits}` : ''} ${dr.extras.join(' ')}${t.minion ? ' <i>(kills)</i>' : ''}</div>` : ''}
       ${provoke ? '<div class="warn">⚠ Provokes opportunity attacks (enemy adjacent)</div>' : ''}
       ${t.object ? `<div class="warn">${esc(G.Monsters[t.id].desc)}</div>` : ''}`;
