@@ -72,7 +72,8 @@ var G = (typeof G !== 'undefined') ? G : {};
         const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
         if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
         if (drag.moved) {
-          if (drag.b === 2 || drag.b === 1 || e.shiftKey) { cam.yaw = drag.yaw - dx * 0.008; cam.pitch = Math.max(0.35, Math.min(1.45, drag.pitch + dy * 0.006)); }
+          userCam();
+          if (drag.b === 2 || drag.b === 1 || e.shiftKey) { cam.yaw = drag.yaw + dx * 0.008; cam.pitch = Math.max(0.35, Math.min(1.45, drag.pitch + dy * 0.006)); }
           else {
             const s = cam.dist * 0.0022;
             const c = Math.cos(cam.yaw), sn = Math.sin(cam.yaw);
@@ -94,8 +95,13 @@ var G = (typeof G !== 'undefined') ? G : {};
       }
       drag = null;
     });
-    el.addEventListener('wheel', e => { e.preventDefault(); cam.dist = Math.max(7, Math.min(32, cam.dist * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
-    window.addEventListener('keydown', e => { if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return; keys[e.key.toLowerCase()] = true; });
+    el.addEventListener('wheel', e => { e.preventDefault(); userCam(); cam.dist = Math.max(7, Math.min(32, cam.dist * (1 + Math.sign(e.deltaY) * 0.1))); }, { passive: false });
+    window.addEventListener('keydown', e => {
+      if (e.target.tagName === 'INPUT' || e.target.tagName === 'SELECT' || e.target.tagName === 'TEXTAREA') return;
+      const k = e.key.toLowerCase(); keys[k] = true;
+      if (B && 'wasdqe'.includes(k) && k.length === 1 || k.startsWith('arrow')) userCam();
+      if (k === 'home' && B) resetCamera();
+    });
     window.addEventListener('keyup', e => { keys[e.key.toLowerCase()] = false; });
   }
   function clampCam() { cam.tx = Math.max(-16, Math.min(16, cam.tx)); cam.tz = Math.max(-12, Math.min(12, cam.tz)); }
@@ -109,6 +115,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (keys['q']) cam.yaw -= 1.6 * dt;
     if (keys['e'] && !keys['shift']) cam.yaw += 1.6 * dt;
     clampCam();
+    if (cam.yawTo != null) { cam.yaw += (cam.yawTo - cam.yaw) * Math.min(1, dt * 4); if (Math.abs(cam.yawTo - cam.yaw) < 0.005) { cam.yaw = cam.yawTo; cam.yawTo = null; } }
+    if (cam.pitchTo != null) { cam.pitch += (cam.pitchTo - cam.pitch) * Math.min(1, dt * 4); if (Math.abs(cam.pitchTo - cam.pitch) < 0.005) { cam.pitch = cam.pitchTo; cam.pitchTo = null; } }
     if (cam.zoomTo) { cam.dist += (cam.zoomTo - cam.dist) * Math.min(1, dt * 3); if (Math.abs(cam.zoomTo - cam.dist) < 0.05) cam.zoomTo = null; }
     if (cam.follow) { cam.tx += (cam.follow.x - cam.tx) * Math.min(1, dt * 4); cam.tz += (cam.follow.z - cam.tz) * Math.min(1, dt * 4); if (Math.hypot(cam.follow.x - cam.tx, cam.follow.z - cam.tz) < 0.05) cam.follow = null; }
     const cy = Math.sin(cam.pitch) * cam.dist, ch = Math.cos(cam.pitch) * cam.dist;
@@ -118,20 +126,39 @@ var G = (typeof G !== 'undefined') ? G : {};
     camera.lookAt(cam.tx + sx * 0.5, 0.4, cam.tz);
   }
   function focus(h) { if (!h) return; const p = px(h); cam.follow = { x: p.x, z: p.z }; }
-  // pan (and zoom out if needed) so two world points share the screen; resolves once the camera has mostly arrived
+  // The player moved the camera: stop any automatic yaw/pitch/zoom easing and forget the view we meant to restore.
+  function userCam() { cam.restore = null; cam.yawTo = cam.pitchTo = null; cam.zoomTo = null; }
+  // Smoothly return to the view the battle opened with.
+  function resetCamera() {
+    if (!cam.home) return;
+    const h = cam.home;
+    cam.restore = null; cam.follow = { x: h.tx, z: h.tz }; cam.zoomTo = h.dist; cam.pitchTo = h.pitch;
+    // turn the short way round
+    cam.yawTo = cam.yaw + Math.atan2(Math.sin(h.yaw - cam.yaw), Math.cos(h.yaw - cam.yaw));
+  }
+  // pan (and zoom out if needed) so two world points share the screen; resolves once the camera has mostly arrived.
+  // A zoom-out remembers the view it left, and restoreView() goes back to it once the action is over.
   async function frame(a, b) {
     const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
     const span = Math.hypot(a.x - b.x, a.z - b.z);
     const need = Math.min(32, span * 1.25 + 7);
     const far = Math.hypot(mid.x - cam.tx, mid.z - cam.tz) > 1.5 || need > cam.dist + 0.5;
+    if (need > cam.dist + 0.5 && !cam.restore) {
+      const f = cam.follow || { x: cam.tx, z: cam.tz };
+      cam.restore = { tx: f.x, tz: f.z, dist: cam.zoomTo || cam.dist };
+    }
     cam.follow = mid;
     if (need > cam.dist) cam.zoomTo = need;
     if (far) await wait(380);
   }
+  function restoreView() {
+    const r = cam.restore; if (!r) return;
+    cam.restore = null; cam.follow = { x: r.tx, z: r.tz }; cam.zoomTo = r.dist;
+  }
   // does the active player drive this unit's movement themselves?
   const playerDriven = (u) => u.side === 'hero' && !(G.Settings && G.Settings.autoHeroes);
-  function rotate(d) { cam.yaw += d; }
-  function zoom(f) { cam.dist = Math.max(7, Math.min(32, cam.dist * f)); }
+  function rotate(d) { userCam(); cam.yaw += d; }
+  function zoom(f) { userCam(); cam.dist = Math.max(7, Math.min(32, cam.dist * f)); }
 
   function pick(cx, cy) {
     if (!B) return null;
@@ -151,7 +178,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   function clearScene() {
     while (scene.children.length) scene.remove(scene.children[0]);
     tileMeshes.clear(); hlMeshes.clear(); propGroups.clear(); unitViews.clear(); flickers.length = 0; particles.length = 0;
-    overlay.innerHTML = '';
+    overlay.innerHTML = ''; floatStacks.clear();
   }
   let hexGeo, hlGeo, ringGeo;
   function loadBattle(battle) {
@@ -171,6 +198,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const t of B.tiles.values()) { const x = SQ3 * (t.q + t.r / 2), z = 1.5 * t.r; mnx = Math.min(mnx, x); mxx = Math.max(mxx, x); mnz = Math.min(mnz, z); mxz = Math.max(mxz, z); }
     center = { x: (mnx + mxx) / 2, z: (mnz + mxz) / 2 };
     cam.tx = 0; cam.tz = 0.5; cam.yaw = Math.PI / 2; cam.pitch = 1.0; cam.dist = 25;
+    cam.home = { tx: cam.tx, tz: cam.tz, yaw: cam.yaw, pitch: cam.pitch, dist: cam.dist };
+    cam.restore = null; cam.yawTo = cam.pitchTo = cam.zoomTo = null; cam.follow = null;
     hexGeo = new THREE.CylinderGeometry(0.97, 1.0, 1, 6); hexGeo.translate(0, -0.5, 0);
     hlGeo = new THREE.CylinderGeometry(0.9, 0.9, 0.04, 6);
     ringGeo = new THREE.RingGeometry(0.62, 0.78, 6); ringGeo.rotateX(-Math.PI / 2); ringGeo.rotateY(Math.PI / 6);
@@ -606,6 +635,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     updateCamera(dt);
     renderer.render(scene, camera);
     updateLabels();
+    updateFloats(dt);
   }
   const COND_ICON = { marked: '◎', slowed: '🐌', immobilized: '⛓', dazed: '💫', stunned: '✸', prone: '⤓', weakened: '↓', blinded: '◌', ongoing: '🔥', quarry: '⌖', cagrant: '⚠', atkBonus: '⚔', defBonus: '🛡', hidden: '👁', vuln: '✚', asleep: 'Z', dying: '☠' };
   function updateLabels() {
@@ -645,13 +675,41 @@ var G = (typeof G !== 'undefined') ? G : {};
     const v = new THREE.Vector3(p.x, topY(t) + yOff, p.z).project(camera);
     return { x: (v.x * 0.5 + 0.5) * renderer.domElement.clientWidth, y: (-v.y * 0.5 + 0.5) * renderer.domElement.clientHeight };
   }
+  // Combat text stacks per hex: the newest line appears at the bottom and pushes older lines up,
+  // so rolls, damage, conditions and banners never overlap. Each line drifts up slowly and fades
+  // near the end of its life; the stack follows the hex as the camera moves.
+  const floatStacks = new Map();
   function floatText(h, text, cls, yOff = 1.6, dur = 1300) {
     if (!h) return;
-    const s = screenOf(h, yOff);
+    const key = Hex.hk(h);
     const el = document.createElement('div'); el.className = 'ftext ' + (cls || ''); el.textContent = text;
-    el.style.left = s.x + (Math.random() - 0.5) * 30 + 'px'; el.style.top = s.y + 'px';
-    el.style.animationDuration = (dur / S()) + 'ms';
-    overlay.appendChild(el); setTimeout(() => el.remove(), dur / S() + 50);
+    overlay.appendChild(el);
+    const st = floatStacks.get(key) || { h: { q: h.q, r: h.r }, items: [] };
+    floatStacks.set(key, st);
+    const now = performance.now(), life = dur / S();
+    st.items.unshift({ el, yOff, born: now, life, lift: null, hgt: el.offsetHeight });
+    placeFloats(st, now, 0);
+    setTimeout(() => {
+      el.remove(); const i = st.items.findIndex(x => x.el === el); if (i >= 0) st.items.splice(i, 1);
+      if (!st.items.length) floatStacks.delete(key);
+    }, life + 50);
+  }
+  function placeFloats(st, now, k) {
+    const base = screenOf(st.h, Math.min(...st.items.map(x => x.yOff)));
+    let stack = 0;
+    for (const it of st.items) {
+      const age = (now - it.born) / it.life;
+      // gentle upward drift on top of the stacking; by time, not life fraction, so older lines always drift further
+      const target = stack + (now - it.born) / 1000 * 16;
+      it.lift = it.lift == null ? target : it.lift + (target - it.lift) * k;
+      it.el.style.left = base.x + 'px'; it.el.style.top = (base.y - it.lift) + 'px';
+      it.el.style.opacity = age > 0.75 ? Math.max(0, 1 - (age - 0.75) / 0.25) : '';
+      stack += it.hgt + 2;
+    }
+  }
+  function updateFloats(dt) {
+    const now = performance.now(), k = Math.min(1, dt * 14);
+    for (const st of floatStacks.values()) placeFloats(st, now, k);
   }
   // Speech bubbles stack per unit: a new line appears at the bottom and pushes older ones up.
   function bubble(uid, text, dur = 2600) {
@@ -896,7 +954,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   G.Render = {
     hexScreen: (h) => { const s = screenOf(h, 0); const r = renderer.domElement.getBoundingClientRect(); return { x: s.x + r.left, y: s.y + r.top }; },
-    init, loadBattle, setHighlights, playFx, syncAll, focus, frame, rotate, zoom, pick, setActive, setTargetable, unitScreen, unitPage, floatText, snapshot,
+    init, loadBattle, setHighlights, playFx, syncAll, focus, frame, restoreView, resetCamera, rotate, zoom, pick, setActive, setTargetable, unitScreen, unitPage, floatText, snapshot,
     onHover: (f) => hoverCb = f, onClick: (f) => clickCb = f, onRight: (f) => rightCb = f, resize,
     get camera() { return cam; },
   };
