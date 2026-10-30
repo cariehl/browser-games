@@ -43,6 +43,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     atwill: { name: 'At-Will', cls: 'atwill', match: 'at-will', text: 'Use it as often as you like.' },
     encounter: { name: 'Encounter', cls: 'encounter', match: 'encounter', text: 'Once per fight.' },
     daily: { name: 'Daily', cls: 'daily', match: 'daily', text: 'Your big once-per-fight finisher. Save it for when it counts.' },
+    consumable: { name: 'Consumable', cls: 'rule', match: 'consumable', text: 'A one-use item from the hero\'s pack. Item attacks roll d20 + the item\'s bonus + the hero\'s level, with no ability modifier.' },
     closeBurst: { name: 'Close burst', cls: 'rule', match: 'close burst(?: \\d+)?', text: 'Hits every hex within that many hexes of you. Close attacks don\'t provoke opportunity attacks.' },
     closeBlast: { name: 'Close blast', cls: 'rule', match: 'close blast(?: \\d+)?', text: 'Hits a block of hexes next to you, in the direction you choose.' },
     areaBurst: { name: 'Area burst', cls: 'rule', match: 'area burst(?: \\d+)?', text: 'Hits every hex within that many hexes of a point you pick in range. It provokes like a ranged attack.' },

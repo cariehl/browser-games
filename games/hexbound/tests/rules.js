@@ -1,15 +1,15 @@
 // Rules regression checks. Usage: node tests/rules.js
 const fs = require('fs'), vm = require('vm'), path = require('path'), assert = require('assert');
 global.G = {};
-for (const f of ['js/hex.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/ai.js'])
+for (const f of ['js/hex.js', 'js/data/items.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/ai.js'])
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), { filename: f });
 const E = G.Engine, Hex = G.Hex;
 const off = (c, r) => Hex.fromOffset(c, r);
 
 // a battle with only the units we name left on the map
-function arena(scenId, keep, seed = 7, party = 0) {
+function arena(scenId, keep, seed = 7, party = 0, opts = {}) {
   const scen = G.Scenarios.find(s => s.id === scenId);
-  const B = E.newBattle(Object.assign({}, scen, { events: [] }), G.Build.PREMADES[party].heroes, { seed, quiet: true });
+  const B = E.newBattle(Object.assign({}, scen, { events: [] }), G.Build.PREMADES[party].heroes, Object.assign({ seed, quiet: true }, opts));
   E.runAuto(E.startBattle(B));
   const named = {};
   for (const [k, pick] of Object.entries(keep)) named[k] = B.units.find(pick);
@@ -254,6 +254,83 @@ test('a leftover minor action only counts when something can spend it', () => {
   assert(E.hasMinorUse(B, wiz), 'Arcane Ward is a minor');
   wiz.used.z_ward = true; wiz.powers = wiz.powers.filter(p => p.id !== 'z_ward');
   assert(!E.hasMinorUse(B, wiz));
+});
+
+// ---------- items ----------
+const itemsOf = (u) => u.powers.filter(p => p.kind === 'item');
+const packed = (scen, seed) => E.newBattle(Object.assign({}, G.Scenarios.find(s => s.id === scen), { events: [] }), G.Build.PREMADES[0].heroes, { seed, quiet: true })
+  .units.filter(u => u.side === 'hero').map(u => u.pack.join());
+
+test('every hero starts with exactly one item from the item table', () => {
+  for (const scen of ['goblins', 'bandits', 'golem']) {
+    const { B } = arena(scen, {});
+    for (const u of B.units.filter(x => x.side === 'hero')) {
+      assert.strictEqual(u.pack.length, 1); assert(G.Items[u.pack[0]]);
+      assert.strictEqual(itemsOf(u).length, 1); assert.strictEqual(itemsOf(u)[0].item, u.pack[0]);
+    }
+    assert(!B.units.some(x => x.monster && itemsOf(x).length), 'monsters carry nothing');
+  }
+});
+
+test('seeded item rolls are reproducible, and vary between seeds', () => {
+  assert.deepStrictEqual(packed('goblins', 42), packed('goblins', 42));
+  const seen = new Set(); for (let s = 1; s <= 20; s++) packed('goblins', s).forEach(i => seen.add(i));
+  assert(seen.size >= 5, 'a spread of items across seeds');
+});
+
+test('a healing draught spends a surge for 10 HP and is used up', () => {
+  const { B, ftr } = arena('goblins', { ftr: u => u.cls === 'fighter' }, 7, 0, { items: ['redroot'] });
+  B.active = ftr; ftr.hp = 5; const surges = ftr.surges;
+  const pot = itemsOf(ftr)[0];
+  assert.strictEqual(pot.action, 'minor'); assert(E.canUse(B, ftr, pot));
+  E.runAuto(E.usePower(B, ftr, pot, {}));
+  assert.strictEqual(ftr.hp, 15); assert.strictEqual(ftr.surges, surges - 1);
+  assert.strictEqual(ftr.act.minor, 0); assert.strictEqual(ftr.act.std, 1, 'only the minor action is spent');
+  ftr.act = { std: 1, move: 1, minor: 1 };
+  assert(!E.canUse(B, ftr, pot), 'one use only');
+});
+
+test('a throwable rolls its fixed bonus + level, with no ability mod or weapon bonus', () => {
+  const { B, wiz, gob } = arena('bandits', { wiz: u => u.cls === 'wizard', gob: u => u.side === 'enemy' && !u.minion }, 7, 0, { items: [null, null, null, 'fireflask'] });
+  const flask = itemsOf(wiz)[0];
+  assert.strictEqual(flask.item, 'fireflask');
+  const ab = E.attackBonus(B, wiz, flask, gob, {});
+  assert.strictEqual(ab.total, 3 + wiz.level); assert.deepStrictEqual(ab.parts, [['item', 3 + wiz.level]]);
+  const spec = E.damageSpec(B, wiz, flask, gob);
+  assert.strictEqual(spec.flat, 0); assert.deepStrictEqual(spec.dice, [[1, 6]]);
+  assert.strictEqual(G.Build.describe(flask, wiz).find(l => /^Attack/.test(l)), `Attack: +${3 + wiz.level} vs Ref`);
+  // throw it into a cluster: one use, and it's gone
+  wiz.pos = off(4, 10); gob.pos = Hex.add(wiz.pos, { q: 4, r: 0 }); B.active = wiz;
+  E.runAuto(E.usePower(B, wiz, flask, { hex: gob.pos }));
+  assert.strictEqual(wiz.uses[flask.id], 1); assert(!E.powerReady(B, wiz, flask));
+  assert(B.log.some(l => /Emberflask/.test(l.msg) && /vs Ref/.test(l.msg)));
+});
+
+test('a field dressing brings a dying ally back, even with no surges left', () => {
+  const { B, clr, ftr } = arena('goblins', { clr: u => u.cls === 'cleric', ftr: u => u.cls === 'fighter' }, 7, 0, { items: [null, null, 'dressing'] });
+  clr.pos = off(4, 10); ftr.pos = Hex.neighbor(clr.pos, 0); B.active = clr;
+  const kit = itemsOf(clr)[0];
+  ftr.hp = -4; E.addCond(B, ftr, 'dying', { dur: 'enc' }); ftr.surges = 0;
+  assert(E.validTarget(B, clr, kit, ftr));
+  const plan = G.AI.planStandard(B, clr, { noMove: true });
+  assert.strictEqual(plan.power, kit, 'the AI reaches for the dressing to save a dying ally');
+  E.runAuto(E.usePower(B, clr, kit, { unit: ftr }));
+  assert(!E.isDying(ftr)); assert.strictEqual(ftr.hp, 1);
+  assert(!E.powerReady(B, clr, kit));
+  // with surges, it heals the surge value
+  const { B: B2, clr: c2, ftr: f2 } = arena('goblins', { clr: u => u.cls === 'cleric', ftr: u => u.cls === 'fighter' }, 7, 0, { items: [null, null, 'dressing'] });
+  c2.pos = off(4, 10); f2.pos = Hex.neighbor(c2.pos, 0); B2.active = c2; f2.hp = 2;
+  E.runAuto(E.usePower(B2, c2, itemsOf(c2)[0], { unit: f2 }));
+  assert.strictEqual(f2.hp, 2 + f2.surgeValue + c2.healBonus, "surge value, plus the Healer feat");
+});
+
+test('items stay out of move-undo and the minor-action auto-end check', () => {
+  const { B, ftr } = arena('goblins', { ftr: u => u.cls === 'fighter' }, 7, 0, { items: ['quickstep'] });
+  B.active = ftr; ftr.act = { std: 0, move: 0, minor: 1 }; ftr.used.__sw = true;
+  assert(!E.hasMinorUse(B, ftr), 'an unused potion does not hold the turn open');
+  E.runAuto(E.usePower(B, ftr, itemsOf(ftr)[0], {}));
+  assert(!E.canUndoMove(ftr));
+  assert.strictEqual(E.speedOf(ftr), ftr.speed + 2);
 });
 
 console.log(`${n} rules checks passed`);

@@ -67,7 +67,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       v = Math.min(dmg, cap) * hc * hits;
       if (p.miss === 'half') v += Math.min(dmg / 2, cap) * (1 - hc);
       if (dmg * hits >= cap) v += 6 * hc; // likely kill bonus
-      v += effectValue(B, u, p.hit, t) * hc;
+      // a thrown snare or blinding dust is worth far more against a boss than a lone goblin
+      v += effectValue(B, u, p.hit, t) * hc * (p.kind === 'item' && !p.dmg ? (t.solo ? 3 : t.elite ? 2 : 1) : 1);
     }
     return v * targetWeight(B, u, t);
   }
@@ -142,6 +143,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const t of ts) {
       for (const e of (p.hit || [])) {
         if (e.t === 'heal') {
+          // field dressing: worth the standard action only to lift the dying or patch someone badly hurt
+          if (p.kind === 'item' && !E().isDying(t) && (t.hp > t.maxHp * 0.3 || t.surges <= 0)) continue;
           const missing = t.maxHp - t.hp;
           if (E().isDying(t)) v += 40;
           else if (t.hp < t.maxHp * 0.5) v += Math.min(missing, t.surgeValue + 5) * 1.0;
@@ -218,6 +221,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         const pk = E().powerRange(u, p).kind;
         if (p.atk && !p.noProvoke && (pk === 'ranged' || pk === 'areaBurst')) v -= threats * 6;
         if (p.kind === 'daily') v -= u.side === 'hero' ? 9 : 0;
+        else if (p.kind === 'item') v -= p.atk && p.dmg ? 6 : 1; // one use: save throwables for a good cluster
         else if (p.kind === 'encounter') v -= u.side === 'hero' ? 3 : 0;
         if (p.recharge) v += 1;
         const total = v + pv;
@@ -246,10 +250,34 @@ var G = (typeof G !== 'undefined') ? G : {};
     return best;
   }
 
+  // when a hero should drink a potion (never at the cost of a move or standard action)
+  function potionValue(B, u, p, phase) {
+    if (u.act.minor <= 0) return 0;
+    const foes = E().enemiesOf(B, u);
+    const adj = foes.filter(e => E().udist(e, u) <= (e.reach || 1)).length;
+    switch (p.item) {
+      case 'redroot': return u.hp < u.maxHp * 0.35 && u.surges > 0 ? 20 : 0;
+      case 'barkskin': return u.hp < u.maxHp * 0.6 && adj && u.tempHp < 4 ? 8 : 0;
+      case 'clarity': return u.conds.some(c => c.dur === 'save') ? 10 : 0;
+      case 'quickstep': {
+        // only when the extra speed puts a melee hero into reach this turn
+        if (phase !== 'pre' || isRangedUnit(u) || adj || !E().canSpend(u, 'move') || !foes.length) return 0;
+        const near = Math.min(...foes.map(e => E().udist(u, e)));
+        return near > E().speedOf(u) + 1 && near <= E().speedOf(u) + 3 ? 5 : 0;
+      }
+    }
+    return 0;
+  }
+
   function* useMinors(B, u, phase, beat = function* () {}) {
     for (const p of u.powers) {
       if ((p.action || 'standard') !== 'minor' || !E().canUse(B, u, p)) continue;
       if (!E().canSpend(u, 'minor')) return;
+      if (p.kind === 'item') {
+        if (potionValue(B, u, p, phase) >= 4) { yield* beat(); yield* E().usePower(B, u, p, {}); }
+        if (u.dead || B.over) return;
+        continue;
+      }
       // keep at least the standard for attacks: canSpend with minor uses minor first
       const rally = p.hit && p.hit[0].t === 'temp' && p.hit[0].revive;
       if (u.act.minor <= 0 && !(p.uses || p.hit && p.hit.some(e => e.t === 'heal'))) continue;

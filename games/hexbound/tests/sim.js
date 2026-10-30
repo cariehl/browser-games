@@ -1,7 +1,7 @@
 // Headless balance sim: AI plays both sides. Usage: node tests/sim.js [runs] [scenarioId] [partyIdx]
 const fs = require('fs'), vm = require('vm'), path = require('path');
 global.G = {};
-for (const f of ['js/hex.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/ai.js'])
+for (const f of ['js/hex.js', 'js/data/items.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/ai.js'])
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), { filename: f });
 const E = G.Engine;
 const runs = +(process.argv[2] || 50);
