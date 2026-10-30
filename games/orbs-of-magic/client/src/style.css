@@ -53,6 +53,9 @@ input, select { pointer-events: auto; font: inherit; background: rgba(0,0,0,0.35
 .commentary h1:first-child, .commentary h2:first-child { margin-top: 0; }
 .commentary a { color: var(--gold); }
 .commentary img { display: block; max-width: 100%; max-height: 70vh; margin: 12px auto; border-radius: 8px; }
+.commentary figure { margin: 16px 0; }
+.commentary figure img { margin: 0 auto 6px; }
+.commentary figcaption { text-align: center; font-size: 0.9em; font-style: italic; opacity: 0.75; }
 .commentary blockquote { margin: 10px 0; padding: 4px 14px; border-left: 3px solid var(--panel-border); opacity: 0.85; }
 .commentary code { background: rgba(255,255,255,0.08); padding: 1px 5px; border-radius: 4px; }
 .commentary pre { background: rgba(0,0,0,0.35); padding: 10px 12px; border-radius: 8px; overflow-x: auto; }

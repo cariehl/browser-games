@@ -55,6 +55,18 @@ function commentaryHTML(md: string) {
       if (!v.startsWith('#')) el.setAttribute(attr, new URL(v, COMMENTARY_URL).href);
     });
   }
+  // ![alt](pic.jpg "Caption") shows the title as a caption under the image.
+  tpl.content.querySelectorAll('img[title]').forEach((img) => {
+    const fig = document.createElement('figure');
+    const cap = document.createElement('figcaption');
+    cap.textContent = img.getAttribute('title');
+    img.removeAttribute('title');
+    const p = img.parentElement;
+    // An image alone in its paragraph replaces the paragraph, so no empty <p> is left around the figure.
+    const alone = p?.tagName === 'P' && p.childNodes.length === 1;
+    (alone ? p : img).replaceWith(fig);
+    fig.append(img, cap);
+  });
   tpl.content.querySelectorAll('a[href^="http"]').forEach((a) => { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); });
   return tpl.innerHTML;
 }

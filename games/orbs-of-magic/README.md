@@ -38,7 +38,7 @@ Example from cmd or a shortcut: `start-server.cmd -HostOnline`.
 
 To play online from this build, enter a game server's address under *Online* in the menu, or open the page with `?serverUrl=` (for example https://cariehl.github.io/orbs/?serverUrl=https://example.trycloudflare.com). The page remembers the server, and **Copy link** makes such a link for friends. `start-server.ps1 -HostOnline` prints that link for its tunnel. The page is served over https, so browsers only let it use https servers (like the tunnel) or one on `localhost`. Set `VITE_SERVER_URL` in `client/.env.pages` to build in a default server.
 
-The Pages menu also has a back link to the site, a GitHub link, and a **Commentary** button. That button shows `commentary/orbs.md` from the cariehl.github.io repo, rendered as Markdown, and is hidden when the file doesn't exist.
+The Pages menu also has a back link to the site, a GitHub link, and a **Commentary** button. That button shows `commentary/orbs.md` from the cariehl.github.io repo, rendered as Markdown, and is hidden when the file doesn't exist. Image and link paths in it are relative to that file, and an image title becomes a caption: `![alt text](photo.jpg "Caption")`.
 
 Other scripts:
 
