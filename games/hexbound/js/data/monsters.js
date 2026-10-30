@@ -109,17 +109,17 @@ var G = (typeof G !== 'undefined') ? G : {};
 
     // ---------------- Pastry Golem (level 5 scenario) ----------------
     pastry_golem: {
-      name: 'The Pastry Golem', title: 'Confection Abomination', role: 'Solo Brute', level: 6, solo: true, hp: 200, def: { AC: 20, Fort: 20, Ref: 17, Will: 17 }, speed: 5, init: 2, saveBonus: 5, actionPoints: 1, immuneForced: true, reach: 2,
+      name: 'The Pastry Golem', title: 'Confection Abomination', role: 'Solo Brute', level: 6, solo: true, hp: 200, def: { AC: 20, Fort: 20, Ref: 17, Will: 17 }, speed: 5, init: 2, saveBonus: 5, actionPoints: 1, immuneForced: true, large: true,
       powers: [
-        melee({ id: 'pin', name: 'Rolling Pin Smash', basicMelee: true, range: 2, atk: { bonus: 9, vs: 'AC' }, dmg: '2d6+4', hit: [{ t: 'push', n: 1 }] }),
-        melee({ id: 'double', name: 'Double Batch', range: 2, hits: 2, hitsSplit: true, recharge: 5, atk: { bonus: 9, vs: 'AC' }, dmg: '1d10+4', bark: 'TWO DOZEN!' }),
+        melee({ id: 'pin', name: 'Rolling Pin Smash', basicMelee: true, atk: { bonus: 9, vs: 'AC' }, dmg: '2d6+4', hit: [{ t: 'push', n: 1 }] }),
+        melee({ id: 'double', name: 'Double Batch', hits: 2, hitsSplit: true, recharge: 5, atk: { bonus: 9, vs: 'AC' }, dmg: '1d10+4', bark: 'TWO DOZEN!' }),
         { id: 'frost', name: 'Frosting Spray', tgt: 'closeBlast', size: 3, recharge: 5, atk: { bonus: 9, vs: 'Ref' }, dmg: '1d10+4', dtype: 'cold', targets: 'enemy', hit: [{ t: 'cond', c: 'immobilized', dur: 'save', label: 'glazed (immobilized)' }], frostTiles: true, bark: 'HOLD STILL. YOU NEED... GLAZING.' },
         ranged({ id: 'sprinkle', name: 'Sprinkle Storm', tgt: 'areaBurst', size: 2, range: 10, recharge: 6, atk: { bonus: 9, vs: 'Ref' }, dmg: '1d10+4', dtype: 'fire', targets: 'enemy', hit: [{ t: 'ongoing', amt: 3, dtype: 'fire' }], bark: 'RAINBOW. JIMMIES.' }),
         { id: 'batch', name: 'Fresh Batch!', action: 'minor', tgt: 'self', recharge: 6, bark: 'OVEN ONE... OVEN TWO... DING!', text: 'Two Gingerbread Guards march out of the ovens.', after: (B, u) => { const ovens = [...B.tiles.values()].filter(t => t.terrain === 'oven'); ovens.sort(() => Math.random() - 0.5); let n = 0; for (const o of ovens) { if (n >= 2) break; const spot = Hex.neighbors(o).find(h => E().passable(B, h) && !E().unitAt(B, h) && E().tile(B, h).terrain !== 'oven'); if (spot) { E().spawnMonster(B, 'gingerbread', spot); n++; } } } },
       ],
       traits: ['pastryGolem'], look: { kind: 'golem', color: 0xf5deb3, scale: 1 }, ai: 'solo', size: 2,
       barks: ['PREHEATING... COMPLETE.', 'YOU ARE ALL... UNDERCOOKED.', 'I WILL SPRINKLE YOUR REMAINS.', 'THE CRUST... IT CRACKS...', 'ONE. FINAL. RISE.'],
-      desc: 'Immune to forced movement. Reach 2. Saves +5. When bloodied it starts acting twice per round and telegraphs a Grand Soufflé; below 25% HP it frenzies.',
+      desc: 'Large: fills 7 hexes. Immune to forced movement. Saves +5. When bloodied it starts acting twice per round and telegraphs a Grand Soufflé; below 25% HP it frenzies.',
     },
     gingerbread: {
       name: 'Gingerbread Guard', role: 'Minion', level: 5, minion: true, hp: 1, def: { AC: 19, Fort: 17, Ref: 16, Will: 15 }, speed: 6, init: 4,
@@ -170,11 +170,11 @@ var G = (typeof G !== 'undefined') ? G : {};
     caDamage: { dmgMod: (B, u, ctx) => ctx.ca ? E().rollDice(E().parseDice(G.Monsters[u.id].caDmg)).total : 0 },
     growl: { onAttack: function* (B, u) { if (!u.growled) { u.growled = true; E().fx(B, { t: 'bark', u: u.uid, text: 'Grrr!' }); } } },
     pounce: { onHit: function* (B, u, t, p, ctx) { if (ctx.ca && !t.dead) { E().addCond(B, t, 'prone', { dur: 'enc', src: u.uid }); E().log(B, `${t.name} is dragged down!`, 'cond'); } } },
-    mobAttack: { atkMod: (B, u, ctx) => ctx.target ? B.units.filter(o => o !== u && !o.dead && o.id === u.id && Hex.dist(o.pos, ctx.target.pos) === 1).length : 0 },
+    mobAttack: { atkMod: (B, u, ctx) => ctx.target ? B.units.filter(o => o !== u && !o.dead && o.id === u.id && E().udist(o, ctx.target) === 1).length : 0 },
     hexerSwap: {
       onHitBy: function* (B, u) {
         if (u.dead || u.turnFlags && u.turnFlags.swapped) return;
-        const m = E().alliesOf(B, u).find(a => a.minion && Hex.dist(a.pos, u.pos) === 1);
+        const m = E().alliesOf(B, u).find(a => a.minion && E().udist(a, u) === 1);
         if (!m) return;
         const p = u.pos; u.pos = m.pos; m.pos = p;
         E().fx(B, { t: 'step', u: u.uid, to: u.pos, kind: 'shift' }); E().fx(B, { t: 'step', u: m.uid, to: m.pos, kind: 'shift' });
@@ -191,7 +191,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     },
     riposte: {
       onMissedBy: function* (B, u, att, p, ctx) {
-        if (!ctx.melee || u.ripRound === B.turnNo || !E().canReact(u) || att.dead || Hex.dist(att.pos, u.pos) > 1) return;
+        if (!ctx.melee || u.ripRound === B.turnNo || !E().canReact(u) || att.dead || E().udist(att, u) > 1) return;
         u.ripRound = B.turnNo;
         E().fx(B, { t: 'banner', text: 'Riposte!', u: u.uid, cls: 'oa' });
         E().fx(B, { t: 'attack', u: u.uid, tgt: att.uid, kind: 'melee' });
@@ -206,7 +206,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         const hexes = Hex.within(u.pos, 1);
         for (const h of hexes) { const t = E().tile(B, h); if (t && !E().TERRAIN[t.terrain].block) { t.terrain = 'flames'; E().fx(B, { t: 'retile', h }); } }
         for (const o of B.units.slice()) {
-          if (o.dead || o === u || Hex.dist(o.pos, u.pos) > 1) continue;
+          if (o.dead || o === u || E().udist(o, u) > 1) continue;
           yield* E().dealDamage(B, null, o, E().rollDice(E().parseDice('2d6+3')).total, { dtype: 'fire', label: 'explosion' });
         }
       },
@@ -216,14 +216,14 @@ var G = (typeof G !== 'undefined') ? G : {};
         E().log(B, 'The jam jar shatters — sticky jam everywhere!', 'hazard');
         E().fx(B, { t: 'explode', at: u.pos, color: 0xa4133c, r: 1 });
         for (const h of Hex.within(u.pos, 1)) { const t = E().tile(B, h); if (t && !E().TERRAIN[t.terrain].block) { t.terrain = 'jam'; E().fx(B, { t: 'retile', h }); } }
-        for (const o of B.units) if (!o.dead && o !== u && !o.object && Hex.dist(o.pos, u.pos) <= 1) E().addCond(B, o, 'immobilized', { dur: 'save', label: 'jammed' });
+        for (const o of B.units) if (!o.dead && o !== u && !o.object && E().udist(o, u) <= 1) E().addCond(B, o, 'immobilized', { dur: 'save', label: 'jammed' });
       },
     },
     creamBurst: {
       onDeath: function* (B, u) {
         E().fx(B, { t: 'explode', at: u.pos, color: 0xfffaf0, r: 1 });
         for (const o of B.units.slice()) {
-          if (o.dead || o === u || o.object || o.side === u.side || Hex.dist(o.pos, u.pos) > 1) continue;
+          if (o.dead || o === u || o.object || o.side === u.side || E().udist(o, u) > 1) continue;
           E().addCond(B, o, 'slowed', { dur: 'save', label: 'creamed (slowed)' });
           yield* E().dealDamage(B, null, o, 3, { label: 'cream burst' });
         }
