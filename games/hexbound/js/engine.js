@@ -1030,24 +1030,37 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---------- Turn flow ----------
+  function initRoll(B, u) {
+    const bonus = u.monster ? u.initBonus : (mod(u.abil.DEX) + Math.floor(u.level / 2) + (u.initBonus || 0));
+    // party-wide init bonus (warlord etc.)
+    const lead = B.units.filter(a => a.side === u.side && !a.dead).reduce((m, a) => Math.max(m, traitSum(B, a, 'allyInit')), 0);
+    const roll = d(20);
+    u.init = roll + bonus + lead;
+    return { u: u.uid, roll, bonus: bonus + lead, init: u.init };
+  }
   function rollInitiative(B) {
-    const entries = [];
+    const entries = [], rolls = [];
     for (const u of B.units) {
       if (u.object) continue;
-      const bonus = u.monster ? u.initBonus : (mod(u.abil.DEX) + Math.floor(u.level / 2) + (u.initBonus || 0));
-      const lead = B.units.filter(a => a.side === u.side && !a.dead).reduce((m, a) => Math.max(m, traitSum(B, a, 'allyInit')), 0);
-      u.init = d(20) + bonus + lead;
+      rolls.push(initRoll(B, u));
       entries.push({ u, init: u.init });
       if (u.solo) entries.push({ u, init: u.init - 10, second: true });
     }
-    // party-wide init bonus (warlord etc.)
     entries.sort((a, b) => b.init - a.init || (a.u.side === 'hero' ? -1 : 1));
     B.order = entries;
-    log(B, 'Roll for initiative! ' + entries.map(e => `${e.u.name} ${e.init}`).join(', '), 'round');
+    log(B, 'Roll for initiative! ' + entries.filter(e => !e.second).map(e => `${e.u.name} ${e.init}`).join(', '), 'round');
+    fx(B, { t: 'initiative', rolls });
   }
-  function addToInitiative(B, u, afterIdx) {
-    u.init = (B.order[afterIdx] ? B.order[afterIdx].init : 0) - 0.5;
-    B.order.splice(afterIdx + 1, 0, { u, init: u.init });
+  // reinforcements roll their own initiative and slot into the order; anyone placed ahead of the
+  // current turn waits for next round
+  function addToInitiative(B, u) {
+    const r = initRoll(B, u);
+    let i = B.order.findIndex(e => e.init < u.init);
+    if (i < 0) i = B.order.length;
+    B.order.splice(i, 0, { u, init: u.init });
+    if (i <= B.turnIdx) B.turnIdx++;
+    log(B, `${u.name} rolls initiative: ${u.init}.`, 'round');
+    return r;
   }
 
   function* startBattle(B) {
@@ -1065,11 +1078,12 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (B.over) return null;
       B.turnIdx++;
       if (B.turnIdx >= B.order.length) {
-        B.turnIdx = 0; B.round++;
+        B.turnIdx = -1; B.round++;
         log(B, `— Round ${B.round} —`, 'round');
         fx(B, { t: 'round', n: B.round });
         yield* scenarioEvents(B);
         if (B.over) return null;
+        B.turnIdx = 0;
         // zones tick down
         B.zones = B.zones.filter(z => --z.rounds > 0);
       }
@@ -1122,13 +1136,13 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (u.regen && !isDying(u) && u.hp > 0) heal(B, null, u, u.regen);
     if (isDying(u)) {
       const r = d(20);
-      if (r === 20) { log(B, `${u.name} rallies from death's door! (20)`, 'heal'); u.surges > 0 ? spendSurge(B, null, u) : heal(B, null, u, 1); }
+      if (r === 20) { log(B, `${u.name} rallies from death's door! (20)`, 'heal'); fx(B, { t: 'save', u: u.uid, ok: true, c: 'death', roll: r, fails: u.deathFails || 0 }); u.surges > 0 ? spendSurge(B, null, u) : heal(B, null, u, 1); }
       else if (r < 10) {
         u.deathFails = (u.deathFails || 0) + 1;
         log(B, `${u.name} fails a death save (${r}). [${u.deathFails}/3]`, 'death');
-        fx(B, { t: 'save', u: u.uid, ok: false, c: 'death' });
+        fx(B, { t: 'save', u: u.uid, ok: false, c: 'death', roll: r, fails: u.deathFails });
         if (u.deathFails >= 3) { yield* kill(B, null, u); return false; }
-      } else { log(B, `${u.name} clings to life (${r}).`, 'save'); fx(B, { t: 'save', u: u.uid, ok: true, c: 'death' }); }
+      } else { log(B, `${u.name} clings to life (${r}).`, 'save'); fx(B, { t: 'save', u: u.uid, ok: true, c: 'death', roll: r, fails: u.deathFails || 0 }); }
       if (isDying(u)) return false;
     }
     if (hasCond(u, 'stunned') || hasCond(u, 'asleep')) { log(B, `${u.name} is ${hasCond(u, 'asleep') ? 'asleep' : 'stunned'} and can't act!`, 'cond'); return false; }
@@ -1173,8 +1187,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       p = alt[0];
     }
     const m = addUnit(B, makeMonster(id, p, sp));
-    addToInitiative(B, m, B.turnIdx < 0 ? B.order.length - 1 : B.turnIdx);
-    fx(B, { t: 'spawn', u: m.uid });
+    const init = addToInitiative(B, m);
+    fx(B, { t: 'spawn', u: m.uid, init });
     return m;
   }
 

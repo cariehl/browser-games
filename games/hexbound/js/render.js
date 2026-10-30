@@ -109,6 +109,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (keys['q']) cam.yaw -= 1.6 * dt;
     if (keys['e'] && !keys['shift']) cam.yaw += 1.6 * dt;
     clampCam();
+    if (cam.zoomTo) { cam.dist += (cam.zoomTo - cam.dist) * Math.min(1, dt * 3); if (Math.abs(cam.zoomTo - cam.dist) < 0.05) cam.zoomTo = null; }
     if (cam.follow) { cam.tx += (cam.follow.x - cam.tx) * Math.min(1, dt * 4); cam.tz += (cam.follow.z - cam.tz) * Math.min(1, dt * 4); if (Math.hypot(cam.follow.x - cam.tx, cam.follow.z - cam.tz) < 0.05) cam.follow = null; }
     const cy = Math.sin(cam.pitch) * cam.dist, ch = Math.cos(cam.pitch) * cam.dist;
     let sx = 0, sy = 0;
@@ -117,6 +118,18 @@ var G = (typeof G !== 'undefined') ? G : {};
     camera.lookAt(cam.tx + sx * 0.5, 0.4, cam.tz);
   }
   function focus(h) { if (!h) return; const p = px(h); cam.follow = { x: p.x, z: p.z }; }
+  // pan (and zoom out if needed) so two world points share the screen; resolves once the camera has mostly arrived
+  async function frame(a, b) {
+    const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
+    const span = Math.hypot(a.x - b.x, a.z - b.z);
+    const need = Math.min(32, span * 1.25 + 7);
+    const far = Math.hypot(mid.x - cam.tx, mid.z - cam.tz) > 1.5 || need > cam.dist + 0.5;
+    cam.follow = mid;
+    if (need > cam.dist) cam.zoomTo = need;
+    if (far) await wait(380);
+  }
+  // does the active player drive this unit's movement themselves?
+  const playerDriven = (u) => u.side === 'hero' && !(G.Settings && G.Settings.autoHeroes);
   function rotate(d) { cam.yaw += d; }
   function zoom(f) { cam.dist = Math.max(7, Math.min(32, cam.dist * f)); }
 
@@ -316,14 +329,17 @@ var G = (typeof G !== 'undefined') ? G : {};
     }
     const sel = new THREE.Mesh(new THREE.RingGeometry(0.66 * big, 0.8 * big, 32), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
     sel.rotation.x = -Math.PI / 2; sel.position.y = 0.08; g.add(sel);
+    // dying marker: a pulsing red ring under the fallen unit
+    const dyingRing = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.9, 32), new THREE.MeshBasicMaterial({ color: 0xff2a2a, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+    dyingRing.rotation.x = -Math.PI / 2; dyingRing.position.y = 0.07; g.add(dyingRing);
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; } });
     sel.castShadow = false; // the (usually invisible) selection ring shouldn't cast a ring-shaped shadow
     scene.add(g);
     const label = document.createElement('div');
     label.className = 'ulabel ' + (u.side === 'hero' ? 'hero' : u.object ? 'obj' : 'enemy') + (u.solo ? ' solo' : '') + (u.minion ? ' minion' : '');
-    label.innerHTML = `<div class="ul-name">${u.name}</div><div class="ul-bar"><i class="hp"></i><i class="tmp"></i></div><div class="ul-conds"></div>`;
+    label.innerHTML = `<div class="ul-name">${u.name}</div><div class="ul-bar"><i class="hp"></i><i class="tmp"></i></div><div class="ul-conds"></div><div class="ul-dying"></div>`;
     overlay.appendChild(label);
-    const v = { u, g, body: body.group, bs: US, height, sel, label, hp: u.hp, temp: u.tempHp, pos: Object.assign({}, u.pos), mats: [], dead: false, bob: Math.random() * 6 };
+    const v = { u, g, body: body.group, bs: US, height, sel, dyingRing, label, hp: u.hp, temp: u.tempHp, pos: Object.assign({}, u.pos), mats: [], dead: false, bob: Math.random() * 6 };
     g.traverse(o => { if (o.isMesh && o.material && o.material.emissive) v.mats.push(o.material); });
     unitViews.set(u.uid, v);
     placeView(v, u.pos);
@@ -582,6 +598,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (v.dead) continue;
       v.sel.material.opacity = v.active ? 0.7 + Math.sin(time * 5) * 0.25 : v.targetable ? 0.45 + Math.sin(time * 8) * 0.3 : 0;
       v.sel.material.color.setHex(v.active ? 0xffe066 : 0xff4a4a);
+      v.dyingRing.material.opacity = E().isDying(v.u) ? 0.35 + Math.abs(Math.sin(time * 3)) * 0.45 : 0;
+      if (v.down) continue;
       if (!v.anim) v.body.position.y = (v.u.look && ['puff', 'macaron', 'golem'].includes(v.u.look.kind)) ? Math.abs(Math.sin(time * 2.2 + v.bob)) * 0.06 : Math.sin(time * 2 + v.bob) * 0.015;
       if (v.u.look && v.u.look.kind === 'golem' && !v.anim) v.body.scale.set(v.bs * (1 + Math.sin(time * 1.6) * 0.02), v.bs * (1 - Math.sin(time * 1.6) * 0.02), v.bs * (1 + Math.sin(time * 1.6) * 0.02));
     }
@@ -607,10 +625,12 @@ var G = (typeof G !== 'undefined') ? G : {};
       hpEl.style.width = (hp / tot * 100) + '%';
       hpEl.className = 'hp' + (hp <= mx / 2 ? ' bl' : '') + (hp <= mx / 4 ? ' cr' : '');
       tEl.style.width = (v.temp / tot * 100) + '%';
-      const ck = u.conds.map(c => c.c).join(',') + (E().isDying(u) ? 'dying' : '');
+      const ck = u.conds.map(c => c.c).join(',') + (E().isDying(u) ? 'dying' + (u.deathFails || 0) : '');
       if (v.ck !== ck) {
         v.ck = ck;
         const seen = new Set();
+        const df = u.deathFails || 0;
+        v.label.querySelector('.ul-dying').innerHTML = E().isDying(u) ? `☠ DYING ${[0, 1, 2].map(i => `<span class="${i < df ? 'x' : ''}">${i < df ? '✖' : '○'}</span>`).join('')}` : '';
         v.label.querySelector('.ul-conds').innerHTML = u.conds.filter(c => COND_ICON[c.c] && c.c !== 'dying' && !seen.has(c.c) && seen.add(c.c)).map(c => `<span title="${c.label || c.c}">${COND_ICON[c.c]}</span>`).join('');
       }
       v.label.classList.toggle('active', !!v.active);
@@ -661,6 +681,44 @@ var G = (typeof G !== 'undefined') ? G : {};
     setTimeout(() => { for (const m of v.mats) if (m.userData.e) m.emissive.copy(m.userData.e); }, ms / S());
   }
 
+  // knocked prone or dying: the model topples over; standing up reverses it
+  async function fall(v, dur = 0.35) {
+    if (v.down) return; v.down = true;
+    await tween(dur, k => { const e = k < 0.8 ? ease(k / 0.8) * 1.04 : 1.04 - (k - 0.8) / 0.2 * 0.04; v.body.rotation.x = -1.45 * e; v.body.position.y = -0.1 * Math.min(1, k * 1.5); });
+  }
+  async function rise(v, dur = 0.3) {
+    if (!v.down) return;
+    await tween(dur, k => { v.body.rotation.x = -1.45 * (1 - ease(k)); v.body.position.y = -0.1 * (1 - k); });
+    v.body.rotation.x = 0; v.body.position.y = 0; v.down = false;
+  }
+  // big tumbling d20 over a unit for the rolls that decide a hero's fate
+  async function deathRoll(v, ev) {
+    const u = v.u;
+    focus(v.pos); await wait(300);
+    const s = screenOf(v.pos, v.height + 1.2);
+    const el = document.createElement('div'); el.className = 'deathroll';
+    el.style.left = s.x + 'px'; el.style.top = s.y + 'px';
+    el.innerHTML = `<small>${u.name} · Death Save</small><div class="dr-die">?</div><div class="dr-res"></div>`;
+    overlay.appendChild(el);
+    const die = el.querySelector('.dr-die'), res = el.querySelector('.dr-res');
+    if (ev.roll != null) {
+      G.Audio && G.Audio.play('dice');
+      const spinMs = 1100 / S(); const t0 = performance.now();
+      while (performance.now() - t0 < spinMs) { die.textContent = 1 + Math.floor(Math.random() * 20); await new Promise(r => setTimeout(r, 70)); }
+      die.textContent = ev.roll;
+    } else die.textContent = '✖';
+    const fails = ev.fails != null ? ev.fails : (u.deathFails || 0);
+    const pips = [0, 1, 2].map(i => `<span class="${i < fails ? 'x' : ''}">${i < fails ? '✖' : '○'}</span>`).join('');
+    const nat20 = ev.roll === 20;
+    el.classList.add(nat20 ? 'nat20' : ev.ok ? 'ok' : 'fail');
+    res.innerHTML = nat20 ? 'Rallies from death\'s door!' : ev.ok ? `Clings to life <em>${pips}</em>` : fails >= 3 ? `Slips away… <em>${pips}</em>` : `${ev.roll == null ? 'Struck while dying' : 'Failed'} <em>${pips}</em>`;
+    G.Audio && G.Audio.play(nat20 ? 'sting' : ev.ok ? 'buff' : 'down');
+    if (!ev.ok) { flashUnit(v, 0x801010, 400); cam.shake = Math.max(cam.shake, fails >= 3 ? 0.4 : 0.15); }
+    await wait(1700);
+    el.classList.add('out'); setTimeout(() => el.remove(), 400 / S());
+    await wait(200);
+  }
+
   // ---------- fx playback ----------
   async function playFx(ev) {
     const v = ev.u != null ? unitViews.get(ev.u) : null;
@@ -673,8 +731,12 @@ var G = (typeof G !== 'undefined') ? G : {};
         const ya = topY(ta), yb = topY(tb);
         facing(v, to); v.anim = true;
         const hop = ev.kind === 'forced' ? 0.05 : 0.22;
+        const follow = ev.kind === 'forced' || !playerDriven(v.u);
         G.Audio && G.Audio.play(ev.kind === 'forced' ? 'shove' : 'step');
-        await tween(ev.kind === 'forced' ? 0.14 : 0.16, k => { const e = ease(k); v.g.position.set(a.x + (b.x - a.x) * e, ya + (yb - ya) * e + Math.sin(k * Math.PI) * hop, a.z + (b.z - a.z) * e); });
+        await tween(ev.kind === 'forced' ? 0.16 : 0.2, k => {
+          const e = ease(k); v.g.position.set(a.x + (b.x - a.x) * e, ya + (yb - ya) * e + Math.sin(k * Math.PI) * hop, a.z + (b.z - a.z) * e);
+          if (follow) cam.follow = { x: v.g.position.x, z: v.g.position.z };
+        });
         v.anim = false; v.pos = { q: to.q, r: to.r };
         return;
       }
@@ -693,6 +755,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           await tween(0.12, k => v.g.position.set(base.x + dx * k, base.y + Math.sin(k * Math.PI) * 0.1, base.z + dz * k));
           tween(0.16, k => v.g.position.set(base.x + dx * (1 - k), base.y, base.z + dz * (1 - k))).then(() => { v.anim = false; });
         } else {
+          await frame(v.g.position, tv.g.position);
           const col = DT_COLOR[ev.dtype] || (v.u.side === 'hero' ? 0xfff0c0 : 0xd0d0d0);
           const proj = new THREE.Mesh(new THREE.SphereGeometry(ev.dtype ? 0.14 : 0.07, 8, 6), new THREE.MeshBasicMaterial({ color: col }));
           scene.add(proj);
@@ -705,7 +768,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         return;
       }
       case 'area': {
-        if (v) { const tv = ev.aim; if (tv) facing(v, tv); }
+        if (v) { const tv = ev.aim; if (tv) { facing(v, tv); if (ev.kind === 'areaBurst') await frame(v.g.position, px(tv)); } }
         G.Audio && G.Audio.play(ev.dtype === 'fire' ? 'fire' : ev.dtype === 'cold' ? 'ice' : 'boom');
         const col = DT_COLOR[ev.dtype] || 0xffb05a;
         const ms = [];
@@ -722,17 +785,18 @@ var G = (typeof G !== 'undefined') ? G : {};
       case 'self': { if (v) { burst(v.pos, DT_COLOR[ev.dtype] || 0x9fd8ff, 10, { speed: 1, up: 2 }); G.Audio && G.Audio.play('buff'); } await wait(150); return; }
       case 'roll': {
         const tv = unitViews.get(ev.tgt);
-        if (tv) floatText(tv.pos, `${ev.roll === 20 ? '★20' : ev.roll}${ev.bonus >= 0 ? '+' : ''}${ev.bonus} vs ${ev.vs} ${ev.def}`, 'roll ' + (ev.hit ? 'hit' : 'miss'), tv.height + 1.0, 1500);
+        // final values only; the combat log keeps the d20 + bonus breakdown
+        if (tv) floatText(tv.pos, `${ev.roll === 20 ? '★ ' : ''}${ev.roll + ev.bonus} vs ${ev.vs} ${ev.def}`, 'roll ' + (ev.hit ? 'hit' : 'miss') + (ev.roll === 20 ? ' nat20' : ''), tv.height + 1.0, 3000);
         if (G.UI && G.UI.onRoll) G.UI.onRoll(ev);
-        if (!ev.hit) { if (tv) floatText(tv.pos, ev.reroll ? 'MISS (reroll)' : 'MISS', 'miss', tv.height + 0.4); G.Audio && G.Audio.play('miss'); }
-        await wait(ev.hit ? 120 : 260);
+        if (!ev.hit) { if (tv) floatText(tv.pos, ev.reroll ? 'MISS (reroll)' : 'MISS', 'miss', tv.height + 0.4, 2000); G.Audio && G.Audio.play('miss'); }
+        await wait(ev.hit ? 320 : 560);
         return;
       }
       case 'damage': {
         if (!v) return;
         v.hp = ev.hp; v.temp = ev.temp;
         flashUnit(v, 0xff2020);
-        floatText(v.pos, (ev.crit ? '💥' : '') + ev.amt, 'dmg' + (ev.crit ? ' crit' : '') + (ev.amt >= 15 ? ' big' : ''), v.height + 0.3);
+        floatText(v.pos, (ev.crit ? '💥' : '') + ev.amt, 'dmg' + (ev.crit ? ' crit' : '') + (ev.amt >= 15 ? ' big' : ''), v.height + 0.3, 1900);
         burst(v.pos, ev.dtype ? (DT_COLOR[ev.dtype] || 0xff3030) : (v.u.look && ['golem', 'ginger', 'puff', 'macaron', 'roll'].includes(v.u.look.kind) ? [0xffc0d9, 0xfff2a0, 0xb6f0ff] : 0xb01010), Math.min(24, 6 + ev.amt), { size: 0.06 });
         if (ev.crit) { cam.shake = 0.35; G.Audio && G.Audio.play('crit'); } else G.Audio && G.Audio.play('hit');
         if (ev.amt >= 15) cam.shake = Math.max(cam.shake, 0.18);
@@ -743,11 +807,15 @@ var G = (typeof G !== 'undefined') ? G : {};
       }
       case 'heal': { if (!v) return; v.hp = ev.hp; floatText(v.pos, '+' + ev.amt, 'heal', v.height + 0.3); burst(v.pos, [0x7affb0, 0xffffff], 12, { speed: 0.8, up: 2.5, grav: -1 }); flashUnit(v, 0x10a040, 250); G.Audio && G.Audio.play('heal'); await wait(200); return; }
       case 'temp': { if (!v) return; v.temp = ev.amt; floatText(v.pos, '+' + ev.amt + ' temp', 'temp', v.height + 0.6); G.Audio && G.Audio.play('buff'); await wait(120); return; }
-      case 'cond': { if (!v) return; floatText(v.pos, condName(ev.c), 'cond', v.height + 0.9, 1400); await wait(120); return; }
-      case 'save': { if (!v) return; floatText(v.pos, ev.ok ? `Saved! (${condName(ev.c)})` : `Save failed`, ev.ok ? 'save' : 'cond', v.height + 1.1, 1200); await wait(100); return; }
+      case 'cond': {
+        if (!v) return; floatText(v.pos, condName(ev.c), 'cond', v.height + 0.9, 1800);
+        if (ev.c === 'prone' && !v.down) { G.Audio && G.Audio.play('shove'); await fall(v); }
+        await wait(160); return;
+      }
+      case 'save': { if (!v) return; if (ev.c === 'death') return deathRoll(v, ev); floatText(v.pos, ev.ok ? `Saved! (${condName(ev.c)})` : `Save failed`, ev.ok ? 'save' : 'cond', v.height + 1.1, 1200); await wait(100); return; }
       case 'banner': { const tv = v; if (tv) floatText(tv.pos, ev.text, 'banner ' + (ev.cls || ''), tv.height + 1.3, 1600); if (ev.cls === 'crit') G.Audio && G.Audio.play('sting'); await wait(160); return; }
       case 'bark': { bubble(ev.u, ev.text); G.Audio && G.Audio.play('bark'); await wait(500); return; }
-      case 'power': { if (v && G.UI) G.UI.powerBanner(v.u, ev.name, ev.kind); await wait(ev.side === 'hero' ? 150 : 380); return; }
+      case 'power': { if (v && G.UI) G.UI.powerBanner(v.u, ev.name, ev.kind); await wait(ev.side === 'hero' ? 250 : 650); return; }
       case 'death': {
         if (!v || v.dead) return;
         v.dead = true; v.label.style.display = 'none';
@@ -759,9 +827,14 @@ var G = (typeof G !== 'undefined') ? G : {};
         scene.remove(g);
         return;
       }
-      case 'dying': { if (!v) return; v.anim = true; G.Audio && G.Audio.play('down'); await tween(0.3, k => { v.body.rotation.x = -k * 1.45; v.body.position.y = -k * 0.1; }); return; }
-      case 'revive': { if (!v) return; await tween(0.3, k => { v.body.rotation.x = -(1 - k) * 1.45; }); v.anim = false; burst(v.pos, 0xffffff, 16, { grav: -2 }); return; }
-      case 'stand': { if (v) { v.body.rotation.x = 0; v.anim = false; } return; }
+      case 'dying': {
+        if (!v) return; G.Audio && G.Audio.play('down'); focus(v.pos);
+        await fall(v, 0.6); cam.shake = Math.max(cam.shake, 0.2);
+        floatText(v.pos, 'DYING', 'banner blood', v.height + 0.6, 2200); await wait(500); return;
+      }
+      // revived heroes stay prone until they spend a move to stand
+      case 'revive': { if (!v) return; burst(v.pos, 0xffffff, 16, { grav: -2 }); floatText(v.pos, 'Revived!', 'banner heal', v.height + 0.6, 1800); if (!E().hasCond(v.u, 'prone')) await rise(v); await wait(250); return; }
+      case 'stand': { if (v) await rise(v); return; }
       case 'explode': {
         const r = ev.r || 1; G.Audio && G.Audio.play(ev.big ? 'bigboom' : 'boom');
         for (const h of Hex.within(ev.at, r)) if (B.tiles.has(Hex.hk(h))) burst(h, [ev.color, 0xffe08a, 0x553322], ev.big ? 10 : 8, { speed: 2, up: 5, life: 0.9 });
@@ -773,14 +846,18 @@ var G = (typeof G !== 'undefined') ? G : {};
       case 'retile': { const t = B.tiles.get(Hex.hk(ev.h)); if (t) buildTile(t); applyHL(); return; }
       case 'spawn': {
         const u = B.units.find(x => x.uid === ev.u); if (!u) return;
-        const nv = addUnitView(u); burst(u.pos, [0xffffff, 0xdddddd], 14, { speed: 1.5, up: 2 });
+        const nv = unitViews.get(u.uid) || addUnitView(u); burst(u.pos, [0xffffff, 0xdddddd], 14, { speed: 1.5, up: 2 });
         G.Audio && G.Audio.play('spawn');
-        await tween(0.3, k => nv.g.scale.setScalar(Math.max(0.01, k))); return;
+        focus(u.pos);
+        await tween(0.35, k => nv.g.scale.setScalar(Math.max(0.01, k)));
+        if (ev.init && G.UI && G.UI.joinInitiative) await G.UI.joinInitiative(ev);
+        return;
       }
       case 'zone': case 'telegraph': applyHL(); if (ev.t === 'telegraph') G.Audio && G.Audio.play('warn'); await wait(ev.t === 'telegraph' ? 500 : 50); return;
-      case 'turn': { if (v) { setActive(ev.u); focus(v.pos); } await wait(80); return; }
-      case 'round': { G.UI && G.UI.roundBanner(ev.n); await wait(500); return; }
-      case 'story': { G.UI && G.UI.story(ev.text); await wait(900); return; }
+      case 'turn': { if (v) { setActive(ev.u); focus(v.pos); if (G.UI && G.UI.turnBanner) G.UI.turnBanner(v.u); } await wait(120); return; }
+      case 'round': { G.UI && G.UI.roundBanner(ev.n); await wait(900); return; }
+      case 'story': { if (G.UI && G.UI.event) await G.UI.event(ev.text); return; }
+      case 'initiative': { if (G.UI && G.UI.rollInitiative) await G.UI.rollInitiative(ev); return; }
       case 'momentum': { G.UI && G.UI.momentumPulse(); G.Audio && G.Audio.play('momentum'); return; }
       case 'forced': return;
     }
@@ -803,18 +880,23 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (u.dead) continue;
       if (!v.anim && (v.pos.q !== u.pos.q || v.pos.r !== u.pos.r)) placeView(v, u.pos);
       v.hp = u.hp; v.temp = u.tempHp;
-      const dying = E().isDying(u);
-      if (!dying && v.body.rotation.x !== 0 && !v.anim) v.body.rotation.x = 0;
-      if (dying) { v.body.rotation.x = -1.45; }
+      const down = E().isDying(u) || E().hasCond(u, 'prone');
+      if (!v.anim && v.down !== down) { v.down = down; v.body.rotation.x = down ? -1.45 : 0; v.body.position.y = down ? -0.1 : 0; }
     }
     applyHL();
   }
   function unitScreen(uid) { const v = unitViews.get(uid); if (!v) return null; return screenOf(v.pos, v.height); }
+  // page (viewport) coordinates above a unit's head, for HUD elements that fly from the board
+  function unitPage(uid, yOff = 0.4) {
+    const v = unitViews.get(uid); if (!v) return null;
+    const s = screenOf(v.pos, v.height + yOff); const r = renderer.domElement.getBoundingClientRect();
+    return { x: s.x + r.left, y: s.y + r.top };
+  }
   function snapshot() { return renderer.domElement.toDataURL('image/png'); }
 
   G.Render = {
     hexScreen: (h) => { const s = screenOf(h, 0); const r = renderer.domElement.getBoundingClientRect(); return { x: s.x + r.left, y: s.y + r.top }; },
-    init, loadBattle, setHighlights, playFx, syncAll, focus, rotate, zoom, pick, setActive, setTargetable, unitScreen, floatText, snapshot,
+    init, loadBattle, setHighlights, playFx, syncAll, focus, frame, rotate, zoom, pick, setActive, setTargetable, unitScreen, unitPage, floatText, snapshot,
     onHover: (f) => hoverCb = f, onClick: (f) => clickCb = f, onRight: (f) => rightCb = f, resize,
     get camera() { return cam; },
   };
