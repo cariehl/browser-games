@@ -84,7 +84,7 @@ test('charge follows a plotted route', () => {
   assert(!E.chargePath(B, hero, gob, [hero.pos, lane[2], lane[3]]), 'routes must be contiguous');
   E.runAuto(E.doCharge(B, hero, gob, lane));
   assert(Hex.eq(hero.pos, lane[3]));
-  assert(B.log.some(l => /Melee Basic Attack/.test(l.msg)));
+  assert(B.log.some(l => l.msg.includes(`: ${hero.powers.find(p => p.basicMelee).name} —`)));
 });
 
 test('damage while dying is a failed death save, a crit is two', () => {
@@ -104,7 +104,7 @@ test('heroes without a ranged weapon throw stones; daggers can be thrown', () =>
   const rb = (u) => u.powers.find(p => p.basicRanged);
   assert.strictEqual(rb(fighter).name, 'Thrown Stone'); assert.strictEqual(rb(fighter).range, 5);
   assert(/Longbow/.test(rb(archer).name)); assert.strictEqual(E.powerRange(archer, rb(archer)).range, 15);
-  assert.strictEqual(rb(rogue).name, 'Thrown Dagger');
+  assert.strictEqual(rb(rogue).name, 'Dagger (thrown)');
   const { B } = arena('goblins', {});
   const stone = E.attackBonus(B, fighter, rb(fighter), { uid: -1, conds: [] }, {});
   assert(!stone.parts.some(([k]) => k === 'prof'), 'no proficiency bonus for a rock');
@@ -121,6 +121,81 @@ test('the Pastry Golem is Large: 7 hexes, reached from any side', () => {
   // the golem can't walk into a hex where its body would overlap a hero
   const r = E.reach(B, golem, E.speedOf(golem), 'move');
   for (const v of r.values()) if (!v.noEnd) assert(E.footprint(golem, v.h).every(f => E.passable(B, f) && !(E.unitAt(B, f) && E.unitAt(B, f) !== golem)));
+});
+
+// d20s land on `face` (and every other die on the same fraction of its range) until the next arena()
+const fixDice = (face) => E.setRng(() => (face - 0.5) / 20);
+
+test('a natural 1 on a death save counts as two failures', () => {
+  // a second hero stays up so the fight isn't over
+  const { B, hero, gob } = arena('goblins', { hero: u => u.cls === 'fighter', other: u => u.cls === 'cleric', gob: u => u.id === 'goblin_skulker' });
+  E.runAuto(E.dealDamage(B, gob, hero, hero.hp + 1));
+  assert(E.isDying(hero));
+  fixDice(1);
+  E.runAuto(E.startTurn(B, hero, { u: hero }));
+  assert.strictEqual(hero.deathFails, 2, B.log.slice(-4).map(l => l.msg).join(' / '));
+  fixDice(5);
+  E.runAuto(E.startTurn(B, hero, { u: hero }));
+  assert(hero.dead, 'an ordinary failure on top makes three');
+});
+
+test('heroes take opportunity attacks on enemies that walk out of their reach', () => {
+  const { B, hero, gob } = arena('goblins', { hero: u => u.side === 'hero' && u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+  gob.pos = off(3, 9); hero.pos = Hex.neighbor(gob.pos, 0);
+  B.active = gob;
+  E.runAuto(E.doMove(B, gob, Hex.add(gob.pos, { q: -3, r: 0 })));
+  assert(B.log.some(l => l.msg === `${hero.name} takes an opportunity attack on ${gob.name}!`));
+});
+
+test('a killing blow still triggers the power\'s follow-up effects', () => {
+  // Cleaving Strike: the second enemy is still cleaved when the first one drops
+  {
+    const { B, hero, g1, g2 } = arena('goblins', { hero: u => u.cls === 'fighter', g1: u => u.id === 'goblin_skulker', g2: u => u.id === 'goblin_cutter' });
+    hero.pos = off(4, 10); g1.pos = Hex.neighbor(hero.pos, 0); g2.pos = Hex.neighbor(hero.pos, 3);
+    g1.hp = 1; const hp2 = g2.hp; B.active = hero;
+    fixDice(15);
+    E.runAuto(E.usePower(B, hero, hero.powers.find(p => p.id === 'f_cleave'), { unit: g1 }));
+    assert(g1.dead); assert(g2.hp < hp2 || g2.dead, 'cleave hits the other adjacent enemy');
+  }
+  // Lance of Dawn: the wounded ally still gets temp HP
+  {
+    const { B, cleric, ally, gob } = arena('goblins', { cleric: u => u.cls === 'cleric', ally: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+    cleric.pos = off(4, 10); ally.pos = Hex.add(cleric.pos, { q: 2, r: 0 }); gob.pos = Hex.add(cleric.pos, { q: -3, r: 0 });
+    ally.hp = Math.floor(ally.maxHp / 2); gob.hp = 1; B.active = cleric;
+    fixDice(15);
+    E.runAuto(E.usePower(B, cleric, cleric.powers.find(p => p.id === 'c_lance'), { unit: gob }));
+    assert(gob.dead); assert(ally.tempHp > 0, 'ally gains temp HP');
+  }
+});
+
+test('First Strike: rogues have advantage only against foes that haven\'t had a turn', () => {
+  const { B, rogue, gob } = arena('goblins', { rogue: u => u.cls === 'rogue', gob: u => u.id === 'goblin_cutter' });
+  gob.actedThisFight = false;
+  rogue.pos = off(4, 10); gob.pos = Hex.add(rogue.pos, { q: 4, r: 0 });
+  const thrown = rogue.powers.find(p => p.basicRanged);
+  assert.strictEqual(E.caReason(B, rogue, gob, { ranged: true, adjacentCheck: false }), 'First Strike');
+  E.runAuto(E.startTurn(B, gob, { u: gob }));
+  assert.strictEqual(E.caReason(B, rogue, gob, { ranged: true, adjacentCheck: false }), null);
+  rogue.act = { std: 1, move: 1, minor: 1 }; B.active = rogue;
+  E.runAuto(E.usePower(B, rogue, thrown, { unit: gob }));
+  assert(!B.log.some(l => /\(advantage/.test(l.msg)));
+});
+
+test('basic attacks are named for the weapon', () => {
+  const mk = (cls, sub) => G.Build.makeHero(G.Build.defaultBuild(cls, sub, 'human', 'T', { STR: 16, CON: 12, DEX: 14, INT: 10, WIS: 12, CHA: 10 }, {}), 1);
+  const names = (u) => [u.powers.find(p => p.basicMelee).name, u.powers.find(p => p.basicRanged).name];
+  assert.deepStrictEqual(names(mk('rogue', 'shadow')), ['Dagger', 'Dagger (thrown)']);
+  assert.deepStrictEqual(names(mk('ranger', 'archer')), ['Longbow (melee)', 'Longbow']);
+  assert.deepStrictEqual(names(mk('fighter', 'shield')), ['Longsword', 'Thrown Stone']);
+});
+
+test('enemy turns pause briefly between actions; the pause is not a choice', () => {
+  const { B, gob } = arena('goblins', { hero: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+  B.active = gob;
+  const gen = G.AI.takeTurn(B, gob); let r = gen.next(), beats = 0, acts = 0;
+  while (!r.done) { if (r.value && r.value.beat) beats++; r = gen.next(r.value && r.value.auto ? r.value.auto() : undefined); }
+  acts = B.log.filter(l => /uses |moves|shifts/.test(l.msg)).length;
+  assert(beats >= 1, 'a goblin that walks up and stabs gets a beat between the two');
 });
 
 console.log(`${n} rules checks passed`);

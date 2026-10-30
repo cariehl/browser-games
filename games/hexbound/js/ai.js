@@ -246,7 +246,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     return best;
   }
 
-  function* useMinors(B, u, phase) {
+  function* useMinors(B, u, phase, beat = function* () {}) {
     for (const p of u.powers) {
       if ((p.action || 'standard') !== 'minor' || !E().canUse(B, u, p)) continue;
       if (!E().canSpend(u, 'minor')) return;
@@ -270,32 +270,35 @@ var G = (typeof G !== 'undefined') ? G : {};
         if (p.id === 'c_bless' && B.round > 2) val = 0;
         if (p.id === 'f_taunt') val = aim ? (E().areaTargets(B, u, p, E().areaHexes(B, u, p, u.pos)).filter(t => !t.minion && !t.object).length >= 2 ? 6 : 0) : 0;
       }
-      if (val >= 4 && aim) yield* E().usePower(B, u, p, aim);
+      if (val >= 4 && aim) { yield* beat(); yield* E().usePower(B, u, p, aim); }
       if (u.dead || B.over) return;
     }
   }
 
   function* takeTurn(B, u) {
     if (B.over || u.dead) return;
-    if (E().hasCond(u, 'prone') && E().canSpend(u, 'move') && !u.act.single) yield* E().doMove(B, u, u.pos);
-    yield* useMinors(B, u, 'pre');
+    // a short beat between actions so each move and attack reads on its own (the UI waits on it; sims ignore it)
+    let acts = 0;
+    const beat = function* () { if (acts++) yield { beat: 400 }; };
+    if (E().hasCond(u, 'prone') && E().canSpend(u, 'move') && !u.act.single) { yield* beat(); yield* E().doMove(B, u, u.pos); }
+    yield* useMinors(B, u, 'pre', beat);
     if (u.dead || B.over) return;
     // second wind when in trouble
     if (u.side === 'hero' && !u.used.__sw && u.hp < u.maxHp * 0.3 && u.surges > 0 && (u.secondWindAction === 'minor' || !planStandard(B, u) || u.hp < u.maxHp * 0.2)) {
-      yield* E().secondWind(B, u);
+      yield* beat(); yield* E().secondWind(B, u);
     }
     for (let i = 0; i < 3; i++) {
       if (u.dead || B.over || !E().canAct(u)) return;
       if (!E().canSpend(u, 'standard')) break;
       const plan = planStandard(B, u);
       if (plan && plan.score > 0.5) {
-        if (!Hex.eq(plan.node.h, u.pos)) yield* E().doMove(B, u, plan.node.h, plan.node.shift ? 'shift' : 'move');
+        if (!Hex.eq(plan.node.h, u.pos)) { yield* beat(); yield* E().doMove(B, u, plan.node.h, plan.node.shift ? 'shift' : 'move'); }
         if (u.dead || B.over || E().isDying(u)) return;
         // re-aim after moving (things may have changed due to OAs)
         const p = plan.power;
         if (!E().canUse(B, u, p)) continue;
         const a = bestAim(B, u, p);
-        if (a) yield* E().usePower(B, u, p, a.aim);
+        if (a) { yield* beat(); yield* E().usePower(B, u, p, a.aim); }
         else { /* nothing to hit after all */ }
       } else {
         // approach: move + standard-as-move
@@ -305,7 +308,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           const ap = planApproach(B, u);
           if (!ap || Hex.eq(ap.n.h, u.pos)) break;
           const before = u.pos;
-          yield* E().doMove(B, u, ap.n.h);
+          yield* beat(); yield* E().doMove(B, u, ap.n.h);
           moved = true;
           if (u.dead || B.over) return;
           if (Hex.eq(before, u.pos)) break;
@@ -319,18 +322,18 @@ var G = (typeof G !== 'undefined') ? G : {};
         const wantsAP = u.monster ? (u.actionPoints > 0 && (u.solo ? E().bloodied(u) : true)) : (!u.used.__ap && B.round >= 2 && E().enemiesOf(B, u).some(e => !e.minion));
         if (wantsAP) {
           const nxt = (() => { u.act.std++; const pl = planStandard(B, u, { noMove: true }); u.act.std--; return pl; })();
-          if (nxt && nxt.score > 6) yield* E().actionPoint(B, u);
+          if (nxt && nxt.score > 6) { yield* beat(); yield* E().actionPoint(B, u); }
         }
       }
     }
     if (u.dead || B.over) return;
-    yield* useMinors(B, u, 'post');
+    yield* useMinors(B, u, 'post', beat);
     // leftover move: artillery repositions, melee closes in
     if (E().canSpend(u, 'move') && E().speedOf(u) > 0 && !u.dead && !B.over && u.act.move > 0) {
       const r = E().reach(B, u, E().speedOf(u), 'move');
       let best = null, bv = posValue(B, u, u.pos, null) + 0.5;
       for (const n of r.values()) { if (n.noEnd || n.cost === 0) continue; const v = posValue(B, u, n.h, n); if (v > bv + 0.5) { bv = v; best = n; } }
-      if (best && (isRangedUnit(u) || u.side === 'hero')) yield* E().doMove(B, u, best.h);
+      if (best && (isRangedUnit(u) || u.side === 'hero')) { yield* beat(); yield* E().doMove(B, u, best.h); }
     }
   }
 
