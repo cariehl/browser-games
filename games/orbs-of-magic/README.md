@@ -1,5 +1,9 @@
 # 🔮 Orbs of Magic
 
+> [!TIP]
+> ### [▶ Play now in your browser!](https://cariehl.github.io/orbs/)
+> Battle the AI right away, no install needed. To play friends online, see [GitHub Pages](#github-pages-no-server).
+
 A multiplayer tactical card battler. Two wizards summon units onto a hex battlefield, give them orders, and race to shatter the enemy **Sanctum**. Built with **three.js** (client), **Colyseus** (server) and **TypeScript** everywhere.
 
 ## Quick start
@@ -33,6 +37,8 @@ Example from cmd or a shortcut: `start-server.cmd -HostOnline`.
 `npm run build:pages` builds a static version into `dist/` that runs AI battles entirely in the browser, so it can be hosted anywhere static files can. The game is hosted at https://cariehl.github.io/orbs/: to update it, run `npm run build:pages`, replace the `orbs/` folder of the [cariehl.github.io](https://github.com/cariehl/cariehl.github.io) repo with the contents of `dist/`, and push to its `master` branch.
 
 To play online from this build, enter a game server's address under *Online* in the menu, or open the page with `?serverUrl=` (for example https://cariehl.github.io/orbs/?serverUrl=https://example.trycloudflare.com). The page remembers the server, and **Copy link** makes such a link for friends. `start-server.ps1 -HostOnline` prints that link for its tunnel. The page is served over https, so browsers only let it use https servers (like the tunnel) or one on `localhost`. Set `VITE_SERVER_URL` in `client/.env.pages` to build in a default server.
+
+The Pages menu also has a back link to the site, a GitHub link, and a **Commentary** button. That button shows `commentary/orbs.md` from the cariehl.github.io repo, rendered as Markdown, and is hidden when the file doesn't exist. Image and link paths in it are relative to that file, and an image title becomes a caption: `![alt text](photo.jpg "Caption")`.
 
 Other scripts:
 
