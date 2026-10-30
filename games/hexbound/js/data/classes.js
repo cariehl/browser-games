@@ -80,11 +80,11 @@ var G = (typeof G !== 'undefined') ? G : {};
     },
     warlord: {
       name: 'Warlord', role: 'Leader', hp: 12, hpLvl: 5, surges: 7, def: { Fort: 1, Will: 1 }, armor: 'chain', primary: ['STR', 'INT', 'CHA'],
-      blurb: 'Battlefield commander. Spends attacks to make allies strike, heals with Inspiring Word, and gives the party +2 initiative.',
+      blurb: 'Battlefield commander. Spends attacks to make allies strike, shields friends with temporary HP from Inspiring Word (three times per fight), and gives the party +2 initiative.',
       features: ['Inspiring Word', 'Combat Leader'], traits: ['combatLeader'], color: 0x8e44ad,
       subs: {
         tactician: { name: 'Tactician', weapon: 'longsword', shield: 1, traits: ['tactician'], blurb: 'Attacks you grant to allies gain +INT to hit.' },
-        inspiring: { name: 'Inspiring', weapon: 'longsword', shield: 1, traits: ['inspiring'], blurb: 'Inspiring Word heals an extra +CHA.' },
+        inspiring: { name: 'Inspiring', weapon: 'longsword', shield: 1, traits: ['inspiring'], blurb: 'Inspiring Word grants an extra +CHA temp HP.' },
       },
     },
     wizard: {
@@ -220,7 +220,11 @@ var G = (typeof G !== 'undefined') ? G : {};
   ]);
 
   // Warlord
-  add('warlord', 'class', [healWord('w_word', 'Inspiring Word', (B, u) => E().rollDice(E().parseDice('1d6')).total + (u.traits.includes('inspiring') ? M(u, 'CHA') : 0))]);
+  // Warlords don't heal: they rally. Temp HP instead of surges (that's the Cleric's job), and a dying
+  // ally is pulled back up to 1 HP first so the word still saves lives.
+  add('warlord', 'class', [{ id: 'w_word', name: 'Inspiring Word', kind: 'atwill', uses: 3, action: 'minor', tgt: 'ranged', range: 5, targets: 'allyOrSelf', noProvoke: true,
+    hit: [{ t: 'temp', revive: true, amt: (B, u) => E().rollDice(E().parseDice('1d6')).total + M(u, 'CHA') + u.level + (u.traits.includes('inspiring') ? M(u, 'CHA') : 0) }],
+    text: 'Three times per fight. Target gains 1d6 + CHA + level temporary HP (no surge spent). A dying target first rises at 1 HP.' }]);
   add('warlord', 'atwill', [
     { id: 'w_rally', name: 'Rally the Blade', tgt: 'ranged', range: 10, targets: 'enemy', intent: 'mixed', noProvoke: true, hit: [{ t: 'fn', fn: function* (B, u, t) { const a = allyCanAttack(B, u, t); if (!a) { E().log(B, 'No ally can reach!', 'miss'); return; } yield* E().grantAttack(B, u, a, t, { dmg: Math.max(1, M(u, 'INT')) }); } }], text: 'No attack of your own: the best-placed ally makes a basic attack on the target, +INT damage.', grant: true },
     melee({ id: 'w_heart', name: 'Heartening Strike', hit: [{ on: 'allyNear', prefer: 'hurt', t: 'temp', amt: (B, u) => M(u, 'CHA') + 2 + Math.floor(u.level / 2) }] }),
@@ -232,15 +236,16 @@ var G = (typeof G !== 'undefined') ? G : {};
   ]);
   add('warlord', 'enc3', [
     melee({ id: 'w_shock', name: 'Shock Assault', dmg: '2W', hit: [{ t: 'cond', c: 'dazed' }] }),
-    melee({ id: 'w_inspblow', name: 'Inspiring Blow', dmg: '2W', hit: [{ on: 'alliesNear', incSelf: true, t: 'heal', amt: (B, u) => M(u, 'CHA') + 3 }] }),
+    melee({ id: 'w_inspblow', name: 'Inspiring Blow', dmg: '2W', hit: [{ on: 'alliesNear', incSelf: true, t: 'temp', revive: true, amt: (B, u) => M(u, 'CHA') + 3 + u.level }], text: 'On a hit, you and allies within 5 gain CHA + 3 + level temp HP; dying allies rise at 1 HP.' }),
   ]);
   add('warlord', 'daily1', [
     melee({ id: 'w_bastion', name: 'Bastion Formation', dmg: '2W', miss: 'half', eff: [{ on: 'alliesNear', incSelf: true, t: 'cond', c: 'defBonus', amt: 1, dur: 'enc', label: '+1 defenses' }, { on: 'alliesNear', incSelf: true, t: 'temp', amt: 5 }] }),
-    melee({ id: 'w_lead', name: 'Lead the Charge', intent: 'mixed', dmg: '2W', miss: 'half', hit: [buffAlliesVs(2, 'enc')] }),
+    // the offensive twin of Bastion Formation: same shape (party-wide buff win or lose), but attack instead of defense
+    melee({ id: 'w_lead', name: 'Lead the Charge', intent: 'mixed', dmg: '3W', miss: 'half', hit: [buffAlliesVs(2, 'enc')], eff: [{ on: 'alliesNear', incSelf: true, t: 'cond', c: 'atkBonus', amt: 1, dur: 'enc', label: '+1 to attacks' }], text: 'Win or lose, you and allies within 5 gain +1 to attacks for the fight. On a hit, allies gain +2 more against the target.' }),
   ]);
   add('warlord', 'daily5', [
     { id: 'w_grand', name: 'Grand Command', tgt: 'closeBurst', size: 5, targets: 'ally', noProvoke: true, text: 'Up to three allies within 5 each make a basic attack (+2) against an enemy they can reach.', after: function* (B, u, ts) { let n = 0; for (const a of ts) { if (n >= 3) break; const e = E().enemiesOf(B, a).filter(e => a.powers.some(p => (p.basicMelee || p.basicRanged) && E().validTarget(B, a, p, e))).sort((x, y) => x.hp - y.hp)[0]; if (e) { n++; yield* E().grantAttack(B, u, a, e, { atk: 2 }); } } } },
-    melee({ id: 'w_victory', name: 'Victory Surge', dmg: '2W', eff: [{ on: 'alliesNear', incSelf: true, t: 'heal', amt: 'surgeValue' }], text: 'Every ally within 5 heals as if spending a surge (without spending one).' }),
+    melee({ id: 'w_victory', name: 'Rallying Triumph', dmg: '2W', eff: [{ on: 'alliesNear', incSelf: true, t: 'temp', revive: true, amt: 'surgeValue' }], text: 'Win or lose, you and every ally within 5 gain temp HP equal to their surge value; dying allies rise at 1 HP.' }),
   ]);
   add('warlord', 'util2', [
     { id: 'w_orders', name: 'Quick Orders', action: 'minor', tgt: 'ranged', range: 5, targets: 'ally', noProvoke: true, hit: [{ t: 'shift', n: 2 }] },
@@ -519,7 +524,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           case 'ongoing': return `ongoing ${e.amt} damage (save ends)`;
           case 'mark': return 'marked' + dur;
           case 'heal': return `${who} ${e.surge ? 'spends a surge' : 'heals'}`;
-          case 'temp': return `${who} gains temp HP`;
+          case 'temp': return `${who} gains temp HP${e.revive ? ' (revives the dying)' : ''}`;
           case 'shift': return `${who} shifts ${e.n}`;
           case 'teleport': return `teleport ${e.n}`;
           case 'swap': return 'swap places';

@@ -149,7 +149,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           if (e.surge && t.surges <= 0) v -= 10;
         } else if (e.t === 'cond' && e.c === 'atkBonus') v += e.dur === 'enc' ? 5 : 2;
         else if (e.t === 'save') v += t.conds.some(c => c.dur === 'save' && c.c !== 'ongoing' || c.c === 'ongoing') ? 6 : 0;
-        else if (e.t === 'temp') v += t.hp < t.maxHp * 0.7 ? 3 : 1;
+        else if (e.t === 'temp') v += e.revive && E().isDying(t) ? 40 : t.hp < t.maxHp * 0.7 ? 3 : 1;
         else if (e.t === 'shift') v += 0;
       }
     }
@@ -251,6 +251,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       if ((p.action || 'standard') !== 'minor' || !E().canUse(B, u, p)) continue;
       if (!E().canSpend(u, 'minor')) return;
       // keep at least the standard for attacks: canSpend with minor uses minor first
+      const rally = p.hit && p.hit[0].t === 'temp' && p.hit[0].revive;
       if (u.act.minor <= 0 && !(p.uses || p.hit && p.hit.some(e => e.t === 'heal'))) continue;
       let val = 0, aim = null;
       if (p.id === 'batch') { val = B.units.filter(x => !x.dead && x.id === 'gingerbread').length < 6 ? 10 : 0; aim = {}; }
@@ -258,6 +259,13 @@ var G = (typeof G !== 'undefined') ? G : {};
         const cands = E().alliesOf(B, u, true).filter(a => !a.object && E().validTarget(B, u, p, a));
         const dying = cands.find(a => E().isDying(a));
         const hurt = cands.filter(a => a.hp < a.maxHp * 0.45 && a.surges > 0).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
+        const t = dying || hurt;
+        if (t) { val = 20; aim = { unit: t }; }
+      } else if (p.uses && rally) {
+        // temp HP: save the dying, else shore up whoever is hurt and not already buffered
+        const cands = E().alliesOf(B, u, true).filter(a => !a.object && E().validTarget(B, u, p, a));
+        const dying = cands.find(a => E().isDying(a));
+        const hurt = cands.filter(a => a.hp < a.maxHp * 0.6 && a.tempHp < 4).sort((a, b) => a.hp / a.maxHp - b.hp / b.maxHp)[0];
         const t = dying || hurt;
         if (t) { val = 20; aim = { unit: t }; }
       } else if (p.id === 'rally') {

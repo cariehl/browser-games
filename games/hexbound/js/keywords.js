@@ -35,7 +35,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     oa: { name: 'Opportunity attack', cls: 'rule', match: 'opportunity attacks?|provokes?', text: 'A free melee basic attack against an adjacent enemy that leaves your reach, or that makes a ranged or area attack next to you. Shifting doesn\'t provoke.' },
     shift: { name: 'Shift', cls: 'rule', match: 'shifts?', text: 'Move 1 hex carefully. Shifting never provokes opportunity attacks.' },
     forced: { name: 'Push, pull, slide', cls: 'rule', match: 'push(?: \\d+)?|pull(?: \\d+)?|slide(?: \\d+)?', text: 'Forced movement. Push moves the target away from you, pull moves it closer, and slide moves it anywhere. It doesn\'t provoke opportunity attacks, and can shove a target into hazards.' },
-    surge: { name: 'Healing surge', cls: 'heal', match: '(?:healing )?surges?', text: 'Each hero has a few per fight. Spending one heals a quarter of max HP. Second Wind and most leader heals spend one.' },
+    surge: { name: 'Healing surge', cls: 'heal', match: '(?:healing )?surges?', text: 'Each hero has a few per fight. Spending one heals a quarter of max HP. Second Wind and Cleric heals spend one; Warlord rallies give temporary HP instead.' },
     temp: { name: 'Temporary HP', cls: 'heal', match: 'temp(?:orary)? hp', text: 'A buffer that absorbs damage before real HP. It doesn\'t stack: a new grant replaces the old one if it\'s bigger.' },
     crit: { name: 'Critical hit', cls: 'good', match: 'crit(?:ical hit)?s?|natural 20', text: 'A natural 20 always hits and deals maximum damage. Heroes earn Momentum from crits.' },
     momentum: { name: 'Momentum', cls: 'good', match: 'momentum', text: 'A party resource earned by kills and critical hits. Spend 2 to reroll a missed attack.' },

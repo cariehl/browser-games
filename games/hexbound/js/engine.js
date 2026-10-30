@@ -371,6 +371,19 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (!powerReady(B, u, p)) return false;
     return canSpend(u, p.action || 'standard');
   }
+  // is there anything u could still spend a minor action on? Self powers count as soon as they're
+  // ready, close bursts need someone inside them, single-target powers need someone valid to aim at,
+  // and aimed areas always count (too many aim points to rule out). Second Wind counts when it's a minor.
+  function hasMinorUse(B, u) {
+    if (!canAct(u) || !canSpend(u, 'minor')) return false;
+    if (u.secondWindAction === 'minor' && !u.used.__sw && u.surges > 0) return true;
+    const aimable = (p) => {
+      if (p.tgt === 'closeBurst') return areaTargets(B, u, p, areaHexes(B, u, p, u.pos)).length > 0;
+      if (isArea(p) || powerRange(u, p).kind === 'self') return true;
+      return B.units.some(t => !t.dead && validTarget(B, u, p, t));
+    };
+    return u.powers.some(p => (p.action || 'standard') === 'minor' && canUse(B, u, p) && aimable(p));
+  }
 
   // ---------- Movement ----------
   // can u's space be at h while moving? (blocked terrain or a hostile body in the way)
@@ -756,7 +769,12 @@ var G = (typeof G !== 'undefined') ? G : {};
           if (e.surge) spendSurge(B, u, s, bonus); else heal(B, u, s, e.amt === 'surgeValue' ? s.surgeValue + bonus : num(e.amt) + bonus);
           break;
         }
-        case 'temp': giveTemp(B, s, num(e.amt)); break;
+        case 'temp': {
+          // revive: a dying target is lifted to 1 HP before the buffer goes on (temp HP alone can't wake them)
+          if (e.revive && isDying(s)) heal(B, u, s, 1);
+          giveTemp(B, s, e.amt === 'surgeValue' ? s.surgeValue : num(e.amt));
+          break;
+        }
         case 'dmg': yield* dealDamage(B, u, s, num(e.amt), { dtype: e.dtype }); break;
         case 'shift': { // subject shifts n: chosen by controller of u
           if (!canAct(s) && s !== u) break;
@@ -1077,13 +1095,16 @@ var G = (typeof G !== 'undefined') ? G : {};
     log(B, 'Roll for initiative! ' + entries.filter(e => !e.second).map(e => `${e.u.name} ${e.init}`).join(', '), 'round');
     fx(B, { t: 'initiative', rolls });
   }
-  // reinforcements roll their own initiative and slot into the order; anyone placed ahead of the
-  // current turn waits for next round
+  // reinforcements roll their own initiative and slot into the order, but never act in the round
+  // they arrive: mid-round arrivals wait for next round. Ones that arrive as a round opens (before
+  // anyone has acted in it) take part in that round.
   function addToInitiative(B, u) {
     const r = initRoll(B, u);
     let i = B.order.findIndex(e => e.init < u.init);
     if (i < 0) i = B.order.length;
-    B.order.splice(i, 0, { u, init: u.init });
+    const ent = { u, init: u.init };
+    if (B.turnIdx >= 0) ent.joinRound = (B.round || 1) + 1;
+    B.order.splice(i, 0, ent);
     if (i <= B.turnIdx) B.turnIdx++;
     log(B, `${u.name} rolls initiative: ${u.init}.`, 'round');
     return r;
@@ -1116,6 +1137,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       const ent = B.order[B.turnIdx];
       const u = ent.u;
       if (u.dead) continue;
+      if (ent.joinRound > B.round) continue;
       if (ent.second && traitSum(B, u, 'skipSecond')) continue;
       B.active = u; B.activeEntry = ent;
       const ok = yield* startTurn(B, u, ent);
@@ -1249,7 +1271,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     validTarget, areaHexes, areaTargets, isArea, canSpend, spend, canUse, powerReady, reach, pathFrom, freeHexesWithin,
     udist, hdist, footprint, occupies, canPass, moveLeft, commitMove, canUndoMove, undoMove, chargePath,
     moveAlong, forcedMove, forcedOptions, dealDamage, heal, spendSurge, giveTemp, attackRoll, applyEffect, savingThrows,
-    usePower, doMove, doCharge, chargeOptions, secondWind, actionPoint, startBattle, nextTurn, startTurn, endTurn, checkEnd,
+    usePower, doMove, doCharge, chargeOptions, secondWind, actionPoint, hasMinorUse, startBattle, nextTurn, startTurn, endTurn, checkEnd,
     runAuto, gainMomentum, grantAttack, kill, enterHex, isHostile,
   };
 })();

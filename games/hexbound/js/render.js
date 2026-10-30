@@ -594,7 +594,12 @@ var G = (typeof G !== 'undefined') ? G : {};
     }
     // zones & telegraphs always visible
     if (B) {
-      for (const z of B.zones) for (const h of z.hexes) { const m = hlMeshes.get(Hex.hk(h)); if (m && !m.visible) { m.visible = true; m.userData.kind = 'zone'; m.material.color.setHex(z.color || 0x8bd448); m.material.opacity = 0.32; m.userData.edge.material.opacity = 0.3; } }
+      // under a pale planning overlay (move reach, power range) the zone keeps its own outline so it still reads
+      for (const z of B.zones) for (const h of z.hexes) {
+        const m = hlMeshes.get(Hex.hk(h)); if (!m) continue;
+        if (!m.visible) { m.visible = true; m.userData.kind = 'zone'; m.material.color.setHex(z.color || 0x8bd448); m.material.opacity = 0.32; m.userData.edge.material.color.setHex(z.color || 0x8bd448); m.userData.edge.material.opacity = 0.3; }
+        else if (['reach', 'dash', 'range_help', 'range_harm', 'range_mixed'].includes(m.userData.kind)) { m.userData.edge.material.color.setHex(z.color || 0x8bd448); m.userData.edge.material.opacity = 0.95; }
+      }
       // a telegraphed slam outranks every planning overlay except the hovered path, hovered hex and area preview
       for (const tg of B.telegraphs) for (const h of tg.hexes) { const m = hlMeshes.get(Hex.hk(h)); if (m && !['path', 'hover', 'area', 'area_help', 'area_harm', 'choice'].includes(m.userData.kind)) { m.visible = true; m.userData.kind = 'telegraph'; m.material.color.setHex(0xff1a1a); m.material.opacity = 0.45; m.userData.edge.material.color.setHex(0xff1a1a); m.userData.edge.material.opacity = 0.9; } }
     }

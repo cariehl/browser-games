@@ -105,7 +105,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       <p>Flank an enemy (an ally directly opposite you — gold hexes while moving), or hit enemies that are prone, dazed, stunned or exposed. Rogues deal big Sneak Attack damage with it, and their <b>First Strike</b> gives them advantage against any enemy that hasn't had a turn yet.</p>
       </div><div>
       <h4>Staying alive</h4>
-      <p>Heroes have <b>healing surges</b>: Second Wind (once per fight) and leader heals spend one to restore ¼ of max HP. At 0 HP you fall <b>dying</b> and roll death saves (10+ holds on, a natural 1 counts as two failures); three failures and you're gone. Being hit while dying is a failure too, a crit is two. Enemies who step out of a hero's reach provoke an opportunity attack just like heroes do. Any heal brings you back.</p>
+      <p>Heroes have <b>healing surges</b>: Second Wind (once per fight) and Cleric heals spend one to restore ¼ of max HP. Warlords rally instead: Inspiring Word grants <b>temporary HP</b> without spending a surge. At 0 HP you fall <b>dying</b> and roll death saves (10+ holds on, a natural 1 counts as two failures); three failures and you're gone. Being hit while dying is a failure too, a crit is two. Enemies who step out of a hero's reach provoke an opportunity attack just like heroes do. Any heal brings you back, and so does a Warlord's rally.</p>
       <p><b>Action Point</b>: once per fight, take an extra standard action. <b>Momentum</b> (◆) is earned by kills and crits; spend 2 to reroll a missed attack.</p>
       <h4>Enemies</h4>
       <p><b>Minions</b> die to any hit but ignore damage on a miss. <b>Marked</b> creatures take −2 attacking anyone but whoever marked them, and Fighters punish them. Watch for hazards — fire, frosting, exploding barrels — and push enemies into them!</p>
@@ -260,9 +260,12 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (!u) return;
     if (u.dead || E().isDying(u) || !E().canAct(u)) return endHeroTurn();
     const A = u.act;
-    const anything = E().canSpend(u, 'minor') || E().canSpend(u, 'move') || E().canSpend(u, 'standard');
-    if (!anything && !E().canUndoMove(u) && G.Settings.autoEndTurn) { await sleep(450); return endHeroTurn(); }
-    if (u.moving && E().moveLeft(u, u.moving.kind) > 0) return setMode(u.moving.kind);
+    // a leftover minor only keeps the turn open if something can use it (standard and move actions
+    // can always be spent: moving, standing, or converted down to a minor)
+    const anything = E().canSpend(u, 'move') || E().canSpend(u, 'standard') || E().hasMinorUse(B, u);
+    const stepsLeft = u.moving && E().moveLeft(u, u.moving.kind) > 0;
+    if (!anything && !stepsLeft && !E().canUndoMove(u) && G.Settings.autoEndTurn) { await sleep(450); return endHeroTurn(); }
+    if (stepsLeft) return setMode(u.moving.kind);
     setMode(canMove(u, 'move') && !E().hasCond(u, 'prone') ? 'move' : 'idle');
   }
 
@@ -421,6 +424,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     }
     if (h && !tipHtml) { const t = E().terr(B, h); if (t && (t.hazard || t.difficult || t.block)) tipHtml = `<b>${t.name}</b><br><small>${t.block ? 'Blocks movement' + (t.los ? ' and line of sight' : '') : ''}${t.difficult ? 'Difficult terrain (2 movement)' : ''}${t.hazard ? (t.hazard.dmg ? ` · ${t.hazard.dmg} ${t.hazard.dtype} when entered or starting a turn here` : ` · ${t.hazard.cond} when entered`) : ''}</small>`; }
     if (h) { const tg = B.telegraphs.find(t => Hex.dist(t.center, h) <= t.size); if (tg) tipHtml += `<br><b class="warn">⚠ ${tg.name} lands here next Golem turn!</b>`; }
+    if (h) for (const z of B.zones.filter(z => z.hexes.some(x => Hex.eq(x, h)))) tipHtml += (tipHtml ? '<br>' : '') + zoneTip(z, u);
     R().setHighlights(hl);
     tip.innerHTML = tipHtml; tip.classList.toggle('on', !!tipHtml);
     keywordsFor(tip, 'left');
@@ -471,6 +475,13 @@ var G = (typeof G !== 'undefined') ? G : {};
     });
     const allies = ts.filter(t => t.side === u.side);
     return `<b>${esc(p.name)}</b> — ${foes.length ? foes.length + ' target' + (foes.length > 1 ? 's' : '') : (allies.length ? allies.length + ' all' + (allies.length > 1 ? 'ies' : 'y') : 'no targets')}<br><small>${lines.join('<br>')}</small>${p.dmg ? `<div>Damage ${dmgRange(u, p, ts[0] || u).mn}–${dmgRange(u, p, ts[0] || u).mx} each</div>` : ''}`;
+  }
+  // a lingering area (Acrid Fog etc.): who it hurts, how much, and how long it lasts
+  function zoneTip(z, viewer) {
+    const side = viewer ? viewer.side : 'hero';
+    const who = z.side === side ? 'Enemies who start a turn here take' : '<b class="warn">Start a turn here and you take</b>';
+    const left = z.rounds >= 99 ? '' : ` · ${z.rounds} round${z.rounds === 1 ? '' : 's'} left`;
+    return `<b>☁ ${esc(z.name)}</b><br><small>${z.dmg ? `${who} ${z.dmg} ${z.dtype || ''} damage` : 'A lingering effect'}${left}</small>`;
   }
   function heroLine(u) { const C = G.Build.CLASSES[u.cls], A = G.Build.ANCESTRIES[u.ancestry]; return `${A ? A.name + ' ' : ''}${C.subs[u.sub].name} ${C.name}`; }
   function unitTip(t) {
@@ -646,13 +657,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     const n = B.order.length, cur = B.order[B.turnIdx];
     const start = Math.max(0, B.turnIdx);
     const chip = (e) => `<span class="ichip ${e.u.side} ${cur === e ? 'cur' : ''} ${E().isDying(e.u) ? 'dying' : ''}" data-uid="${e.u.uid}" data-key="${chipKey(e)}" title="${esc(e.u.name)}${e.u.side === 'hero' ? ' · ' + esc(heroLine(e.u)) : ''} · initiative ${Math.round(e.init)}${e.second ? ' (second turn)' : ''}">${e.u.side === 'hero' ? G.ICON[e.u.cls] : monIcon(e.u)}<i>${esc(shortName(e.u.name))}</i><em class="ic-init">${Math.floor(e.init)}</em>${E().isDying(e.u) ? `<b class="ic-dying">☠${e.u.deathFails || 0}</b>` : ''}</span>`;
+    // the rest of this round, then next round up to the current slot. Units that joined this
+    // round (reinforcements, summons) sit out until next round, so they only show after the marker.
+    const waiting = (e) => e.joinRound > B.round;
+    const live = (e) => !e.u.dead;
     let html = '';
-    for (let k = 0; k < n; k++) {
-      const i = (start + k) % n;
-      if (k > 0 && i === 0) html += roundMark();
-      if (!B.order[i].u.dead) html += chip(B.order[i]);
-    }
-    if (start === 0 && n) html += roundMark();
+    for (let i = start; i < n; i++) if (live(B.order[i]) && !waiting(B.order[i])) html += chip(B.order[i]);
+    if (n) html += roundMark();
+    for (let i = 0; i < n; i++) if (live(B.order[i]) && (i < start || waiting(B.order[i]))) html += chip(B.order[i]);
     // FLIP: slide chips from where they were to where they now are
     const before = new Map([...box.querySelectorAll('.ichip')].map(c => [c.dataset.key, c.getBoundingClientRect().left]));
     box.innerHTML = html;
