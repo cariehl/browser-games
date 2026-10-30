@@ -36,12 +36,27 @@ const GITHUB_ICON = '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden
 
 // The Pages build sits in a folder of cariehl.github.io, and the site keeps Cooper's commentary
 // beside it at commentary/orbs.md. No file (or a server-hosted build) means no Commentary button.
+const COMMENTARY_URL = new URL('../commentary/orbs.md', location.href);
 let commentary: Promise<string | null> | null = null;
 function loadCommentary() {
-  commentary ??= fetch(new URL('../commentary/orbs.md', location.href), { cache: 'no-cache' })
+  commentary ??= fetch(COMMENTARY_URL, { cache: 'no-cache' })
     .then(async (r) => (r.ok && !(r.headers.get('content-type') ?? '').includes('text/html') ? (await r.text()).trim() || null : null))
     .catch(() => null);
   return commentary;
+}
+
+/** Renders the commentary, with relative image and link paths taken from the .md file's folder, not the page's. */
+function commentaryHTML(md: string) {
+  const tpl = document.createElement('template');
+  tpl.innerHTML = marked.parse(md, { async: false });
+  for (const [sel, attr] of [['img[src]', 'src'], ['a[href]', 'href']] as const) {
+    tpl.content.querySelectorAll(sel).forEach((el) => {
+      const v = el.getAttribute(attr)!;
+      if (!v.startsWith('#')) el.setAttribute(attr, new URL(v, COMMENTARY_URL).href);
+    });
+  }
+  tpl.content.querySelectorAll('a[href^="http"]').forEach((a) => { a.setAttribute('target', '_blank'); a.setAttribute('rel', 'noopener'); });
+  return tpl.innerHTML;
 }
 
 function onlineHTML() {
@@ -148,7 +163,7 @@ function menu() {
       const btn = ui.querySelector('.btn-commentary') as HTMLElement | null;
       if (!md || !btn) return;
       btn.classList.remove('hidden');
-      btn.onclick = () => modal(`<div class="commentary">${marked.parse(md, { async: false })}</div>`);
+      btn.onclick = () => modal(`<div class="commentary">${commentaryHTML(md)}</div>`);
     });
   }
   q('.btn-library').onclick = () => library('all');
