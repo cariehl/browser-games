@@ -162,6 +162,7 @@ Write-Host '  ===========================================================' -Fore
 if ($url) {
   Write-Host "  Friends join at:  $url" -ForegroundColor Green
   Write-Host '  (copied to the clipboard, and in the window title)' -ForegroundColor Green
+  Write-Host "  Or through GitHub Pages:  https://cariehl.github.io/orbs/?serverUrl=$url" -ForegroundColor Green
 }
 if ($url) { Write-Host "  You can also use:  http://localhost:$port/" -ForegroundColor Green }
 else { Write-Host "  Play at:  http://localhost:$port/  (friends on your network: http://<this PC's address>:$port/)" -ForegroundColor Green }
