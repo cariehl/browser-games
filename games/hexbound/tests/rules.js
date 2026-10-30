@@ -7,9 +7,9 @@ const E = G.Engine, Hex = G.Hex;
 const off = (c, r) => Hex.fromOffset(c, r);
 
 // a battle with only the units we name left on the map
-function arena(scenId, keep, seed = 7) {
+function arena(scenId, keep, seed = 7, party = 0) {
   const scen = G.Scenarios.find(s => s.id === scenId);
-  const B = E.newBattle(Object.assign({}, scen, { events: [] }), G.Build.PREMADES[0].heroes, { seed, quiet: true });
+  const B = E.newBattle(Object.assign({}, scen, { events: [] }), G.Build.PREMADES[party].heroes, { seed, quiet: true });
   E.runAuto(E.startBattle(B));
   const named = {};
   for (const [k, pick] of Object.entries(keep)) named[k] = B.units.find(pick);
@@ -211,6 +211,49 @@ test('enemy turns pause briefly between actions; the pause is not a choice', () 
   while (!r.done) { if (r.value && r.value.beat) beats++; r = gen.next(r.value && r.value.auto ? r.value.auto() : undefined); }
   acts = B.log.filter(l => /uses |moves|shifts/.test(l.msg)).length;
   assert(beats >= 1, 'a goblin that walks up and stabs gets a beat between the two');
+});
+
+test('reinforcements never act in the round they arrive', () => {
+  const { B } = arena('goblins', { hero: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+  B.round = 1; B.turnIdx = 0; B.active = B.order[0].u;
+  const spawned = [];
+  for (let i = 0; i < 4; i++) spawned.push(E.spawnMonster(B, 'goblin_cutter', off(8, 3 + i)));
+  const acted = new Set();
+  // play out the rest of round 1: none of the newcomers gets a turn
+  while (B.round === 1 && !B.over) { const u = E.runAuto(E.nextTurn(B)); if (!u || B.round > 1) break; acted.add(u); E.runAuto(E.endTurn(B, u)); }
+  assert(spawned.every(m => !acted.has(m)), 'no reinforcement acts in round 1');
+  // ...and in round 2 they take their turns like anyone else
+  const seen = new Set();
+  for (let k = 0; k < 20 && B.round === 2 && !B.over; k++) { const u = B.active; if (u) seen.add(u); E.runAuto(E.endTurn(B, u)); E.runAuto(E.nextTurn(B)); }
+  assert(spawned.some(m => seen.has(m)), 'reinforcements act from round 2');
+});
+
+test('Inspiring Word grants temp HP (no surge) three times and lifts the dying', () => {
+  const { B, wl, ally } = arena('goblins', { wl: u => u.cls === 'warlord', ally: u => u.cls === 'fighter' }, 7, 1);
+  wl.pos = off(4, 10); ally.pos = Hex.add(wl.pos, { q: 2, r: 0 }); B.active = wl;
+  const word = wl.powers.find(p => p.id === 'w_word');
+  assert.strictEqual(word.uses, 3);
+  ally.hp = 5; const surges = ally.surges;
+  E.runAuto(E.usePower(B, wl, word, { unit: ally }));
+  assert.strictEqual(ally.hp, 5, 'no real healing'); assert(ally.tempHp > 0, 'temp HP'); assert.strictEqual(ally.surges, surges, 'no surge spent');
+  ally.hp = -3; ally.tempHp = 0; E.addCond(B, ally, 'dying', { dur: 'enc' });
+  wl.act = { std: 1, move: 1, minor: 1 };
+  E.runAuto(E.usePower(B, wl, word, { unit: ally }));
+  assert(!E.isDying(ally), 'back on their feet'); assert.strictEqual(ally.hp, 1); assert(ally.tempHp > 0);
+});
+
+test('a leftover minor action only counts when something can spend it', () => {
+  // level 3, so the heroes have their utility powers
+  const { B, wiz } = arena('bandits', { wiz: u => u.cls === 'wizard' });
+  const { B: B2, ftr } = arena('bandits', { ftr: u => u.cls === 'fighter' });
+  ftr.act = { std: 0, move: 0, minor: 1 };
+  assert(E.hasMinorUse(B2, ftr), 'a dwarf can still Second Wind as a minor');
+  ftr.used.__sw = true;
+  assert(!E.hasMinorUse(B2, ftr), 'Taunting Shout with nobody in the burst is no use');
+  wiz.act = { std: 0, move: 0, minor: 1 };
+  assert(E.hasMinorUse(B, wiz), 'Arcane Ward is a minor');
+  wiz.used.z_ward = true; wiz.powers = wiz.powers.filter(p => p.id !== 'z_ward');
+  assert(!E.hasMinorUse(B, wiz));
 });
 
 console.log(`${n} rules checks passed`);
