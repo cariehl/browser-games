@@ -11,7 +11,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await page.click('[data-scen="0"]');
   await page.waitForTimeout(800);
   await page.click('#btn-begin');
-  const waitHero = async () => { for (let k = 0; k < 120; k++) { await page.waitForTimeout(250); const ok = await page.evaluate(() => G.App.B.over || (!!G.App.ui.hero && !G.App.ui.busy)); if (ok) return true; } return false; };
+  const waitHero = async () => { for (let k = 0; k < 120; k++) { await page.waitForTimeout(250); const ok = await page.evaluate(() => { const st = document.querySelector('#story-ok'); if (st && st.offsetParent) st.click(); return G.App.B.over || (!!G.App.ui.hero && !G.App.ui.busy); }); if (ok) return true; } return false; };
   const out = '/tmp/shots';
   for (let turn = 0; turn < 6; turn++) {
     if (!await waitHero()) { console.log('timeout waiting for hero'); break; }

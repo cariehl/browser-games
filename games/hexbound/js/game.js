@@ -8,6 +8,9 @@ var G = (typeof G !== 'undefined') ? G : {};
   const sleep = (ms) => new Promise(r => setTimeout(r, ms / (G.Settings.speed || 1)));
 
   G.Settings = Object.assign({ speed: 1, difficulty: 'normal', autoEndTurn: true }, (() => { try { return JSON.parse(localStorage.getItem('hexbound.settings') || '{}'); } catch (e) { return {}; } })());
+  const SPEEDS = [0.5, 1, 2, 3];
+  // older saves used 0.75 / 1.5 / 2.5: snap to the nearest current option
+  if (!SPEEDS.includes(+G.Settings.speed)) G.Settings.speed = SPEEDS.reduce((a, b) => Math.abs(b - G.Settings.speed) < Math.abs(a - G.Settings.speed) ? b : a, 1);
   const saveSettings = () => { try { localStorage.setItem('hexbound.settings', JSON.stringify(G.Settings)); } catch (e) { } };
   const DIFF = { story: { hp: 0.75, atk: -2, label: 'Story' }, normal: { hp: 1, atk: 0, label: 'Normal' }, hard: { hp: 1.25, atk: 1, label: 'Hard' } };
 
@@ -29,7 +32,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           <button class="btn big ghost" data-go="help">? How to Play</button>
         </div>
         <div class="menu-opts">
-          <label>Animation speed <select id="opt-speed">${[0.75, 1, 1.5, 2.5].map(s => `<option value="${s}" ${+G.Settings.speed === s ? 'selected' : ''}>${s}×</option>`).join('')}</select></label>
+          <label>Animation speed <select id="opt-speed">${SPEEDS.map(s => `<option value="${s}" ${+G.Settings.speed === s ? 'selected' : ''}>${s}×</option>`).join('')}</select></label>
           <label><input type="checkbox" id="opt-sound" ${G.Audio.muted ? '' : 'checked'}> Sound</label>
         </div>
         <p class="fine">Mechanics inspired by classic tabletop tactics (at-will / encounter / daily powers, four defenses, healing surges, marks). All names, classes and monsters are original to this prototype.</p>
@@ -136,7 +139,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       u.powers = u.powers.map(p => p.atk ? Object.assign({}, p, { atk: Object.assign({}, p.atk, { bonus: (p.atk.bonus || 0) + d.atk }) }) : p);
     }
     B.difficulty = G.Settings.difficulty;
-    logIdx = 0;
+    logIdx = 0; hiddenChips.clear();
     show('battle');
     buildHud();
     R().loadBattle(B);
@@ -151,7 +154,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     $('#hud-prompt').classList.add('on');
     $('#btn-begin').onclick = beginBattle;
     $('#hud-bottom').classList.remove('on');
-    story(`${scenRef.name}`, scenRef.intro);
+    story(`${scenRef.name}`, scenRef.intro, { sticky: true });
     refreshDeploy();
     updateHud();
   }
@@ -171,6 +174,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   async function beginBattle() {
     $('#hud-prompt').classList.remove('on');
+    dismissStory();
     ui.mode = null; R().setHighlights({}); R().setActive(null);
     await run(E().startBattle(B));
     updateHud();
@@ -214,9 +218,11 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (!u) break;
       if (u.side === 'hero' && !G.Settings.autoHeroes) { startHeroTurn(u); return; }
       updateHud();
-      await sleep(220);
+      // let the player see whose turn it is before the enemy acts
+      await sleep(1000);
+      if (B !== myB) return;
       await run(G.AI.takeTurn(B, u));
-      await sleep(120);
+      await sleep(250);
       await run(E().endTurn(B, u));
       if (B !== myB) return;
     }
@@ -243,7 +249,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (u.dead || E().isDying(u) || !E().canAct(u)) return endHeroTurn();
     const A = u.act;
     const anything = E().canSpend(u, 'minor') || E().canSpend(u, 'move') || E().canSpend(u, 'standard');
-    if (!anything && G.Settings.autoEndTurn) { await sleep(250); return endHeroTurn(); }
+    if (!anything && G.Settings.autoEndTurn) { await sleep(450); return endHeroTurn(); }
     setMode(E().canSpend(u, 'move') && E().speedOf(u) > 0 && !E().hasCond(u, 'prone') ? 'move' : 'idle');
   }
 
@@ -472,6 +478,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       <div id="hud-tip"></div>
       <div id="hud-prompt"></div>
       <div id="hud-banner"></div>
+      <div id="hud-turn"></div>
       <div id="hud-story"></div>
       <div id="hud-cam"><button class="btn sm ghost" data-cam="l" title="Rotate (Q)">⟲</button><button class="btn sm ghost" data-cam="r" title="Rotate (E)">⟳</button><button class="btn sm ghost" data-cam="i" title="Zoom in">＋</button><button class="btn sm ghost" data-cam="o" title="Zoom out">－</button><button class="btn sm ghost" data-cam="f" title="Focus active">◎</button></div>`;
     $('#hud-menu').onclick = battleMenu;
@@ -495,7 +502,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     m.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
       const a = b.dataset.a; m.remove();
       if (a === 'help') help();
-      if (a === 'speed') { const s = [0.75, 1, 1.5, 2.5]; G.Settings.speed = s[(s.indexOf(+G.Settings.speed) + 1) % s.length]; saveSettings(); battleMenu(); }
+      if (a === 'speed') { G.Settings.speed = SPEEDS[(SPEEDS.indexOf(+G.Settings.speed) + 1) % SPEEDS.length]; saveSettings(); battleMenu(); }
       if (a === 'auto') { G.Settings.autoEndTurn = !G.Settings.autoEndTurn; saveSettings(); battleMenu(); }
       if (a === 'ai') { G.Settings.autoHeroes = !G.Settings.autoHeroes; if (G.Settings.autoHeroes && ui.hero && !ui.busy) { const u = ui.hero; ui.hero = null; ui.mode = null; R().setHighlights({}); (async () => { await run(G.AI.takeTurn(B, u)); await run(E().endTurn(B, u)); advance(); })(); } }
       if (a === 'restart') { B.over = B.over || 'quit'; startBattle(scenRef, partyRef); }
@@ -517,14 +524,103 @@ var G = (typeof G !== 'undefined') ? G : {};
   function updateHud() { if (!B) return; updateTop(); updateParty(); updateBottom(); }
   function updateTop() {
     $('#hud-round').innerHTML = B.round ? `Round <b>${B.round}</b>` : 'Deploy';
-    const ents = B.order.filter(e => !e.u.dead);
-    const cur = B.order[B.turnIdx];
-    $('#hud-init').innerHTML = ents.map(e => `<span class="ichip ${e.u.side} ${cur === e ? 'cur' : ''} ${E().isDying(e.u) ? 'dying' : ''}" data-uid="${e.u.uid}" title="${esc(e.u.name)} (init ${Math.round(e.init)})">${e.u.side === 'hero' ? G.ICON[e.u.cls] : monIcon(e.u)}<i>${esc(shortName(e.u.name))}</i></span>`).join('');
-    $('#hud-init').querySelectorAll('.ichip').forEach(c => c.onclick = () => { const u = B.units.find(x => x.uid === +c.dataset.uid); if (u) R().focus(u.pos); });
-    const cur2 = $('#hud-init .cur'); if (cur2) cur2.scrollIntoView({ block: 'nearest', inline: 'center' });
+    renderTracker();
     const m = Math.floor(B.momentum);
     $('#hud-mom').innerHTML = `Momentum <b>${'◆'.repeat(m)}<span>${'◇'.repeat(Math.max(0, 6 - m))}</span></b>`;
   }
+  // Turn tracker: rotates so the acting unit is always leftmost, with a marker where the next round begins.
+  const chipKey = (e) => e.u.uid + (e.second ? 'b' : '');
+  const hiddenChips = new Set();
+  function renderTracker() {
+    const box = $('#hud-init'); if (!box) return;
+    const n = B.order.length, cur = B.order[B.turnIdx];
+    const start = Math.max(0, B.turnIdx);
+    const chip = (e) => `<span class="ichip ${e.u.side} ${cur === e ? 'cur' : ''} ${E().isDying(e.u) ? 'dying' : ''}" data-uid="${e.u.uid}" data-key="${chipKey(e)}" title="${esc(e.u.name)} · initiative ${Math.round(e.init)}${e.second ? ' (second turn)' : ''}">${e.u.side === 'hero' ? G.ICON[e.u.cls] : monIcon(e.u)}<i>${esc(shortName(e.u.name))}</i>${E().isDying(e.u) ? `<b class="ic-dying">☠${e.u.deathFails || 0}</b>` : ''}</span>`;
+    let html = '';
+    for (let k = 0; k < n; k++) {
+      const i = (start + k) % n;
+      if (k > 0 && i === 0) html += roundMark();
+      if (!B.order[i].u.dead) html += chip(B.order[i]);
+    }
+    if (start === 0 && n) html += roundMark();
+    // FLIP: slide chips from where they were to where they now are
+    const before = new Map([...box.querySelectorAll('.ichip')].map(c => [c.dataset.key, c.getBoundingClientRect().left]));
+    box.innerHTML = html;
+    const w = box.clientWidth;
+    box.querySelectorAll('.ichip').forEach(c => {
+      if (hiddenChips.has(c.dataset.key)) c.style.opacity = 0;
+      c.onclick = () => { const u = B.units.find(x => x.uid === +c.dataset.uid); if (u) R().focus(u.pos); };
+      const was = before.get(c.dataset.key); if (was == null || !c.animate) return;
+      const dx = was - c.getBoundingClientRect().left;
+      if (Math.abs(dx) < 2) return;
+      const dur = 380 / G.Settings.speed;
+      if (Math.abs(dx) > w * 0.5) c.animate([{ opacity: 0, transform: 'translateY(-14px)' }, { opacity: 1, transform: 'none' }], { duration: dur, easing: 'ease-out' });
+      else c.animate([{ transform: `translateX(${dx}px)` }, { transform: 'none' }], { duration: dur, easing: 'ease-out' });
+    });
+    box.scrollLeft = 0;
+  }
+  function roundMark() { return `<span class="iround" title="Round ${B.round + 1} starts here">R${B.round + 1}</span>`; }
+
+  // Fly a tracker chip in from a point on screen (above a unit) to its slot.
+  function flyChip(key, from) {
+    const c = $(`#hud-init .ichip[data-key="${key}"]`);
+    if (!c) { hiddenChips.delete(key); return Promise.resolve(); }
+    const reveal = () => { hiddenChips.delete(key); c.style.opacity = ''; };
+    const to = c.getBoundingClientRect();
+    if (!from || !c.animate) { reveal(); return Promise.resolve(); }
+    const fl = c.cloneNode(true); fl.classList.add('flying'); fl.classList.remove('cur');
+    Object.assign(fl.style, { position: 'fixed', left: to.left + 'px', top: to.top + 'px', width: to.width + 'px', margin: 0, opacity: 1, zIndex: 40 });
+    document.body.appendChild(fl);
+    const dx = from.x - (to.left + to.width / 2), dy = from.y - (to.top + to.height / 2);
+    const a = fl.animate([
+      { transform: `translate(${dx}px, ${dy}px) scale(1.3)`, opacity: 0.2 },
+      { transform: `translate(${dx * 0.5}px, ${dy * 0.5 - 40}px) scale(1.15)`, opacity: 1, offset: 0.45 },
+      { transform: 'none', opacity: 1 }], { duration: 700 / G.Settings.speed, easing: 'ease-in-out' });
+    return new Promise(res => { a.onfinish = () => { fl.remove(); reveal(); G.Audio.play('click'); res(); }; });
+  }
+  // A d20 that tumbles over a unit's head and lands on its initiative total.
+  function initDie(uid, total, ms) {
+    const p = R().unitPage(uid); if (!p) return null;
+    const el = document.createElement('div'); el.className = 'initdie'; el.style.left = p.x + 'px'; el.style.top = p.y + 'px';
+    el.innerHTML = `<span>?</span>`; document.body.appendChild(el);
+    const sp = el.firstChild; const t0 = performance.now();
+    const iv = setInterval(() => { if (performance.now() - t0 >= ms) { clearInterval(iv); sp.textContent = total; el.classList.add('landed'); } else sp.textContent = 1 + Math.floor(Math.random() * 20); }, 60);
+    return { el, pos: p, done: () => { clearInterval(iv); el.remove(); } };
+  }
+  async function rollInitiative(ev) {
+    turnBanner(null, 'Roll Initiative!');
+    G.Audio.play('dice');
+    for (const e of B.order) hiddenChips.add(chipKey(e));
+    updateTop();
+    await sleep(700);
+    const dice = new Map();
+    for (const r of ev.rolls) {
+      const d = initDie(r.u, r.init, 900 / G.Settings.speed);
+      if (d) dice.set(r.u, d);
+      await sleep(90);
+    }
+    await sleep(1500);
+    for (const e of B.order) {
+      const d = dice.get(e.u.uid);
+      flyChip(chipKey(e), d && d.pos);
+      if (d && !e.second) { d.el.classList.add('out'); setTimeout(d.done, 300); }
+      await sleep(220);
+    }
+    await sleep(600);
+    for (const d of dice.values()) d.done();
+    hiddenChips.clear();
+  }
+  async function joinInitiative(ev) {
+    const e = B.order.find(x => x.u.uid === ev.u); if (!e) return;
+    hiddenChips.add(chipKey(e)); renderTracker();
+    const d = initDie(ev.u, ev.init.init, 700 / G.Settings.speed);
+    G.Audio.play('dice');
+    await sleep(1300);
+    if (d) d.el.classList.add('out');
+    await flyChip(chipKey(e), d && d.pos);
+    if (d) d.done();
+  }
+
   function shortName(n) { return n.replace(/^(Goblin|Bandit|The) /, '').split(' ')[0]; }
   function monIcon(u) { return { bandit_thug: '👊', bandit_cutthroat: '🗡', bandit_xbow: '🏹', bandit_bruiser: '🔨', bandit_captain: '👑', goblin_boss: '👑', goblin_hexer: '🔮', goblin_slinger: '🪨' }[u.id] || { goblin: '👺', wolf: '🐺', human: '🗡', golem: '🎂', ginger: '🍪', puff: '☁', macaron: '🍬', roll: '🌀' }[u.look && u.look.kind] || '●'; }
   function updateParty() {
@@ -590,14 +686,37 @@ var G = (typeof G !== 'undefined') ? G : {};
     const b = $('#hud-banner'); if (!b) return;
     b.className = 'on ' + (u.side === 'hero' ? 'hero' : 'enemy') + ' k-' + kind;
     b.innerHTML = `<small>${esc(u.name)}</small>${esc(name)}`;
-    clearTimeout(powerBanner.t); powerBanner.t = setTimeout(() => b.classList.remove('on'), 1300 / G.Settings.speed);
+    clearTimeout(powerBanner.t); powerBanner.t = setTimeout(() => b.classList.remove('on'), 1800 / G.Settings.speed);
   }
-  function roundBanner(n) { story('Round ' + n, ''); }
-  function story(title, text) {
-    const s = $('#hud-story'); if (!s) return;
-    s.innerHTML = `<b>${esc(title)}</b>${text ? `<p>${esc(text)}</p>` : ''}`;
-    s.classList.add('on'); clearTimeout(story.t); story.t = setTimeout(() => s.classList.remove('on'), (text ? 3800 : 1200) / G.Settings.speed);
+  // "X's turn" banner. It never blocks input: heroes can act right away, and enemies wait a beat in advance().
+  function turnBanner(u, text) {
+    const b = $('#hud-turn'); if (!b) return;
+    b.className = 'on ' + (u ? u.side : 'neutral');
+    b.innerHTML = u ? `<small>Round ${B.round}</small>${esc(u.name)}'s turn` : esc(text);
+    b.style.animation = 'none'; void b.offsetWidth; b.style.animation = '';
+    clearTimeout(turnBanner.t); turnBanner.t = setTimeout(() => b.classList.remove('on'), 1600 / G.Settings.speed);
   }
+  function roundBanner(n) { turnBanner(null, 'Round ' + n); G.Audio.play('turn'); }
+  // Story text stays up until dismissed. Intro text is dismissed by Continue or Begin Battle; event text
+  // pauses the battle until Continue (or auto-continues after a reading delay while the AI plays the heroes).
+  let storyDone = null;
+  function story(title, text, opts = {}) {
+    const s = $('#hud-story'); if (!s) return Promise.resolve();
+    dismissStory();
+    s.innerHTML = `${title ? `<b>${esc(title)}</b>` : ''}${text ? `<p>${esc(text)}</p>` : ''}<div class="story-btns"><button class="btn sm" id="story-ok">Continue ▶</button></div>`;
+    s.classList.add('on', 'sticky');
+    return new Promise(res => {
+      storyDone = res;
+      $('#story-ok').onclick = () => { G.Audio.play('click'); dismissStory(); };
+      if (opts.autoMs) story.t = setTimeout(dismissStory, opts.autoMs / G.Settings.speed);
+    });
+  }
+  function dismissStory() {
+    clearTimeout(story.t);
+    const s = $('#hud-story'); if (s) s.classList.remove('on', 'sticky');
+    const r = storyDone; storyDone = null; if (r) r();
+  }
+  function storyEvent(text) { return story('', text, { autoMs: G.Settings.autoHeroes ? Math.max(2500, text.length * 55) : 0 }); }
   function momentumPulse() { const m = $('#hud-mom'); if (m) { m.classList.remove('pulse'); void m.offsetWidth; m.classList.add('pulse'); } updateTop(); }
 
   function finish() {
@@ -631,6 +750,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (!B || !$('#battle').classList.contains('on')) return;
     if (['INPUT', 'SELECT', 'TEXTAREA'].includes(e.target.tagName)) return;
     if (document.querySelector('.modal-bg')) { if (e.key === 'Escape') { const m = document.querySelector('.modal-bg'); if (!m.dataset.sticky) m.remove(); } return; }
+    if (storyDone && $('#hud-story.sticky') && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); dismissStory(); return; }
     const u = ui.hero;
     if (e.key === 'Escape') { if (ui.choice) { const s = $('#btn-skip'); if (s) s.click(); } else if (u) setMode('move'); else battleMenu(); return; }
     if (!u || ui.busy) return;
@@ -647,7 +767,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     G.Render.onHover((h) => hoverAt(h));
     G.Render.onClick((h) => onClick(h));
     G.Render.onRight(() => { if (ui.choice) return; if (ui.mode === 'deploy') { ui.deploySel = null; refreshDeploy(); return; } if (ui.hero) setMode('move'); });
-    G.UI = { powerBanner, roundBanner, story, momentumPulse, onRoll: (ev) => { } };
+    G.UI = { powerBanner, roundBanner, turnBanner, story, event: storyEvent, rollInitiative, joinInitiative, momentumPulse, onRoll: (ev) => { } };
     menu();
     // debug/testing hooks
     G.App = { startBattle, get B() { return B; }, get ui() { return ui; }, beginBattle, menu, selectScreen, go };
