@@ -172,7 +172,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         const opts = B().powersOf(h.cls, slot);
         let sel = [].concat(h.powers[slot] || []);
         if (!sel.length) sel = opts.slice(0, n).map(o => o.id);
-        return `<div class="pslot"><div class="pslot-h"><span class="lv">Lv ${lv}</span> ${label}</div><div class="pcards">${opts.map(o => `<button class="pcard k-${o.kind} ${sel.includes(o.id) ? 'on' : ''}" data-pow="${o.id}" data-slot="${slot}" data-n="${n}"><b>${o.name}</b>${B().describe(o).map(x => `<small>${esc(x)}</small>`).join('')}</button>`).join('')}</div></div>`;
+        return `<div class="pslot"><div class="pslot-h"><span class="lv">Lv ${lv}</span> ${label}</div><div class="pcards">${opts.map(o => `<button class="pcard k-${o.kind} ${sel.includes(o.id) ? 'on' : ''}" data-pow="${o.id}" data-slot="${slot}" data-n="${n}"><b>${o.name}</b>${B().describe(o).map(x => `<small class="${x === o.text ? 'pc-desc' : ''}">${esc(x)}</small>`).join('')}</button>`).join('')}</div></div>`;
       }).join('')}
       <div class="pclass"><b>Always known:</b> ${B().powersOf(h.cls, 'class').map(p => `<span class="tag" title="${esc(B().describe(p).join(' · '))}">${p.name}</span>`).join(' ')} ${B().ANCESTRIES[h.ancestry].power ? `<span class="tag" title="${esc(B().describe(B().POWERS[B().ANCESTRIES[h.ancestry].power]).join(' · '))}">${B().POWERS[B().ANCESTRIES[h.ancestry].power].name}</span>` : ''} <span class="tag">Melee/Ranged Basic Attack</span> <span class="tag">Second Wind</span> <span class="tag">Charge</span> <span class="tag">Action Point</span></div>
     </section>`;
