@@ -8,6 +8,9 @@ var G = (typeof G !== 'undefined') ? G : {};
   const melee = (o) => Object.assign({ tgt: 'melee', atk: { bonus: 0, vs: 'AC' } }, o);
   const ranged = (o) => Object.assign({ tgt: 'ranged', range: 10, atk: { bonus: 0, vs: 'AC' } }, o);
 
+  // true when the unit stands on or right beside a bridge tile
+  const onBridge = (B, u) => Hex.within(u.pos, 1).some(h => { const t = B.tiles.get(Hex.hk(h)); return t && t.terrain === 'bridge'; });
+
   G.Monsters = {
     // ---------------- Goblins (level 1 scenario) ----------------
     goblin_cutter: {
@@ -45,14 +48,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     warg: {
       name: 'Scrapjaw Warg', role: 'Skirmisher', level: 2, hp: 36, def: { AC: 16, Fort: 14, Ref: 15, Will: 13 }, speed: 8, init: 5,
       powers: [melee({ id: 'bite', name: 'Savage Bite', basicMelee: true, atk: { bonus: 7, vs: 'AC' }, dmg: '1d8+3' })],
-      traits: ['pounce'], look: { kind: 'wolf', color: 0x5d4e44, scale: 1 }, ai: 'skirmisher',
+      traits: ['pounce', 'growl'], look: { kind: 'wolf', color: 0x5d4e44, scale: 1 }, ai: 'skirmisher',
       desc: 'Bites with combat advantage knock the target prone.',
     },
     goblin_boss: {
       name: 'Grizzlenack the Bold', title: 'Goblin Warboss', role: 'Elite Soldier', level: 2, elite: true, hp: 70, def: { AC: 18, Fort: 15, Ref: 14, Will: 13 }, speed: 6, init: 4, saveBonus: 2, actionPoints: 1,
       powers: [
         melee({ id: 'cleaver', name: 'Big Cleaver', basicMelee: true, atk: { bonus: 7, vs: 'AC' }, dmg: '1d10+3', hit: [{ t: 'mark' }] }),
-        melee({ id: 'sweep', name: 'Bully Sweep', tgt: 'closeBurst', size: 1, recharge: 5, atk: { bonus: 5, vs: 'Fort' }, dmg: '1d8+3', targets: 'enemy', hit: [{ t: 'push', n: 1 }], bark: 'GET OFF MY BRIDGE!' }),
+        melee({ id: 'sweep', name: 'Bully Sweep', tgt: 'closeBurst', size: 1, recharge: 5, atk: { bonus: 5, vs: 'Fort' }, dmg: '1d8+3', targets: 'enemy', hit: [{ t: 'push', n: 1 }], bark: (B, u) => onBridge(B, u) ? 'GET OFF MY BRIDGE!' : 'OUTTA MY WAY, TALL-FOLK!' }),
       ],
       traits: ['goblinTactics', 'bossRally'], look: { kind: 'goblin', color: 0x4a6b1f, scale: 1.15, crown: true }, ai: 'soldier',
       barks: ['Who dares cross Grizzlenack\'s bridge?!', 'Toll is EVERYTHING you own!', 'Bah! Retreat is for cowards... and ME!'],
@@ -165,6 +168,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       },
     },
     caDamage: { dmgMod: (B, u, ctx) => ctx.ca ? E().rollDice(E().parseDice(G.Monsters[u.id].caDmg)).total : 0 },
+    growl: { onAttack: function* (B, u) { if (!u.growled) { u.growled = true; E().fx(B, { t: 'bark', u: u.uid, text: 'Grrr!' }); } } },
     pounce: { onHit: function* (B, u, t, p, ctx) { if (ctx.ca && !t.dead) { E().addCond(B, t, 'prone', { dur: 'enc', src: u.uid }); E().log(B, `${t.name} is dragged down!`, 'cond'); } } },
     mobAttack: { atkMod: (B, u, ctx) => ctx.target ? B.units.filter(o => o !== u && !o.dead && o.id === u.id && E().udist(o, ctx.target) === 1).length : 0 },
     hexerSwap: {

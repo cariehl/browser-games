@@ -636,6 +636,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     ctx.ca = ctx.ca != null ? ctx.ca : hasCA(B, u, t, ctx);
     const mk = condsOf(u, 'marked')[0];
     ctx.includesMarker = !mk || (ctx.allTargets || [t]).some(x => x.uid === mk.src);
+    yield* traitRun(B, u, 'onAttack', t, p, ctx);
     let ab = attackBonus(B, u, p, t, ctx);
     const vs = p.atk.vs;
     const dv = t.object ? (t.def[vs] || 8) : defense(B, t, vs, ctx);
@@ -846,7 +847,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     else if (aim.unit) targets = [aim.unit];
     log(B, `${u.name} uses ${p.name}.`, 'power');
     fx(B, { t: 'power', u: u.uid, name: p.name, kind: p.kind, side: u.side });
-    if (p.bark && u.barks) fx(B, { t: 'bark', u: u.uid, text: p.bark });
+    const bark = typeof p.bark === 'function' ? p.bark(B, u) : p.bark;
+    if (bark && u.barks) fx(B, { t: 'bark', u: u.uid, text: bark });
     // provoke: ranged or area attacks while threatened
     if (p.atk && (pr.kind === 'ranged' || pr.kind === 'areaBurst') && !p.noProvoke) {
       for (const e of threatening(B, u)) {

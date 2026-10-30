@@ -195,7 +195,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   add('cleric', 'class', [healWord('c_word', 'Healing Word', (B, u) => E().rollDice(E().parseDice('1d6')).total + M(u, 'WIS'))]);
   add('cleric', 'atwill', [
     impl({ id: 'c_lance', name: 'Lance of Dawn', range: 5, atk: { stat: 'WIS', vs: 'Ref' }, dmg: '1d6', dtype: 'radiant', hit: [{ on: 'allyNear', prefer: 'hurt', t: 'temp', amt: (B, u) => M(u, 'WIS') + 2 }], text: 'A wounded ally within 5 gains temporary HP.' }),
-    impl({ id: 'c_lantern', name: 'Lantern Bolt', atk: { stat: 'WIS', vs: 'Will' }, dmg: '1d8', dtype: 'radiant', hit: [buffAlliesVs(2)], text: 'Allies gain +2 to attack the target until the end of your next turn.' }),
+    impl({ id: 'c_lantern', name: 'Lantern Bolt', intent: 'mixed', atk: { stat: 'WIS', vs: 'Will' }, dmg: '1d8', dtype: 'radiant', hit: [buffAlliesVs(2)], text: 'Allies gain +2 to attack the target until the end of your next turn.' }),
     melee({ id: 'c_ward', name: 'Warding Strike', hit: [{ on: 'allyNear', t: 'cond', c: 'defBonus', amt: 2, label: '+2 defenses' }], text: 'An ally near the target gains +2 to all defenses.' }),
   ]);
   add('cleric', 'enc1', [
@@ -222,7 +222,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   // Warlord
   add('warlord', 'class', [healWord('w_word', 'Inspiring Word', (B, u) => E().rollDice(E().parseDice('1d6')).total + (u.traits.includes('inspiring') ? M(u, 'CHA') : 0))]);
   add('warlord', 'atwill', [
-    { id: 'w_rally', name: 'Rally the Blade', tgt: 'ranged', range: 10, targets: 'enemy', noProvoke: true, hit: [{ t: 'fn', fn: function* (B, u, t) { const a = allyCanAttack(B, u, t); if (!a) { E().log(B, 'No ally can reach!', 'miss'); return; } yield* E().grantAttack(B, u, a, t, { dmg: Math.max(1, M(u, 'INT')) }); } }], text: 'No attack of your own: the best-placed ally makes a basic attack on the target, +INT damage.', grant: true },
+    { id: 'w_rally', name: 'Rally the Blade', tgt: 'ranged', range: 10, targets: 'enemy', intent: 'mixed', noProvoke: true, hit: [{ t: 'fn', fn: function* (B, u, t) { const a = allyCanAttack(B, u, t); if (!a) { E().log(B, 'No ally can reach!', 'miss'); return; } yield* E().grantAttack(B, u, a, t, { dmg: Math.max(1, M(u, 'INT')) }); } }], text: 'No attack of your own: the best-placed ally makes a basic attack on the target, +INT damage.', grant: true },
     melee({ id: 'w_heart', name: 'Heartening Strike', hit: [{ on: 'allyNear', prefer: 'hurt', t: 'temp', amt: (B, u) => M(u, 'CHA') + 2 + Math.floor(u.level / 2) }] }),
     melee({ id: 'w_opening', name: 'Opening Gambit', hit: [{ t: 'cond', c: 'cagrant', label: 'exposed to all' }], text: 'Target grants combat advantage to everyone until end of your next turn.' }),
   ]);
@@ -236,7 +236,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   ]);
   add('warlord', 'daily1', [
     melee({ id: 'w_bastion', name: 'Bastion Formation', dmg: '2W', miss: 'half', eff: [{ on: 'alliesNear', incSelf: true, t: 'cond', c: 'defBonus', amt: 1, dur: 'enc', label: '+1 defenses' }, { on: 'alliesNear', incSelf: true, t: 'temp', amt: 5 }] }),
-    melee({ id: 'w_lead', name: 'Lead the Charge', dmg: '2W', miss: 'half', hit: [buffAlliesVs(2, 'enc')] }),
+    melee({ id: 'w_lead', name: 'Lead the Charge', intent: 'mixed', dmg: '2W', miss: 'half', hit: [buffAlliesVs(2, 'enc')] }),
   ]);
   add('warlord', 'daily5', [
     { id: 'w_grand', name: 'Grand Command', tgt: 'closeBurst', size: 5, targets: 'ally', noProvoke: true, text: 'Up to three allies within 5 each make a basic attack (+2) against an enemy they can reach.', after: function* (B, u, ts) { let n = 0; for (const a of ts) { if (n >= 3) break; const e = E().enemiesOf(B, a).filter(e => a.powers.some(p => (p.basicMelee || p.basicRanged) && E().validTarget(B, a, p, e))).sort((x, y) => x.hp - y.hp)[0]; if (e) { n++; yield* E().grantAttack(B, u, a, e, { atk: 2 }); } } } },
