@@ -34,6 +34,7 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
 ## Tests
 
 ```
+node tests/rules.js           # rules regression checks (line of sight, movement, charge, dying, Large creatures)
 node tests/sim.js 20          # headless AI-vs-AI balance runs for every scenario × premade party
 node tests/one.js golem 0 5   # one verbose battle log (scenario, party index, seed)
 node tests/shot.js /tmp/shots # Playwright screenshots of menu, builder and each battle

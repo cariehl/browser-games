@@ -12,7 +12,11 @@ var G = (typeof G !== 'undefined') ? G : {};
   // older saves used 0.75 / 1.5 / 2.5: snap to the nearest current option
   if (!SPEEDS.includes(+G.Settings.speed)) G.Settings.speed = SPEEDS.reduce((a, b) => Math.abs(b - G.Settings.speed) < Math.abs(a - G.Settings.speed) ? b : a, 1);
   const saveSettings = () => { try { localStorage.setItem('hexbound.settings', JSON.stringify(G.Settings)); } catch (e) { } };
-  const DIFF = { story: { hp: 0.75, atk: -2, label: 'Story' }, normal: { hp: 1, atk: 0, label: 'Normal' }, hard: { hp: 1.25, atk: 1, label: 'Hard' } };
+  const DIFF = {
+    story: { hp: 0.75, atk: -2, label: 'Story', desc: 'Enemies have 75% HP and −2 to hit.' },
+    normal: { hp: 1, atk: 0, label: 'Normal', desc: 'Enemies fight at full strength, as designed.' },
+    hard: { hp: 1.25, atk: 1, label: 'Hard', desc: 'Enemies have 125% HP and +1 to hit.' },
+  };
 
   // ================= Screens =================
   function show(id) {
@@ -60,7 +64,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         <div class="sel-opts">
           <label>Party <select id="sel-party">${parties.map((p, i) => `<option value="${i}" ${i === pIdx ? 'selected' : ''}>${esc(p.name)} — ${p.heroes.map(h => G.Build.CLASSES[h.cls].name).join(', ')}</option>`).join('')}</select></label>
           <button class="btn sm" id="sel-edit">Edit parties</button>
-          <span class="diff">${Object.entries(DIFF).map(([k, d]) => `<label class="radio ${G.Settings.difficulty === k ? 'on' : ''}"><input type="radio" name="diff" value="${k}" ${G.Settings.difficulty === k ? 'checked' : ''}>${d.label}</label>`).join('')}</span>
+          <span class="diff"><span class="diff-h">Difficulty</span>${Object.entries(DIFF).map(([k, d]) => `<label class="radio ${G.Settings.difficulty === k ? 'on' : ''}" title="${d.desc}"><input type="radio" name="diff" value="${k}" ${G.Settings.difficulty === k ? 'checked' : ''}>${d.label}</label>`).join('')}<small class="diff-note">${(DIFF[G.Settings.difficulty] || DIFF.normal).desc} Minions keep 1 HP.</small></span>
         </div>
         <div class="sel-party">${parties[pIdx].heroes.map(h => { const C = G.Build.CLASSES[h.cls]; const bad = G.validateHero(h); return `<div class="mini cls-${h.cls}"><span class="ico">${G.ICON[h.cls]}</span><b>${esc(h.name)}</b><small>${G.Build.ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name}</small>${bad.length ? `<em class="bad">${esc(bad[0])}</em>` : ''}</div>`; }).join('')}</div>
         <div class="scen-cards">${G.Scenarios.map((s, i) => `
@@ -94,7 +98,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       <div>
       <h4>Your turn</h4>
       <p>Each hero gets a <b>Standard</b>, a <b>Move</b> and a <b>Minor</b> action. You can trade down: a standard can be used as a move or minor, a move as a minor.</p>
-      <p><b>Move</b> up to your speed. Leaving a hex next to an enemy provokes an <b>opportunity attack</b> — path previews warn you (⚠). <b>Shift</b> 1 hex to step away safely. <b>Charge</b> moves and makes a basic attack (+1) as a single standard action.</p>
+      <p><b>Move</b> up to your speed, a few hexes at a time: click as many times as you like, <b>Undo</b> (Z) a step, then press <b>Done moving</b> (or just act). Stepping <i>out of</i> an enemy's reach provokes an <b>opportunity attack</b>; circling around it doesn't. Path previews warn you (⚠), and a step that provokes or hits a hazard can't be undone. <b>Shift</b> 1 hex to step away safely. <b>Charge</b> moves and makes a basic attack (+1) as a single standard action: click hexes to plot its route, then click the enemy.</p>
       <h4>Powers</h4>
       <p><span class="k k-atwill">At-Will</span> any time. <span class="k k-encounter">Encounter</span> once per fight. <span class="k k-daily">Daily</span> your big once-per-fight finisher. Attacks roll d20 + bonus against one of four defenses: <b>AC, Fortitude, Reflex, Will</b>.</p>
       <h4>Combat advantage (+2)</h4>
@@ -106,7 +110,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       <h4>Enemies</h4>
       <p><b>Minions</b> die to any hit but ignore damage on a miss. <b>Marked</b> creatures take −2 attacking anyone but whoever marked them, and Fighters punish them. Watch for hazards — fire, frosting, exploding barrels — and push enemies into them!</p>
       <h4>Controls</h4>
-      <p>Left-click: select / act · Right-click or Esc: cancel · Drag: pan · Right-drag or Q/E: rotate · Wheel: zoom · WASD: pan · 1–9: powers · X: shift · C: charge · Space: end turn</p>
+      <p>Left-click: select / act · Right-click or Esc: cancel · Drag: pan · Right-drag or Q/E: rotate · Wheel: zoom · WASD: pan · 1–9: powers · X: shift · C: charge · Z: undo move step · Space: end turn</p>
       </div></div>
       <div class="modal-btns"><button class="btn" data-close>Got it</button></div>`);
     return m;
@@ -147,10 +151,15 @@ var G = (typeof G !== 'undefined') ? G : {};
     deployPhase();
   }
 
-  function deployTiles() { return (B.spawns && B.spawns.hero) || []; }
+  // the starting zone: every open, non-hazard hex in the scenario's deploy rows
+  function deployTiles() {
+    const rows = scenRef.deployRows;
+    if (!rows) return (B.spawns && B.spawns.hero) || [];
+    return [...B.tiles.values()].filter(t => t.row >= rows[0] && t.row <= rows[1] && E().passable(B, t) && !E().TERRAIN[t.terrain].hazard).map(t => ({ q: t.q, r: t.r }));
+  }
   function deployPhase() {
     ui.mode = 'deploy';
-    $('#hud-prompt').innerHTML = `<b>Deploy your party.</b> Click a hero, then a green hex to move them. Swap by clicking another hero. <button class="btn sm" id="btn-begin">Begin Battle ▶</button>`;
+    $('#hud-prompt').innerHTML = `<b>Deploy your party.</b> Click a hero, then any green hex in your starting zone. Click another hero to swap. <button class="btn sm" id="btn-begin">Begin Battle ▶</button>`;
     $('#hud-prompt').classList.add('on');
     $('#btn-begin').onclick = beginBattle;
     $('#hud-bottom').classList.remove('on');
@@ -249,25 +258,54 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (u.dead || E().isDying(u) || !E().canAct(u)) return endHeroTurn();
     const A = u.act;
     const anything = E().canSpend(u, 'minor') || E().canSpend(u, 'move') || E().canSpend(u, 'standard');
-    if (!anything && G.Settings.autoEndTurn) { await sleep(450); return endHeroTurn(); }
-    setMode(E().canSpend(u, 'move') && E().speedOf(u) > 0 && !E().hasCond(u, 'prone') ? 'move' : 'idle');
+    if (!anything && !E().canUndoMove(u) && G.Settings.autoEndTurn) { await sleep(450); return endHeroTurn(); }
+    if (u.moving && E().moveLeft(u, u.moving.kind) > 0) return setMode(u.moving.kind);
+    setMode(canMove(u, 'move') && !E().hasCond(u, 'prone') ? 'move' : 'idle');
   }
 
   // ---- modes & highlights ----
   let reachCache = null;
+  // hexes left in the current move/shift: what's left of an open plan, or a fresh action's worth
+  function moveBudget(u, kind) {
+    const left = E().moveLeft(u, kind);
+    if (left != null) return left;
+    return kind === 'shift' ? 1 + (u.shiftBonus || 0) : E().speedOf(u);
+  }
+  function canMove(u, kind) {
+    if (E().speedOf(u) <= 0) return false;
+    const left = E().moveLeft(u, kind);
+    return left != null ? left > 0 : E().canSpend(u, 'move');
+  }
+  // Charge route plotted as legs of clicked hexes; returns where the next leg starts and what's reachable from there
+  function chargePlan(u) {
+    const legs = ui.chargeLegs || [];
+    const last = legs[legs.length - 1];
+    const spent = legs.reduce((t, l) => t + l.cost, 0);
+    const r = E().reach(B, u, E().speedOf(u) - spent, 'move', last ? { from: last.end, provBy: last.provBy } : {});
+    return { spent, r, path: [u.pos].concat(...legs.map(l => l.hexes)) };
+  }
+  function chargeRouteTo(u, t, plan) {
+    let best = null;
+    for (const v of plan.r.values()) {
+      if (v.noEnd || plan.spent + v.cost < 2 || E().udist(u, t, v.h) !== 1) continue;
+      if (!best || v.prov < best.prov || (v.prov === best.prov && v.cost < best.cost)) best = v;
+    }
+    return best && { path: plan.path.concat(E().pathFrom(best).slice(1)), prov: best.prov, provBy: best.provBy };
+  }
   function setMode(m, power) {
+    if (m !== 'charge') ui.chargeLegs = null;
     ui.mode = m; ui.power = power || null; reachCache = null;
     const u = ui.hero;
     if (!u) { R().setHighlights({}); return; }
     const hl = {};
     R().setTargetable(null);
-    if (m === 'move' && E().canSpend(u, 'move')) {
-      reachCache = E().reach(B, u, E().speedOf(u), 'move');
+    if (m === 'move' && canMove(u, 'move')) {
+      reachCache = E().reach(B, u, moveBudget(u, 'move'), 'move');
       hl.reach = [...reachCache.values()].filter(n => !n.noEnd && n.cost > 0).map(n => n.h);
       hl.flank = hl.reach.filter(h => E().enemiesOf(B, u).some(e => !e.object && Hex.dist(e.pos, h) === 1 && E().flanking(B, u, e, h)));
       // dash preview: standard used as a second move isn't auto-computed; show threatened danger
-    } else if (m === 'shift') {
-      reachCache = E().reach(B, u, 1 + (u.shiftBonus || 0), 'shift');
+    } else if (m === 'shift' && canMove(u, 'shift')) {
+      reachCache = E().reach(B, u, moveBudget(u, 'shift'), 'shift');
       hl.shift = [...reachCache.values()].filter(n => !n.noEnd && n.cost > 0).map(n => n.h);
     } else if (m === 'power') {
       const p = power;
@@ -277,12 +315,16 @@ var G = (typeof G !== 'undefined') ? G : {};
         else hl.dash = Hex.within(u.pos, p.size).filter(h => B.tiles.has(Hex.hk(h)));
       } else if (p.tgt !== 'self') {
         const ts = B.units.filter(t => !t.dead && E().validTarget(B, u, p, t));
-        hl[(p.targets || 'enemy') === 'enemy' ? 'target' : 'ally'] = ts.map(t => t.pos);
+        hl[(p.targets || 'enemy') === 'enemy' ? 'target' : 'ally'] = ts.flatMap(t => E().footprint(t));
         R().setTargetable(ts.map(t => t.uid));
       }
     } else if (m === 'charge') {
-      const ts = E().chargeOptions(B, u);
-      hl.target = ts.map(t => t.pos); R().setTargetable(ts.map(t => t.uid));
+      const plan = chargePlan(u);
+      const ts = E().enemiesOf(B, u).filter(t => chargeRouteTo(u, t, plan));
+      ui.chargeCache = plan;
+      hl.dash = [...plan.r.values()].filter(n => !n.noEnd && n.cost > 0).map(n => n.h);
+      if (plan.path.length > 1) hl.path = plan.path.slice(1);
+      hl.target = ts.flatMap(t => E().footprint(t)); R().setTargetable(ts.map(t => t.uid));
     }
     ui.baseHL = hl;
     R().setHighlights(hl);
@@ -331,7 +373,25 @@ var G = (typeof G !== 'undefined') ? G : {};
           tipHtml = targetPreview(u, p, occ);
         }
       }
-      if (ui.mode === 'charge' && occ && E().chargeOptions(B, u).includes(occ)) { hl.hover = [h]; tipHtml = targetPreview(u, Object.assign({}, u.powers.find(p => p.basicMelee)), occ, { charge: true }); }
+      if (ui.mode === 'charge' && ui.chargeCache) {
+        const plan = ui.chargeCache;
+        const route = occ && occ.side !== u.side && !occ.object ? chargeRouteTo(u, occ, plan) : null;
+        if (route) {
+          hl.hover = E().footprint(occ); hl.path = route.path.slice(1);
+          const end = route.path[route.path.length - 1];
+          const home = u.pos; u.pos = end; // preview the swing from where the charge ends
+          tipHtml = targetPreview(u, Object.assign({}, u.powers.find(p => p.basicMelee)), occ, { charge: true });
+          u.pos = home;
+          if (route.prov) tipHtml += `<div class="warn">⚠ Route provokes ${route.prov} opportunity attack${route.prov > 1 ? 's' : ''}</div>`;
+        } else {
+          const n = plan.r.get(Hex.hk(h));
+          if (n && !n.noEnd && n.cost > 0) {
+            hl.path = plan.path.slice(1).concat(E().pathFrom(n).slice(1));
+            tipHtml = `<b>Charge route</b><br><small>Click to add this leg (${plan.spent + n.cost}/${E().speedOf(u)} hexes), then click an enemy. Z undoes a leg.</small>`;
+            if (n.prov) tipHtml += `<br><b class="warn">⚠ Provokes ${n.prov} opportunity attack${n.prov > 1 ? 's' : ''}</b>`;
+          }
+        }
+      }
       if (!tipHtml && occ) tipHtml = unitTip(occ);
     } else if (h) {
       const occ = E().unitAt(B, h); if (occ) tipHtml = unitTip(occ);
@@ -404,7 +464,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (ui.mode === 'move' || ui.mode === 'shift') {
       const n = reachCache && reachCache.get(Hex.hk(h));
       if (n && !n.noEnd && n.cost > 0) {
-        await run(E().doMove(B, u, h, ui.mode === 'shift' ? 'shift' : 'move'));
+        await run(E().doMove(B, u, h, ui.mode === 'shift' ? 'shift' : 'move', { plan: true }));
         return afterAction();
       }
       return;
@@ -423,10 +483,20 @@ var G = (typeof G !== 'undefined') ? G : {};
       await run(E().usePower(B, u, p, aim));
       return afterAction();
     }
-    if (ui.mode === 'charge' && occ && E().chargeOptions(B, u).includes(occ)) {
-      R().setTargetable(null);
-      await run(E().doCharge(B, u, occ));
-      return afterAction();
+    if (ui.mode === 'charge' && ui.chargeCache) {
+      const plan = ui.chargeCache;
+      const route = occ && occ.side !== u.side && !occ.object ? chargeRouteTo(u, occ, plan) : null;
+      if (route) {
+        R().setTargetable(null); ui.chargeLegs = null;
+        await run(E().doCharge(B, u, occ, route.path));
+        return afterAction();
+      }
+      const n = plan.r.get(Hex.hk(h));
+      if (n && !n.noEnd && n.cost > 0) {
+        (ui.chargeLegs = ui.chargeLegs || []).push({ hexes: E().pathFrom(n).slice(1), end: n.h, cost: n.cost, provBy: n.provBy });
+        G.Audio.play('click');
+        setMode('charge');
+      }
     }
   }
   function askChoice(ch) {
@@ -461,6 +531,13 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   async function doSecondWind() { const u = ui.hero; if (!u || ui.busy) return; await run(E().secondWind(B, u)); afterAction(); }
   async function doActionPoint() { const u = ui.hero; if (!u || ui.busy) return; await run(E().actionPoint(B, u)); afterAction(); }
+  async function doUndoMove() {
+    const u = ui.hero; if (!u || ui.busy) return;
+    if (ui.mode === 'charge' && ui.chargeLegs && ui.chargeLegs.length) { ui.chargeLegs.pop(); setMode('charge'); return; }
+    if (!E().canUndoMove(u)) return;
+    await run(E().undoMove(B, u)); afterAction();
+  }
+  function doneMoving() { const u = ui.hero; if (!u || ui.busy || !u.moving) return; E().commitMove(u); afterAction(); }
   async function doStand() { const u = ui.hero; if (!u || ui.busy) return; await run(E().doMove(B, u, u.pos)); afterAction(); }
 
   // ================= HUD =================
@@ -643,7 +720,9 @@ var G = (typeof G !== 'undefined') ? G : {};
     bot.classList.add('on');
     const A = u.act;
     const pip = (k, n, l) => `<span class="pip ${n > 0 && !(A.single && A.spent) ? '' : 'off'}" title="${l}">${k}</span>`;
-    const canMove = E().canSpend(u, 'move') && !ui.busy;
+    const moveAct = E().canSpend(u, 'move') && !ui.busy;
+    const moveOn = (kind) => canMove(u, kind) || (u.moving && u.moving.kind !== kind && E().canSpend(u, 'move') && E().speedOf(u) > 0);
+    const left = (kind) => { const n = E().moveLeft(u, kind); return n != null ? ` (${n} left)` : ''; };
     const prone = E().hasCond(u, 'prone');
     const powers = u.powers.filter(p => !p.passive);
     const keyOf = (i) => i < 9 ? String(i + 1) : '';
@@ -652,8 +731,10 @@ var G = (typeof G !== 'undefined') ? G : {};
         <div class="hb-name cls-${u.cls}">${G.ICON[u.cls]} ${esc(u.name)}</div>
         <div class="hb-acts">${pip('Standard', A.std)}${pip('Move', A.move)}${pip('Minor', A.minor)}${A.single ? '<span class="pip warn">Dazed: 1 action</span>' : ''}</div>
         <div class="hb-btns">
-          ${prone ? `<button class="btn act" id="b-stand" ${canMove ? '' : 'disabled'}>Stand Up</button>` : `<button class="btn act ${ui.mode === 'move' ? 'on' : ''}" id="b-move" ${canMove && E().speedOf(u) > 0 ? '' : 'disabled'}>Move <kbd>M</kbd></button>
-          <button class="btn act ${ui.mode === 'shift' ? 'on' : ''}" id="b-shift" ${canMove && E().speedOf(u) > 0 ? '' : 'disabled'}>Shift <kbd>X</kbd></button>`}
+          ${prone ? `<button class="btn act" id="b-stand" ${moveAct ? '' : 'disabled'}>Stand Up</button>` : `<button class="btn act ${ui.mode === 'move' ? 'on' : ''}" id="b-move" ${!ui.busy && moveOn('move') ? '' : 'disabled'}>Move${left('move')} <kbd>M</kbd></button>
+          <button class="btn act ${ui.mode === 'shift' ? 'on' : ''}" id="b-shift" ${!ui.busy && moveOn('shift') ? '' : 'disabled'}>Shift${left('shift')} <kbd>X</kbd></button>`}
+          ${u.moving || (ui.mode === 'charge' && ui.chargeLegs && ui.chargeLegs.length) ? `<button class="btn act" id="b-undo" ${!ui.busy && (E().canUndoMove(u) || ui.mode === 'charge') ? '' : 'disabled'} title="Take back your last step. Steps that provoked an attack or hit a hazard are locked in.">↶ Undo <kbd>Z</kbd></button>` : ''}
+          ${u.moving ? `<button class="btn act" id="b-done" ${ui.busy ? 'disabled' : ''} title="Finish this move; any leftover movement is lost.">✔ Done moving</button>` : ''}
           <button class="btn act ${ui.mode === 'charge' ? 'on' : ''}" id="b-charge" ${!ui.busy && !prone && E().chargeOptions(B, u).length ? '' : 'disabled'}>Charge <kbd>C</kbd></button>
           <button class="btn act" id="b-sw" ${!ui.busy && !u.used.__sw && u.surges > 0 && E().canSpend(u, u.secondWindAction) ? '' : 'disabled'} title="Spend a surge to heal ${u.surgeValue}, +2 defenses (${u.secondWindAction} action, once per fight)">Second Wind</button>
           <button class="btn act ap" id="b-ap" ${!ui.busy && !u.used.__ap ? '' : 'disabled'} title="Gain an extra standard action (once per fight)">Action Point</button>
@@ -679,6 +760,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     on('#b-sw', doSecondWind);
     on('#b-ap', doActionPoint);
     on('#b-end', endHeroTurn);
+    on('#b-undo', doUndoMove);
+    on('#b-done', doneMoving);
     bot.querySelectorAll('[data-pi]').forEach(b => b.onclick = () => selectPower(powers[+b.dataset.pi]));
   }
 
@@ -759,6 +842,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     else if (k === 'm') setMode('move');
     else if (k === 'x') setMode(ui.mode === 'shift' ? 'move' : 'shift');
     else if (k === 'c') setMode(ui.mode === 'charge' ? 'move' : 'charge');
+    else if (k === 'z') doUndoMove();
     else if (/^[1-9]$/.test(k)) { const powers = u.powers.filter(p => !p.passive); const p = powers[+k - 1]; if (p) selectPower(p); }
   });
 
