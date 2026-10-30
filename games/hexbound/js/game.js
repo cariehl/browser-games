@@ -250,7 +250,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   async function endHeroTurn() {
     if (ui.busy || !ui.hero) return;
-    const u = ui.hero; ui.hero = null; ui.mode = null; R().setHighlights({}); updateHud();
+    const u = ui.hero; ui.hero = null; ui.mode = null; clearHL(); updateHud();
     await run(E().endTurn(B, u));
     advance();
   }
@@ -267,6 +267,9 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---- modes & highlights ----
+  // drop every planning overlay (reach, range, targets) so none of it lingers into other units' turns;
+  // hovering re-applies baseHL, so that has to go too
+  function clearHL() { ui.baseHL = null; ui.chargeLegs = null; reachCache = null; R().setTargetable(null); R().setHighlights({}); }
   let reachCache = null;
   // hexes left in the current move/shift: what's left of an open plan, or a fresh action's worth
   function moveBudget(u, kind) {
@@ -593,7 +596,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       const k = b.dataset.cam;
       if (k === 'l') R().rotate(-Math.PI / 6); if (k === 'r') R().rotate(Math.PI / 6);
       if (k === 'i') R().zoom(0.85); if (k === 'o') R().zoom(1.18);
-      if (k === 'f' && (ui.hero || B.active)) R().focus((ui.hero || B.active).pos);
+      if (k === 'f' && (ui.hero || B.active)) R().focus((ui.hero || B.active).pos, true);
       if (k === 'h') R().resetCamera();
     });
   }
@@ -611,7 +614,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (a === 'help') help();
       if (a === 'speed') { G.Settings.speed = SPEEDS[(SPEEDS.indexOf(+G.Settings.speed) + 1) % SPEEDS.length]; saveSettings(); battleMenu(); }
       if (a === 'auto') { G.Settings.autoEndTurn = !G.Settings.autoEndTurn; saveSettings(); battleMenu(); }
-      if (a === 'ai') { G.Settings.autoHeroes = !G.Settings.autoHeroes; if (G.Settings.autoHeroes && ui.hero && !ui.busy) { const u = ui.hero; ui.hero = null; ui.mode = null; R().setHighlights({}); (async () => { await run(G.AI.takeTurn(B, u)); await run(E().endTurn(B, u)); advance(); })(); } }
+      if (a === 'ai') { G.Settings.autoHeroes = !G.Settings.autoHeroes; if (G.Settings.autoHeroes && ui.hero && !ui.busy) { const u = ui.hero; ui.hero = null; ui.mode = null; clearHL(); (async () => { await run(G.AI.takeTurn(B, u)); await run(E().endTurn(B, u)); advance(); })(); } }
       if (a === 'restart') { B.over = B.over || 'quit'; startBattle(scenRef, partyRef); }
       if (a === 'quit') { B.over = B.over || 'quit'; selectScreen(); }
     });
@@ -656,7 +659,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const w = box.clientWidth;
     box.querySelectorAll('.ichip').forEach(c => {
       if (hiddenChips.has(c.dataset.key)) c.style.opacity = 0;
-      c.onclick = () => { const u = B.units.find(x => x.uid === +c.dataset.uid); if (u) R().focus(u.pos); };
+      c.onclick = () => { const u = B.units.find(x => x.uid === +c.dataset.uid); if (u) R().focus(u.pos, true); };
       const was = before.get(c.dataset.key); if (was == null || !c.animate) return;
       const dx = was - c.getBoundingClientRect().left;
       if (Math.abs(dx) < 2) return;
@@ -777,7 +780,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     }).join('');
     $('#hud-party').querySelectorAll('.pcardh').forEach(c => {
       const u = B.units.find(x => x.uid === +c.dataset.uid);
-      c.onclick = () => { if (u && !u.dead) R().focus(u.pos); };
+      c.onclick = () => { if (u && !u.dead) R().focus(u.pos, true); };
       // explain this hero's statuses beside the card
       c.onmouseenter = () => {
         const K = G.Keywords, list = [];
@@ -816,7 +819,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         <div class="hb-btns">
           ${prone ? `<button class="btn act ${upCls('move')}" id="b-stand" ${moveAct ? '' : 'disabled'} title="${tip('Stand up from prone (move action). Prone: -2 to attacks, and adjacent enemies have combat advantage against you.', 'move')}">Stand Up</button>` : `<button class="btn act ${ui.mode === 'move' ? 'on' : ''} ${moveUp('move')}" id="b-move" ${!ui.busy && moveOn('move') ? '' : 'disabled'} title="${moveTip(`Move up to ${E().speedOf(u)} hexes (move action), a few at a time. Stepping out of an enemy's reach provokes an opportunity attack.`, 'move')}">Move${left('move')} <kbd>M</kbd></button>
           <button class="btn act ${ui.mode === 'shift' ? 'on' : ''} ${moveUp('shift')}" id="b-shift" ${!ui.busy && moveOn('shift') ? '' : 'disabled'} title="${moveTip(`Step ${1 + (u.shiftBonus || 0)} hex${u.shiftBonus ? 'es' : ''} without provoking opportunity attacks (move action).`, 'shift')}">Shift${left('shift')} <kbd>X</kbd></button>`}
-          ${u.moving || (ui.mode === 'charge' && ui.chargeLegs && ui.chargeLegs.length) ? `<button class="btn act" id="b-undo" ${!ui.busy && (E().canUndoMove(u) || ui.mode === 'charge') ? '' : 'disabled'} title="Take back your last step. Steps that provoked an attack or hit a hazard are locked in.">↶ Undo <kbd>Z</kbd></button>` : ''}
+          ${u.moving || (ui.mode === 'charge' && ui.chargeLegs && ui.chargeLegs.length) ? `<button class="btn act" id="b-undo" ${!ui.busy && (E().canUndoMove(u) || ui.mode === 'charge') ? '' : 'disabled'} title="Take back your last step or movement power (like Tumble). Steps that provoked an attack or hit a hazard are locked in.">↶ Undo <kbd>Z</kbd></button>` : ''}
           ${u.moving ? `<button class="btn act" id="b-done" ${ui.busy ? 'disabled' : ''} title="Finish this move; any leftover movement is lost.">✔ Done moving</button>` : ''}
           <button class="btn act ${ui.mode === 'charge' ? 'on' : ''}" id="b-charge" ${!ui.busy && !prone && E().chargeOptions(B, u).length ? '' : 'disabled'} title="Move up to your speed along a path you pick, then make a melee basic attack at +1 (standard action). You must move at least 2 hexes first.">Charge <kbd>C</kbd></button>
           <button class="btn act ${upCls(u.secondWindAction)}" id="b-sw" ${!ui.busy && !u.used.__sw && u.surges > 0 && E().canSpend(u, u.secondWindAction) ? '' : 'disabled'} title="${tip(`Spend a surge to heal ${u.surgeValue}, +2 defenses until your next turn (${u.secondWindAction} action, once per fight).`, u.secondWindAction)}">Second Wind</button>
@@ -917,7 +920,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   function finish() {
     if (B.finished) return; B.finished = true;
-    ui.hero = null; R().setHighlights({}); updateHud();
+    ui.hero = null; ui.mode = null; clearHL(); updateHud();
     const win = B.over === 'win';
     if (B.over === 'quit') return;
     G.Audio.play(win ? 'win' : 'lose');

@@ -66,11 +66,12 @@ var G = (typeof G !== 'undefined') ? G : {};
     const el = renderer.domElement;
     let drag = null;
     el.addEventListener('contextmenu', e => e.preventDefault());
-    el.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, moved: false, yaw: cam.yaw, pitch: cam.pitch, tx: cam.tx, tz: cam.tz }; el.setPointerCapture(e.pointerId); });
+    el.addEventListener('pointerdown', e => { drag = { x: e.clientX, y: e.clientY, b: e.button, moved: false }; el.setPointerCapture(e.pointerId); });
     el.addEventListener('pointermove', e => {
       if (drag) {
         const dx = e.clientX - drag.x, dy = e.clientY - drag.y;
-        if (Math.abs(dx) + Math.abs(dy) > 6) drag.moved = true;
+        // grab the view only once the drag really starts, so an automatic move in flight hands over without a jump
+        if (!drag.moved && Math.abs(dx) + Math.abs(dy) > 6) { drag.moved = true; userCam(); Object.assign(drag, { yaw: cam.yaw, pitch: cam.pitch, tx: cam.tx, tz: cam.tz }); }
         if (drag.moved) {
           userCam();
           if (drag.b === 2 || drag.b === 1 || e.shiftKey) { cam.yaw = drag.yaw + dx * 0.008; cam.pitch = Math.max(0.35, Math.min(1.45, drag.pitch + dy * 0.006)); }
@@ -108,6 +109,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   function updateCamera(dt) {
     const sp = 12 * dt;
     const c = Math.cos(cam.yaw), sn = Math.sin(cam.yaw);
+    if (['w', 'a', 's', 'd', 'q', 'e', 'arrowup', 'arrowdown', 'arrowleft', 'arrowright'].some(k => keys[k])) userCam();
     if (keys['w'] || keys['arrowup']) { cam.tx -= c * sp; cam.tz -= sn * sp; }
     if (keys['s'] || keys['arrowdown']) { cam.tx += c * sp; cam.tz += sn * sp; }
     if (keys['a'] || keys['arrowleft']) { cam.tx -= sn * sp; cam.tz += c * sp; }
@@ -125,20 +127,24 @@ var G = (typeof G !== 'undefined') ? G : {};
     camera.position.set(cam.tx + Math.cos(cam.yaw) * ch + sx, cy + sy, cam.tz + Math.sin(cam.yaw) * ch);
     camera.lookAt(cam.tx + sx * 0.5, 0.4, cam.tz);
   }
-  function focus(h) { if (!h) return; const p = px(h); cam.follow = { x: p.x, z: p.z }; }
-  // The player moved the camera: stop any automatic yaw/pitch/zoom easing and forget the view we meant to restore.
-  function userCam() { cam.restore = null; cam.yawTo = cam.pitchTo = null; cam.zoomTo = null; }
+  // Automatic camera moves give way to the player: while they are steering (and briefly after), auto pans,
+  // follows and zooms are skipped. `force` is for moves the player asked for (portrait click, F, Home).
+  const userSteering = () => performance.now() < (cam.userUntil || 0);
+  function focus(h, force) { if (!h || (!force && userSteering())) return; const p = px(h); cam.follow = { x: p.x, z: p.z }; }
+  // The player rotated, zoomed or panned: cancel every automatic move (pan, yaw, pitch, zoom) and forget the view we meant to restore.
+  function userCam() { cam.restore = null; cam.yawTo = cam.pitchTo = null; cam.zoomTo = null; cam.follow = null; cam.userUntil = performance.now() + 1200; }
   // Smoothly return to the view the battle opened with.
   function resetCamera() {
     if (!cam.home) return;
     const h = cam.home;
-    cam.restore = null; cam.follow = { x: h.tx, z: h.tz }; cam.zoomTo = h.dist; cam.pitchTo = h.pitch;
+    cam.userUntil = 0; cam.restore = null; cam.follow = { x: h.tx, z: h.tz }; cam.zoomTo = h.dist; cam.pitchTo = h.pitch;
     // turn the short way round
     cam.yawTo = cam.yaw + Math.atan2(Math.sin(h.yaw - cam.yaw), Math.cos(h.yaw - cam.yaw));
   }
   // pan (and zoom out if needed) so two world points share the screen; resolves once the camera has mostly arrived.
   // A zoom-out remembers the view it left, and restoreView() goes back to it once the action is over.
   async function frame(a, b) {
+    if (userSteering()) return;
     const mid = { x: (a.x + b.x) / 2, z: (a.z + b.z) / 2 };
     const span = Math.hypot(a.x - b.x, a.z - b.z);
     const need = Math.min(32, span * 1.25 + 7);
@@ -675,10 +681,11 @@ var G = (typeof G !== 'undefined') ? G : {};
     const v = new THREE.Vector3(p.x, topY(t) + yOff, p.z).project(camera);
     return { x: (v.x * 0.5 + 0.5) * renderer.domElement.clientWidth, y: (-v.y * 0.5 + 0.5) * renderer.domElement.clientHeight };
   }
-  // Combat text stacks per hex: the newest line appears at the bottom and pushes older lines up,
-  // so rolls, damage, conditions and banners never overlap. Each line drifts up slowly and fades
-  // near the end of its life; the stack follows the hex as the camera moves.
+  // Combat text floats up from its hex. Lines drift independently (the old floaty style); a new line only
+  // nudges older ones up gently when they would sit on top of each other, and a line never outlives the
+  // lines that came after it, so a roll can't hang around after its damage number has gone.
   const floatStacks = new Map();
+  const FADE = 350;
   function floatText(h, text, cls, yOff = 1.6, dur = 1300) {
     if (!h) return;
     const key = Hex.hk(h);
@@ -686,30 +693,31 @@ var G = (typeof G !== 'undefined') ? G : {};
     overlay.appendChild(el);
     const st = floatStacks.get(key) || { h: { q: h.q, r: h.r }, items: [] };
     floatStacks.set(key, st);
-    const now = performance.now(), life = dur / S();
-    st.items.unshift({ el, yOff, born: now, life, lift: null, hgt: el.offsetHeight });
+    const now = performance.now(), end = now + dur / S();
+    for (const it of st.items) it.end = Math.min(it.end, end);
+    st.items.unshift({ el, yOff, born: now, end, lift: 0, hgt: el.offsetHeight, fresh: true });
     placeFloats(st, now, 0);
-    setTimeout(() => {
-      el.remove(); const i = st.items.findIndex(x => x.el === el); if (i >= 0) st.items.splice(i, 1);
-      if (!st.items.length) floatStacks.delete(key);
-    }, life + 50);
   }
   function placeFloats(st, now, k) {
+    for (let i = st.items.length - 1; i >= 0; i--) if (now >= st.items[i].end) { st.items[i].el.remove(); st.items.splice(i, 1); }
+    if (!st.items.length) return false;
     const base = screenOf(st.h, Math.min(...st.items.map(x => x.yOff)));
-    let stack = 0;
+    let floor = 0;
     for (const it of st.items) {
-      const age = (now - it.born) / it.life;
-      // gentle upward drift on top of the stacking; by time, not life fraction, so older lines always drift further
-      const target = stack + (now - it.born) / 1000 * 16;
-      it.lift = it.lift == null ? target : it.lift + (target - it.lift) * k;
+      // each line drifts up on its own; it is only pushed (gently) when the newer line below would cover it
+      const target = Math.max(floor, (now - it.born) / 1000 * 26);
+      // older lines ease toward their new spot rather than jumping when a line is added
+      it.lift = it.fresh ? target : it.lift + (target - it.lift) * k; it.fresh = false;
       it.el.style.left = base.x + 'px'; it.el.style.top = (base.y - it.lift) + 'px';
-      it.el.style.opacity = age > 0.75 ? Math.max(0, 1 - (age - 0.75) / 0.25) : '';
-      stack += it.hgt + 2;
+      const left = it.end - now;
+      it.el.style.opacity = left < FADE ? Math.max(0, left / FADE) : '';
+      floor = it.lift + it.hgt * 0.9;
     }
+    return true;
   }
   function updateFloats(dt) {
-    const now = performance.now(), k = Math.min(1, dt * 14);
-    for (const st of floatStacks.values()) placeFloats(st, now, k);
+    const now = performance.now(), k = Math.min(1, dt * 5);
+    for (const [key, st] of floatStacks) if (!placeFloats(st, now, k)) floatStacks.delete(key);
   }
   // Speech bubbles stack per unit: a new line appears at the bottom and pushes older ones up.
   function bubble(uid, text, dur = 2600) {
@@ -793,7 +801,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         G.Audio && G.Audio.play(ev.kind === 'forced' ? 'shove' : 'step');
         await tween(ev.kind === 'forced' ? 0.16 : 0.2, k => {
           const e = ease(k); v.g.position.set(a.x + (b.x - a.x) * e, ya + (yb - ya) * e + Math.sin(k * Math.PI) * hop, a.z + (b.z - a.z) * e);
-          if (follow) cam.follow = { x: v.g.position.x, z: v.g.position.z };
+          if (follow && !userSteering()) cam.follow = { x: v.g.position.x, z: v.g.position.z };
         });
         v.anim = false; v.pos = { q: to.q, r: to.r };
         return;
@@ -844,7 +852,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       case 'roll': {
         const tv = unitViews.get(ev.tgt);
         // final values only; the combat log keeps the d20 + bonus breakdown
-        if (tv) floatText(tv.pos, `${ev.roll === 20 ? '★ ' : ''}${ev.roll + ev.bonus} vs ${ev.vs} ${ev.def}`, 'roll ' + (ev.hit ? 'hit' : 'miss') + (ev.roll === 20 ? ' nat20' : ''), tv.height + 1.0, 3000);
+        if (tv) floatText(tv.pos, `${ev.roll === 20 ? '★ ' : ''}${ev.roll + ev.bonus} vs ${ev.vs} ${ev.def}`, 'roll ' + (ev.hit ? 'hit' : 'miss') + (ev.roll === 20 ? ' nat20' : ''), tv.height + 1.0, 1900);
         if (G.UI && G.UI.onRoll) G.UI.onRoll(ev);
         if (!ev.hit) { if (tv) floatText(tv.pos, ev.reroll ? 'MISS (reroll)' : 'MISS', 'miss', tv.height + 0.4, 2000); G.Audio && G.Audio.play('miss'); }
         await wait(ev.hit ? 320 : 560);

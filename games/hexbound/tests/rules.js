@@ -65,6 +65,21 @@ test('planned moves continue with leftover speed and can be undone', () => {
   assert(Hex.eq(hero.pos, start)); assert.strictEqual(hero.act.move, 1); assert.strictEqual(hero.moving, null);
 });
 
+test('movement powers like Tumble can be taken back, power and action included', () => {
+  const { B, rog } = arena('bandits', { rog: u => u.cls === 'rogue' });
+  rog.pos = off(4, 10); B.active = rog;
+  const tumble = rog.powers.find(p => p.id === 'r_tumble'); assert(tumble, 'Pip knows Tumble');
+  const start = rog.pos;
+  // drive the shift choice ourselves: three hexes along a row
+  const gen = E.usePower(B, rog, tumble, {}); let r = gen.next();
+  while (!r.done) r = gen.next(r.value && r.value.choice ? r.value.hexes.find(h => Hex.dist(h, start) === 3) : undefined);
+  assert.strictEqual(Hex.dist(rog.pos, start), 3);
+  assert(rog.used.r_tumble && rog.act.move === 0);
+  assert(E.canUndoMove(rog));
+  E.runAuto(E.undoMove(B, rog));
+  assert(Hex.eq(rog.pos, start) && !rog.used.r_tumble && rog.act.move === 1 && !rog.moving);
+});
+
 test('a step that provokes is locked in', () => {
   const { B, hero, gob } = arena('goblins', { hero: u => u.side === 'hero', gob: u => u.id === 'goblin_skulker' });
   gob.pos = off(3, 9); hero.pos = Hex.neighbor(gob.pos, 0); B.active = hero;
