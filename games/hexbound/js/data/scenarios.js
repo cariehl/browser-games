@@ -5,7 +5,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   G.Scenarios = [
     {
-      id: 'goblins', level: 1, name: 'Thornwood Crossing', sub: 'Level 1 · Party vs Goblins',
+      id: 'goblins', level: 1, deployRows: [9, 11], name: 'Thornwood Crossing', sub: 'Level 1 · Party vs Goblins',
       blurb: 'Grizzlenack the Bold has claimed the old bridges over Thornwater Creek and charges a "toll" of everything you own. Cross the creek, break the warband.',
       intro: 'Goblin war-drums thump in the Thornwood. "TOLL!" shrieks a voice from across the creek.',
       winText: 'The goblins scatter into the thorns, leaving Grizzlenack\'s ridiculous crown behind.',
@@ -40,7 +40,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       tips: ['Goblin Cutters die to any hit. Area attacks shred them.', 'The ford (rough ground) and two bridges are chokepoints. A Fighter on a bridge is a wall.', 'Grizzlenack calls for help when bloodied.'],
     },
     {
-      id: 'bandits', level: 3, name: 'The Red Toll', sub: 'Level 3 · Party vs Bandits',
+      id: 'bandits', level: 3, deployRows: [9, 11], name: 'The Red Toll', sub: 'Level 3 · Party vs Bandits',
       blurb: 'Merrin the Red\'s crew has barricaded the King\'s Road with overturned wagons. Their camp is full of lamp oil, which is a fire hazard. Literally.',
       intro: '"Evening, travelers," calls a woman in a crimson coat. "The road\'s closed. Unless you can pay." Her crew draws steel.',
       winText: 'Merrin the Red yields her rapier with a theatrical bow. "Fine. The road is yours. This time."',
@@ -78,7 +78,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       tips: ['Oil barrels explode when damaged (2d6+3 fire, burst 1) and leave burning ground. Bandits camp next to them...', 'Merrin ripostes when you miss her in melee. Bait her with ranged attacks first.', 'Crossbowmen knock you prone with Aimed Bolts — stand up costs your move.'],
     },
     {
-      id: 'golem', level: 5, name: 'The Grand Bakery', sub: 'Level 5 · Party vs "The Pastry Golem"',
+      id: 'golem', level: 5, deployRows: [9, 11], name: 'The Grand Bakery', sub: 'Level 5 · Party vs "The Pastry Golem"',
       blurb: 'A wizard-baker\'s animation spell went horribly right. Something enormous, tiered and frosted now rules the Grand Bakery of Hollowmere, and it has opinions about you.',
       intro: 'Ovens roar. Flour drifts like snow. Atop a mountain of cake, two cherry eyes open. "PREHEATING... COMPLETE."',
       winText: 'The Pastry Golem sags, deflates, and collapses into the world\'s largest, angriest trifle. The bakery is saved. It smells incredible.',
@@ -111,7 +111,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         { round: 3, msg: 'The pantry door bursts open: a Cinnamon Roller unfurls and barrels in!', spawn: [{ id: 'cinnamon_roller', at: [16, 4] }] },
         { round: 5, msg: 'A second Macaron Mortar hops down from the display shelf, cracking its shell menacingly.', spawn: [{ id: 'macaron', at: [14, 1] }] },
       ],
-      tips: ['The Golem has reach 2. Once bloodied it acts twice per round — save your dailies for that phase.', 'When bloodied it starts a Grand Soufflé: a marked area that slams down on its next turn. MOVE.', 'Jam jars shatter into sticky jam that immobilizes. Smash one near the Golem\'s friends.', 'Ovens burn anyone who enters or starts a turn in them — push minions in!'],
+      tips: ['The Golem is Large: it fills seven hexes, so more of you can gang up on it. Once bloodied it acts twice per round — save your dailies for that phase.', 'When bloodied it starts a Grand Soufflé: a marked area that slams down on its next turn. MOVE.', 'Jam jars shatter into sticky jam that immobilizes. Smash one near the Golem\'s friends.', 'Ovens burn anyone who enters or starts a turn in them — push minions in!'],
     },
   ];
 })();

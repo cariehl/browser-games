@@ -274,15 +274,17 @@ var G = (typeof G !== 'undefined') ? G : {};
   function addUnitView(u) {
     const g = new THREE.Group();
     const body = buildBody(u);
-    const US = u.object ? 1 : 1.2;
+    // Large creatures (u.rad 1) stand on a 7-hex footprint, so their body, base and ring grow to fill it
+    const big = u.rad ? 1 + u.rad * 1.5 : 1;
+    const US = (u.object ? 1 : 1.2) * (u.rad ? 1.55 : 1);
     body.group.scale.multiplyScalar(US);
     g.add(body.group);
     const height = body.height * US;
     if (!u.object) {
-      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55 * (u.look && u.look.kind === 'golem' ? 1.5 : 1), 0.6 * (u.look && u.look.kind === 'golem' ? 1.5 : 1), 0.06, 20), new THREE.MeshStandardMaterial({ color: u.side === 'hero' ? 0x3a8dff : 0xe0453a, emissive: u.side === 'hero' ? 0x0a2a6a : 0x5a0a0a, roughness: 0.5 }));
+      const base = new THREE.Mesh(new THREE.CylinderGeometry(0.55 * big, 0.6 * big, 0.06, u.rad ? 36 : 20), new THREE.MeshStandardMaterial({ color: u.side === 'hero' ? 0x3a8dff : 0xe0453a, emissive: u.side === 'hero' ? 0x0a2a6a : 0x5a0a0a, roughness: 0.5, transparent: !!u.rad, opacity: u.rad ? 0.55 : 1 }));
       base.position.y = 0.03; g.add(base);
     }
-    const sel = new THREE.Mesh(new THREE.RingGeometry(0.66, 0.8, 32), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
+    const sel = new THREE.Mesh(new THREE.RingGeometry(0.66 * big, 0.8 * big, 32), new THREE.MeshBasicMaterial({ color: 0xffe066, transparent: true, opacity: 0, side: THREE.DoubleSide, depthWrite: false }));
     sel.rotation.x = -Math.PI / 2; sel.position.y = 0.08; g.add(sel);
     g.traverse(o => { if (o.isMesh) { o.castShadow = true; } });
     scene.add(g);
@@ -469,7 +471,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     // zones & telegraphs always visible
     if (B) {
       for (const z of B.zones) for (const h of z.hexes) { const m = hlMeshes.get(Hex.hk(h)); if (m && !m.visible) { m.visible = true; m.userData.kind = 'zone'; m.material.color.setHex(z.color || 0x8bd448); m.material.opacity = 0.32; m.userData.edge.material.opacity = 0.3; } }
-      for (const tg of B.telegraphs) for (const h of tg.hexes) { const m = hlMeshes.get(Hex.hk(h)); if (m && (!m.visible || m.userData.kind === 'zone')) { m.visible = true; m.userData.kind = 'telegraph'; m.material.color.setHex(0xff1a1a); m.material.opacity = 0.45; m.userData.edge.material.color.setHex(0xff1a1a); m.userData.edge.material.opacity = 0.9; } }
+      // a telegraphed slam outranks every planning overlay except the hovered path, hovered hex and area preview
+      for (const tg of B.telegraphs) for (const h of tg.hexes) { const m = hlMeshes.get(Hex.hk(h)); if (m && !['path', 'hover', 'area', 'choice'].includes(m.userData.kind)) { m.visible = true; m.userData.kind = 'telegraph'; m.material.color.setHex(0xff1a1a); m.material.opacity = 0.45; m.userData.edge.material.color.setHex(0xff1a1a); m.userData.edge.material.opacity = 0.9; } }
     }
   }
   function setActive(uid) { for (const v of unitViews.values()) v.active = v.u.uid === uid; }

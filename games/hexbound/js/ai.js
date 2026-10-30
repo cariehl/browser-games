@@ -74,7 +74,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   function objectValue(B, u, o) {
     let v = 0;
     for (const x of B.units) {
-      if (x.dead || x === o || x.object || Hex.dist(x.pos, o.pos) > 1) continue;
+      if (x.dead || x === o || x.object || E().udist(x, o) > 1) continue;
       const val = x.minion ? 9 : (o.traits.includes('jamBurst') ? 5 : 9);
       v += (x.side !== u.side ? val : -val * 1.4);
     }
@@ -94,11 +94,11 @@ var G = (typeof G !== 'undefined') ? G : {};
         const seen = new Set();
         for (const e of B.units) {
           if (e.dead || e.side === u.side) continue;
-          for (const h of Hex.within(e.pos, p.tgt === 'areaBurst' ? (p.size || 1) : 0)) {
+          for (const h of Hex.within(e.pos, (p.tgt === 'areaBurst' ? (p.size || 1) : 0) + (e.rad || 0))) {
             const k = Hex.hk(h); if (seen.has(k)) continue; seen.add(k);
             if (p.tgt === 'areaBurst' && Hex.dist(u.pos, h) > pr.range) continue;
-            if (p.tgt === 'closeBlast' && Hex.dist(u.pos, h) > p.size) continue;
-            if (Hex.eq(h, u.pos)) continue;
+            if (p.tgt === 'closeBlast' && E().hdist(u, h) > p.size) continue;
+            if (E().occupies(u, h)) continue;
             aims.push(h);
           }
         }
@@ -157,7 +157,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function selfValue(B, u, p) {
     let v = 0;
-    const adj = E().enemiesOf(B, u).filter(e => Hex.dist(e.pos, u.pos) <= 1).length;
+    const adj = E().enemiesOf(B, u).filter(e => E().udist(e, u) <= 1).length;
     for (const e of (p.eff || [])) {
       if (e.t === 'temp') v += (u.hp < u.maxHp * 0.75) ? 6 : 2;
       if (e.t === 'cond' && e.c === 'defBonus') v += adj ? 4 : 0.5;
@@ -175,7 +175,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (B.telegraphs.some(tg => tg.owner !== u.uid && u.side === 'hero' && Hex.dist(tg.center, pos) <= tg.size)) v -= 35;
     if (node) v -= node.prov * (u.side === 'hero' ? 7 : 5);
     const foes = E().enemiesOf(B, u);
-    const adj = foes.filter(e => Hex.dist(e.pos, pos) <= (e.reach || 1) && E().canReact(e)).length;
+    const adj = foes.filter(e => E().udist(e, u, null, pos) <= (e.reach || 1) && E().canReact(e)).length;
     const ranged = isRangedUnit(u);
     if (ranged) v -= adj * 4;
     else if (u.side === 'hero' && u.role === 'Defender') v += Math.min(adj, 2) * 1.5;
@@ -238,7 +238,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const n of r.values()) {
       if (n.noEnd) continue;
       let dmin = 99;
-      for (const f of foes) dmin = Math.min(dmin, Hex.dist(n.h, f.pos) + (f.minion ? 1 : 0));
+      for (const f of foes) dmin = Math.min(dmin, E().udist(u, f, n.h) + (f.minion ? 1 : 0));
       let v = ranged ? -Math.abs(dmin - 6) : -dmin;
       v += posValue(B, u, n.h, n) * 0.5;
       if (!best || v > best.v) best = { n, v };
@@ -339,11 +339,11 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const h of hexes) {
       const foes = E().enemiesOf(B, u);
       let v = 0;
-      const adj = foes.filter(e => Hex.dist(e.pos, h) === 1);
-      if (away || isRangedUnit(u)) v -= adj.length * 4 - Math.min(...foes.map(f => Hex.dist(f.pos, h)), 6) * 0.3;
+      const adj = foes.filter(e => E().udist(u, e, h) === 1);
+      if (away || isRangedUnit(u)) v -= adj.length * 4 - Math.min(...foes.map(f => E().udist(u, f, h)), 6) * 0.3;
       else {
         // prefer flanking spots next to enemies
-        for (const f of adj) { const opp = { q: 2 * f.pos.q - h.q, r: 2 * f.pos.r - h.r }; const a = E().unitAt(B, opp); if (a && a.side === u.side) v += 3; }
+        for (const f of adj) if (E().flanking(B, u, f, h)) v += 3;
         v += adj.length ? 1 : 0;
       }
       const t = E().terr(B, h); if (t && t.hazard) v -= 10;

@@ -126,6 +126,9 @@ table.abil tr.prim td:first-child { color: var(--gold); } table.abil tr.sec td:f
 .sel-opts { display: flex; gap: 14px; align-items: center; padding: 14px 16px 0; flex-wrap: wrap; }
 .sel-opts select { background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 5px; padding: 6px; max-width: 520px; }
 .diff { display: flex; gap: 4px; margin-left: auto; }
+.diff { align-items: center; flex-wrap: wrap; }
+.diff-h { font-weight: 700; margin-right: 6px; color: var(--muted, #b9b2a5); text-transform: uppercase; font-size: 11px; letter-spacing: .08em; }
+.diff-note { flex-basis: 100%; text-align: right; opacity: .8; margin-top: 4px; }
 .radio { padding: 5px 12px; border: 1px solid var(--line); border-radius: 14px; cursor: pointer; font-size: 13px; }
 .radio input { display: none; } .radio.on { border-color: var(--gold); color: var(--gold); background: #2a2338; }
 .sel-party { display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px; padding: 12px 16px; }

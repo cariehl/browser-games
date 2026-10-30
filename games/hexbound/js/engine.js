@@ -113,7 +113,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       initBonus: def.init || 0, saveBonus: def.saveBonus || 0,
       powers: def.powers.map(p => Object.assign({ src: id }, p)),
       traits: (def.traits || []).slice(), resist: def.resist || {}, vuln: def.vuln || {},
-      look: def.look, size: def.size || 1, ai: def.ai || def.role, pos,
+      look: def.look, size: def.size || 1, rad: def.large ? 1 : 0, ai: def.ai || def.role, pos,
       actionPoints: def.actionPoints || 0, immuneForced: !!def.immuneForced, reach: def.reach || 1,
       barks: def.barks, title: def.title, desc: def.desc,
     };
@@ -125,7 +125,13 @@ var G = (typeof G !== 'undefined') ? G : {};
   const tile = (B, h) => B.tiles.get(Hex.hk(h));
   const terr = (B, h) => { const t = tile(B, h); return t ? TERRAIN[t.terrain] : null; };
   const alive = (u) => !u.dead;
-  const unitAt = (B, h) => B.units.find(u => !u.dead && u.pos && u.pos.q === h.q && u.pos.r === h.r);
+  // Large creatures (rad 1) fill their hex and the six around it; distances are measured edge to edge
+  const rad = (u) => u.rad || 0;
+  const occupies = (u, h, at) => Hex.dist(at || u.pos, h) <= rad(u);
+  const footprint = (u, at) => rad(u) ? Hex.within(at || u.pos, rad(u)) : [at || u.pos];
+  const udist = (a, b, aPos, bPos) => Math.max(0, Hex.dist(aPos || a.pos, bPos || b.pos) - rad(a) - rad(b));
+  const hdist = (u, h, at) => Math.max(0, Hex.dist(at || u.pos, h) - rad(u));
+  const unitAt = (B, h) => B.units.find(u => !u.dead && u.pos && occupies(u, h));
   const isHostile = (a, b) => a.side !== b.side && !(a.object && b.object);
   const enemiesOf = (B, u) => B.units.filter(o => !o.dead && !o.object && o.side !== u.side && o.side !== 'object');
   const alliesOf = (B, u, incSelf) => B.units.filter(o => !o.dead && o.side === u.side && (incSelf || o !== u));
@@ -143,20 +149,15 @@ var G = (typeof G !== 'undefined') ? G : {};
     return true;
   }
   function blocksLos(B, h) { const t = terr(B, h); return !t || !!t.los; }
+  // clear if either edge-nudged line is unobstructed, so peeking past a corner works the same on both sides
   function los(B, a, b) {
-    const line = Hex.line(a, b);
-    for (let i = 1; i < line.length - 1; i++) if (blocksLos(B, line[i])) {
-      // try a slightly shifted line (corner peeking)
-      const alt = Hex.line({ q: a.q - 1e-3, r: a.r + 2e-3 }, b);
-      for (let j = 1; j < alt.length - 1; j++) if (blocksLos(B, alt[j])) return false;
-      return true;
-    }
-    return true;
+    const clear = (line) => { for (let i = 1; i < line.length - 1; i++) if (blocksLos(B, line[i])) return false; return true; };
+    return clear(Hex.line(a, b, 1)) || clear(Hex.line(a, b, -1));
   }
   function threatRange(e) { return e.reach || 1; }
   function threatening(B, u, at) {
     const p = at || u.pos;
-    return enemiesOf(B, u).filter(e => e.pos && canReact(e) && Hex.dist(e.pos, p) <= threatRange(e));
+    return enemiesOf(B, u).filter(e => e.pos && canReact(e) && udist(e, u, null, p) <= threatRange(e));
   }
 
   // ---------- Conditions ----------
@@ -197,7 +198,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   function defense(B, u, which, ctx = {}) {
     let v = u.def[which] + condSum(u, 'defBonus', null);
     v += traitSum(B, u, 'defMod', which, ctx);
-    for (const a of B.units) if (a !== u && !a.dead && a.side === u.side && a.pos && u.pos && Hex.dist(a.pos, u.pos) === 1) v += traitSum(B, a, 'auraDefAlly', which);
+    for (const a of B.units) if (a !== u && !a.dead && a.side === u.side && a.pos && u.pos && udist(a, u) === 1) v += traitSum(B, a, 'auraDefAlly', which);
     if (u.secondWindUntil) v += 2;
     if (which !== 'AC' || true) {
       // prone: +2 vs ranged, (combat advantage handled separately)
@@ -222,10 +223,12 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function flanking(B, att, tgt, attPos) {
     const ap = attPos || att.pos;
-    if (!ap || Hex.dist(ap, tgt.pos) !== 1) return false;
+    if (!ap || udist(att, tgt, ap) !== 1) return false;
     const opp = { q: 2 * tgt.pos.q - ap.q, r: 2 * tgt.pos.r - ap.r };
-    const ally = unitAt(B, opp);
-    return !!(ally && ally !== att && ally.side === att.side && canAct(ally) && !ally.object);
+    const ok = (a) => a && a !== att && a.side === att.side && canAct(a) && !a.object;
+    if (!rad(tgt)) return !!ok(unitAt(B, opp));
+    // around a Large creature: any ally adjacent to it on the far side
+    return B.units.some(a => !a.dead && a.pos && ok(a) && udist(a, tgt) === 1 && Hex.dist(a.pos, opp) <= rad(tgt));
   }
 
   // ---------- Traits ----------
@@ -258,8 +261,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       const s = atkStat(u, p);
       const m = mod(u.abil[s]); const half = Math.floor(u.level / 2);
       b = m + half; parts.push([s, m]); if (half) parts.push(['½ lvl', half]);
-      if (p.weapon || p.basic) { const prof = (u.weapon && u.weapon.prof) || 0; if (prof) { b += prof; parts.push(['prof', prof]); } }
-      if (u.enh) { b += u.enh; parts.push(['enh', u.enh]); }
+      if ((p.weapon || p.basic) && !p.improvised) { const prof = (u.weapon && u.weapon.prof) || 0; if (prof) { b += prof; parts.push(['prof', prof]); } }
+      if (u.enh && !p.improvised) { b += u.enh; parts.push(['enh', u.enh]); }
       if (p.atk.bonus) { b += p.atk.bonus; parts.push(['power', p.atk.bonus]); }
     }
     const tb = traitSum(B, u, 'atkMod', { power: p, target: tgt, ...ctx });
@@ -282,7 +285,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       const s = p.dmgMod || atkStat(u, p);
       if (s) spec.flat += mod(u.abil[s]);
     }
-    if (!u.monster && u.enh && (p.weapon || p.implement || p.basic)) spec.flat += u.enh;
+    if (!u.monster && u.enh && (p.weapon || p.implement || p.basic) && !p.improvised) spec.flat += u.enh;
     return spec;
   }
 
@@ -296,9 +299,9 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (want === 'ally' && (t.side !== u.side || t === u || t.object)) return false;
     if (want === 'allyOrSelf' && (t.side !== u.side || t.object)) return false;
     if (want === 'self' && t !== u) return false;
-    const dd = Hex.dist(pos, t.pos);
-    if (pr.kind === 'melee') return dd >= 1 && dd <= pr.range;
-    if (pr.kind === 'ranged' || pr.kind === 'touch') return dd <= pr.range && (dd === 0 || los(B, pos, t.pos));
+    const dd = udist(u, t, pos);
+    if (pr.kind === 'melee') return t !== u && dd <= pr.range;
+    if (pr.kind === 'ranged' || pr.kind === 'touch') return dd <= pr.range && (t === u || footprint(t).some(h => los(B, pos, h)));
     if (pr.kind === 'self') return t === u;
     return false;
   }
@@ -307,8 +310,9 @@ var G = (typeof G !== 'undefined') ? G : {};
   function areaHexes(B, u, p, aim, fromPos) {
     const pos = fromPos || u.pos;
     const pr = powerRange(u, p);
-    if (p.tgt === 'closeBurst') return Hex.within(pos, p.size).filter(h => tile(B, h) && (p.includeSelf || !Hex.eq(h, pos)));
-    if (p.tgt === 'closeBlast') return Hex.blast(pos, aim, p.size).filter(h => tile(B, h) && los(B, pos, h));
+    // a Large creature's close attacks reach out from the edge of its space
+    if (p.tgt === 'closeBurst') return Hex.within(pos, p.size + rad(u)).filter(h => tile(B, h) && (p.includeSelf ? Hex.dist(h, pos) === 0 || Hex.dist(h, pos) > rad(u) : Hex.dist(h, pos) > rad(u)));
+    if (p.tgt === 'closeBlast') return Hex.blast(pos, aim, p.size + rad(u)).filter(h => tile(B, h) && Hex.dist(h, pos) > rad(u) && los(B, pos, h));
     if (p.tgt === 'areaBurst') {
       if (!aim || Hex.dist(pos, aim) > pr.range || !tile(B, aim) || !los(B, pos, aim)) return [];
       return Hex.within(aim, p.size).filter(h => tile(B, h) && (Hex.eq(h, aim) || los(B, aim, h)));
@@ -320,7 +324,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const want = p.targets || 'enemy';
     const out = [];
     for (const h of hexes) {
-      const t = unitAt(B, h); if (!t) continue;
+      const t = unitAt(B, h); if (!t || out.includes(t)) continue;
       if (want === 'enemy' && t.side === u.side) continue;
       if (want === 'ally' && (t.side !== u.side || t.object)) continue;
       if (want === 'allyOrSelf' && (t.side !== u.side || t.object)) continue;
@@ -365,27 +369,35 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---------- Movement ----------
-  // returns Map key -> {cost, prev, prov} for hexes reachable this move
-  function reach(B, u, budget, mode = 'move') {
-    const start = u.pos; const res = new Map();
+  // can u's space be at h while moving? (blocked terrain or a hostile body in the way)
+  function canPass(B, u, h) {
+    for (const f of footprint(u, h)) {
+      if (!passable(B, f, u)) return false;
+      const occ = unitAt(B, f);
+      if (occ && occ !== u && (occ.side !== u.side || occ.object)) return false;
+    }
+    return true;
+  }
+  function stepCost(B, u, h, mode) {
+    if (mode === 'teleport' || u.ignoreDifficult) return 1;
+    return footprint(u, h).some(f => { const t = terr(B, f); return t && t.difficult; }) ? 2 : 1;
+  }
+  // returns Map key -> {cost, prev, prov} for hexes reachable this move.
+  // Leaving an enemy's reach provokes it (once); moving around inside its reach doesn't.
+  function reach(B, u, budget, mode = 'move', opts = {}) {
+    const start = opts.from || u.pos; const res = new Map();
     const sk = Hex.hk(start);
-    res.set(sk, { h: start, cost: 0, prov: 0, prev: null, provBy: [] });
+    res.set(sk, { h: start, cost: 0, prov: 0, prev: null, provBy: opts.provBy || [] });
     const open = [res.get(sk)];
     while (open.length) {
       open.sort((a, b) => a.prov - b.prov || a.cost - b.cost);
       const cur = open.shift();
-      const threats = mode === 'move' ? threatening(B, u, cur.h) : [];
+      const threats = mode === 'move' ? threatening(B, u, cur.h).filter(e => !e.oaUsed) : [];
       for (const n of Hex.neighbors(cur.h)) {
-        if (!passable(B, n, u)) continue;
-        const occ = unitAt(B, n);
-        if (occ && occ !== u && (occ.side !== u.side || occ.object)) continue;
-        const t = terr(B, n);
-        let c = (t.difficult && !u.ignoreDifficult) ? 2 : 1;
-        if (mode === 'teleport') c = 1;
-        const nc = cur.cost + c;
+        if (!canPass(B, u, n)) continue;
+        const nc = cur.cost + stepCost(B, u, n, mode);
         if (nc > budget) continue;
-        // provoke when leaving cur if threatened there by enemies not adjacent to n? (4e: leaving any threatened square provokes)
-        const newBy = threats.filter(e => !cur.provBy.includes(e.uid)).map(e => e.uid);
+        const newBy = threats.filter(e => !cur.provBy.includes(e.uid) && udist(e, u, null, n) > threatRange(e)).map(e => e.uid);
         const np = cur.prov + newBy.length;
         const k = Hex.hk(n);
         const ex = res.get(k);
@@ -395,15 +407,15 @@ var G = (typeof G !== 'undefined') ? G : {};
         }
       }
     }
-    // can't end in an ally's hex
-    for (const [k, v] of res) { const o = unitAt(B, v.h); if (o && o !== u) v.noEnd = true; }
+    // can't end sharing a hex with another creature
+    for (const v of res.values()) if (footprint(u, v.h).some(f => { const o = unitAt(B, f); return o && o !== u; })) v.noEnd = true;
     return res;
   }
   function pathFrom(node) { const p = []; while (node) { p.unshift(node.h); node = node.prev; } return p; }
 
   // teleport/jump: any free hex within n regardless of path
   function freeHexesWithin(B, u, n, from) {
-    return Hex.within(from || u.pos, n).filter(h => passable(B, h) && !unitAt(B, h) && tile(B, h));
+    return Hex.within(from || u.pos, n).filter(h => tile(B, h) && footprint(u, h).every(f => passable(B, f) && (!unitAt(B, f) || unitAt(B, f) === u)) && !Hex.eq(h, u.pos));
   }
 
   function* moveAlong(B, u, path, kind = 'move') {
@@ -414,17 +426,18 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (u.dead || isDying(u)) return;
       const from = path[i - 1], to = path[i];
       if (kind === 'move') {
-        // leaving 'from' provokes OAs from threatening enemies
+        // stepping out of an enemy's reach provokes it; repositioning within its reach doesn't
         for (const e of threatening(B, u, from)) {
-          if (reactedOA.has(e.uid) || e.oaUsed) continue;
+          if (reactedOA.has(e.uid) || e.oaUsed || udist(e, u, null, to) <= threatRange(e)) continue;
           reactedOA.add(e.uid);
           const stop = yield* opportunityAttack(B, e, u);
           if (u.dead || isDying(u)) return;
           if (stop) { log(B, `${u.name} is stopped in their tracks!`, 'cond'); return; }
         }
       }
-      if (unitAt(B, to) && unitAt(B, to) !== u && i === path.length - 1) return; // can't end on an occupant
+      if (i === path.length - 1 && footprint(u, to).some(f => unitAt(B, f) && unitAt(B, f) !== u)) return; // can't end on an occupant
       u.pos = to;
+      if (u.turnFlags) u.turnFlags.moved = (u.turnFlags.moved || 0) + 1;
       fx(B, { t: 'step', u: u.uid, to, kind });
       yield* enterHex(B, u, to, kind);
       if (hasCond(u, 'immobilized') && kind === 'move') return;
@@ -550,7 +563,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (tgt.side === 'hero') {
       const prevent = traitSum(B, tgt, 'preventDrop');
       if (prevent) { tgt.hp = 1; return; }
-      if (!isDying(tgt)) {
+      if (isDying(tgt)) {
+        // a blow against the dying counts as a failed death save; a critical hit counts twice
+        const n = o.crit ? 2 : 1;
+        tgt.deathFails = (tgt.deathFails || 0) + n;
+        log(B, `${tgt.name} is struck while dying: ${n > 1 ? 'two failed death saves' : 'a failed death save'}! [${Math.min(3, tgt.deathFails)}/3]`, 'death');
+        fx(B, { t: 'save', u: tgt.uid, ok: false, c: 'death', fails: tgt.deathFails });
+        if (tgt.deathFails >= 3) yield* kill(B, src, tgt);
+      } else {
         addCond(B, tgt, 'dying', { dur: 'enc' }); addCond(B, tgt, 'prone', { dur: 'enc' });
         tgt.deathFails = tgt.deathFails || 0;
         log(B, `${tgt.name} falls, dying!`, 'death');
@@ -698,7 +718,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     } else if (e.on === 'alliesNear') {
       subjects = alliesOf(B, u, e.incSelf).filter(a => !a.object && Hex.dist(a.pos, u.pos) <= (e.within || 5));
     } else if (e.on === 'allyAdjTarget') {
-      subjects = alliesOf(B, u).filter(a => !a.object && canAct(a) && Hex.dist(a.pos, t.pos) === 1).slice(0, 1);
+      subjects = alliesOf(B, u).filter(a => !a.object && canAct(a) && udist(a, t) === 1).slice(0, 1);
     }
     for (const s of subjects) {
       if (!s || s.dead) continue;
@@ -811,6 +831,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   // aim: {unit} for single target, {hex} for area/blast, nothing for self
   function* usePower(B, u, p, aim = {}) {
     if (!canUse(B, u, p)) { log(B, `${u.name} can't use ${p.name} now.`, 'miss'); return false; }
+    commitMove(u);
     spend(u, p.action || 'standard');
     if (p.kind === 'encounter' || p.kind === 'daily') u.used[p.id] = true;
     if (p.uses) u.uses[p.id] = (u.uses[p.id] || 0) + 1;
@@ -877,7 +898,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     return true;
   }
   function nextTarget(B, u, p, prev) {
-    return enemiesOf(B, u).find(e => e !== prev && validTarget(B, u, p, e));
+    const cands = enemiesOf(B, u).filter(e => e !== prev && validTarget(B, u, p, e));
+    return (u.monster && cands.find(e => !isDying(e))) || cands[0];
   }
 
   function* notifyEnemyAction(B, actor, info) {
@@ -889,38 +911,84 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---------- Special actions ----------
-  function* doMove(B, u, dest, kind = 'move') {
-    const budget = kind === 'shift' ? 1 + (u.shiftBonus || 0) : speedOf(u);
-    if (!canSpend(u, 'move')) return false;
-    if (hasCond(u, 'prone')) { spend(u, 'move'); removeCond(u, x => x.c === 'prone'); log(B, `${u.name} stands up.`, 'move'); fx(B, { t: 'stand', u: u.uid }); return true; }
+  // A planned move (opts.plan) stays open after each leg: the hero can keep going with what's left of
+  // their speed, or undo legs, until they take another action. Legs that provoked, hit a hazard or
+  // otherwise changed the battle are locked in.
+  function moveLeft(u, kind = 'move') { const m = u.moving; return m && m.kind === kind ? m.budget - m.spent : null; }
+  function commitMove(u) { u.moving = null; }
+  function canUndoMove(u) { const m = u.moving; return !!(m && m.legs.length && !m.legs[m.legs.length - 1].locked); }
+  function* doMove(B, u, dest, kind = 'move', opts = {}) {
+    const open = opts.plan && u.moving && u.moving.kind === kind ? u.moving : null;
+    if (!open) commitMove(u);
+    if (!open && !canSpend(u, 'move')) return false;
+    if (!open && hasCond(u, 'prone')) { spend(u, 'move'); removeCond(u, x => x.c === 'prone'); log(B, `${u.name} stands up.`, 'move'); fx(B, { t: 'stand', u: u.uid }); return true; }
+    const budget = open ? open.budget - open.spent : kind === 'shift' ? 1 + (u.shiftBonus || 0) : speedOf(u);
     const r = reach(B, u, budget, kind);
     const node = r.get(Hex.hk(dest));
     if (!node || node.noEnd || node.cost === 0) return false;
-    spend(u, 'move');
+    const leg = { pos: u.pos, conds: u.conds.slice(), act: Object.assign({}, u.act), cost: node.cost, moved: u.turnFlags && u.turnFlags.moved, acted: u.actedThisFight };
+    if (!open) spend(u, 'move');
     removeCond(u, x => x.c === 'hidden');
     u.actedThisFight = true;
+    const logLen = B.log.length;
     yield* moveAlong(B, u, pathFrom(node), kind);
+    if (opts.plan && !u.dead) {
+      const m = open || (u.moving = { kind, budget, spent: 0, legs: [] });
+      m.spent += node.cost;
+      leg.locked = B.log.length !== logLen || !Hex.eq(u.pos, dest) || isDying(u);
+      if (leg.locked && !Hex.eq(u.pos, dest)) m.spent = m.budget; // stopped short: the move is over
+      m.legs.push(leg);
+    }
     return true;
   }
-  function* doCharge(B, u, tgt) {
-    // standard action: move up to speed to a hex adjacent to tgt (must end closer), then melee basic +1
-    if (!canSpend(u, 'standard')) return false;
+  function* undoMove(B, u) {
+    if (!canUndoMove(u)) return false;
+    const m = u.moving, leg = m.legs.pop();
+    u.pos = leg.pos; u.conds = leg.conds; u.actedThisFight = leg.acted;
+    if (u.turnFlags) u.turnFlags.moved = leg.moved;
+    m.spent -= leg.cost;
+    if (!m.legs.length) { u.act = leg.act; u.moving = null; }
+    fx(B, { t: 'step', u: u.uid, to: u.pos, kind: 'undo' });
+    return true;
+  }
+
+  // Charge: a standard action to move up to speed (at least 2 hexes) and make a basic melee attack at +1.
+  // path, if given, is the exact route (starting at u.pos); otherwise the safest route is chosen.
+  function chargePath(B, u, tgt, path) {
     const bp = u.powers.find(p => p.basicMelee);
-    const r = reach(B, u, speedOf(u), 'move');
+    if (!bp || !tgt || tgt.dead) return null;
+    if (path) {
+      if (path.length < 2 || !Hex.eq(path[0], u.pos)) return null;
+      let cost = 0;
+      for (let i = 1; i < path.length; i++) {
+        if (Hex.dist(path[i - 1], path[i]) !== 1 || !canPass(B, u, path[i])) return null;
+        cost += stepCost(B, u, path[i], 'move');
+      }
+      const end = path[path.length - 1];
+      if (cost < 2 || cost > speedOf(u) || udist(u, tgt, end) !== 1) return null;
+      if (footprint(u, end).some(f => unitAt(B, f) && unitAt(B, f) !== u)) return null;
+      return path;
+    }
     let best = null;
-    for (const v of r.values()) {
-      if (v.noEnd || v.cost < 2) continue;
-      if (Hex.dist(v.h, tgt.pos) !== 1) continue;
+    for (const v of reach(B, u, speedOf(u), 'move').values()) {
+      if (v.noEnd || v.cost < 2 || udist(u, tgt, v.h) !== 1) continue;
       if (!best || v.prov < best.prov || (v.prov === best.prov && v.cost < best.cost)) best = v;
     }
-    if (!best) return false;
+    return best && pathFrom(best);
+  }
+  function* doCharge(B, u, tgt, path) {
+    if (!canSpend(u, 'standard')) return false;
+    commitMove(u);
+    const bp = u.powers.find(p => p.basicMelee);
+    const route = chargePath(B, u, tgt, path);
+    if (!route) return false;
     spend(u, 'standard');
     u.act.move = 0; // charging ends your movement for the turn
     u.actedThisFight = true;
     log(B, `${u.name} charges ${tgt.name}!`, 'power');
     fx(B, { t: 'banner', text: 'CHARGE!', u: u.uid, cls: 'ally' });
-    yield* moveAlong(B, u, pathFrom(best), 'move');
-    if (u.dead || isDying(u) || Hex.dist(u.pos, tgt.pos) !== 1) return true;
+    yield* moveAlong(B, u, route, 'move');
+    if (u.dead || isDying(u) || udist(u, tgt) !== 1) return true;
     fx(B, { t: 'attack', u: u.uid, tgt: tgt.uid, kind: 'melee', power: 'Charge' });
     yield* attackRoll(B, u, bp, tgt, { charge: true, melee: true });
     yield* traitRun(B, u, 'afterAttack', [tgt], []);
@@ -933,13 +1001,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     const r = reach(B, u, speedOf(u), 'move');
     const out = [];
     for (const e of enemiesOf(B, u)) {
-      for (const v of r.values()) if (!v.noEnd && v.cost >= 2 && Hex.dist(v.h, e.pos) === 1) { out.push(e); break; }
+      for (const v of r.values()) if (!v.noEnd && v.cost >= 2 && udist(u, e, v.h) === 1) { out.push(e); break; }
     }
     return out;
   }
   function* secondWind(B, u) {
     const a = u.secondWindAction || 'standard';
     if (u.used.__sw || !canSpend(u, a) || u.surges <= 0) return false;
+    commitMove(u);
     spend(u, a); u.used.__sw = true;
     log(B, `${u.name} catches a second wind!`, 'heal');
     fx(B, { t: 'banner', text: 'Second Wind', u: u.uid, cls: 'heal' });
@@ -949,6 +1018,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function* actionPoint(B, u) {
     if (u.used.__ap || u.monster && !u.actionPoints) return false;
+    commitMove(u);
     if (u.monster) u.actionPoints--; else u.used.__ap = true;
     u.act.std++; if (u.act.single) { u.act.single = false; u.act.spent = false; u.act.std = 1; }
     log(B, `${u.name} spends an action point!`, 'power');
@@ -1018,7 +1088,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const o of B.units) o.oaUsed = false;
     B.turnNo = (B.turnNo || 0) + 1;
     u.act = { std: 1, move: 1, minor: 1 };
-    u.turnFlags = {};
+    u.turnFlags = {}; u.moving = null;
     // expire 'sont' from u
     for (const o of B.units) removeCond(o, x => x.src === u.uid && x.dur === 'sont');
     fx(B, { t: 'turn', u: u.uid });
@@ -1065,6 +1135,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   function* endTurn(B, u) {
+    commitMove(u);
     if (!u.dead) {
       yield* traitRun(B, u, 'onTurnEnd');
       removeCond(u, x => x.dur === 'eot');
@@ -1131,6 +1202,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     bloodied, isDying, helpless, canAct, canReact, passable, los, threatening, addCond, removeCond, log, fx,
     speedOf, defense, hasCA, flanking, traitSum, traitRun, powerRange, atkStat, attackBonus, damageSpec,
     validTarget, areaHexes, areaTargets, isArea, canSpend, spend, canUse, powerReady, reach, pathFrom, freeHexesWithin,
+    udist, hdist, footprint, occupies, canPass, moveLeft, commitMove, canUndoMove, undoMove, chargePath,
     moveAlong, forcedMove, forcedOptions, dealDamage, heal, spendSurge, giveTemp, attackRoll, applyEffect, savingThrows,
     usePower, doMove, doCharge, chargeOptions, secondWind, actionPoint, startBattle, nextTurn, startTurn, endTurn, checkEnd,
     runAuto, gainMomentum, grantAttack, kill, enterHex, isHostile,
