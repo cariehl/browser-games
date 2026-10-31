@@ -59,6 +59,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     pillar: { name: 'Sugar Pillar', block: true, los: true },
     tile: { name: 'Checkered Tile', cost: 1 },
     counter: { name: 'Counter', block: true },
+    grave: { name: 'Headstone', block: true },
     flames: { name: 'Burning Ground', cost: 1, hazard: { dmg: '1d6+2', dtype: 'fire' } },
     jam: { name: 'Sticky Jam', cost: 2, difficult: true, hazard: { cond: 'immobilized' } },
   };
@@ -89,6 +90,13 @@ var G = (typeof G !== 'undefined') ? G : {};
       const pick = opts.items && opts.items[i];
       u.pack = pick != null ? [].concat(pick).filter(id => G.Items[id]) : [randomItem()];
       u.pack.forEach((id, k) => u.powers.push(itemPower(id, u.pack.slice(0, k).filter(x => x === id).length)));
+      // opts.carry[i]: wounds, spent surges and used daily powers brought in from an earlier fight (campaign)
+      const c = opts.carry && opts.carry[i];
+      if (c) {
+        u.hp = Math.max(1, Math.min(u.maxHp, u.maxHp - (c.damage || 0)));
+        u.surges = Math.max(0, u.surges - (c.surgesSpent || 0));
+        for (const id of (c.daily || [])) u.used[id] = true;
+      }
       addUnit(B, u);
     });
     for (const sp of scen.enemies) {

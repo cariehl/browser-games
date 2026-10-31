@@ -1,7 +1,8 @@
 # Hexbound Tactics — combat prototype
 
 A browser-playable, three.js hex-grid tactics prototype: a party of four heroes with tabletop-style classes,
-subclasses, ancestries, feats and power choices, fighting three hand-built scenarios.
+subclasses, ancestries, feats and power choices, fighting four hand-built scenarios on their own or as a
+short roguelite campaign.
 
 ## Run it
 
@@ -17,10 +18,18 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
   saves, minions, elites and a solo boss that acts twice per round.
 - **Classes** (`js/data/classes.js`): Fighter, Rogue, Ranger, Cleric, Warlord, Wizard, each with 2 subclasses
   and 11–12 powers to choose from; 6 ancestries; 21 feats.
+- **Campaign** (`js/campaign.js`, `js/campaign-ui.js`): *Start a Campaign* on the main menu opens the party
+  builder as party creation, then a Slay-the-Spire-style node map: Thornwood Crossing → The Lantern Barrow →
+  The Red Toll. Wounds, spent healing surges, used daily powers and items carry from fight to fight; a hero
+  who dies stays dead. After each victory the party finds two items, levels up (picking any newly unlocked
+  power or feat) and takes a short rest, spending surges to heal. Runs save in the browser and can be
+  continued from the menu; every finished or abandoned run goes into the **Record of Heroes**.
 - **Scenarios** (`js/data/scenarios.js`, `js/data/monsters.js`):
   1. *Thornwood Crossing* — Level 1 vs goblins (bridges, a ford, reinforcements, a warboss).
-  2. *The Red Toll* — Level 3 vs bandits (exploding oil barrels, campfire, a riposting captain).
-  3. *The Grand Bakery* — Level 5 vs **The Pastry Golem**: a three-phase solo boss with telegraphed
+  2. *The Lantern Barrow* — Level 2 vs the restless dead (headstones, soul lanterns that let Old Sallow the
+     Lantern Widow raise fallen Rattlebones until you smash them, and a radiant burst when you do).
+  3. *The Red Toll* — Level 3 vs bandits (exploding oil barrels, campfire, a riposting captain).
+  4. *The Grand Bakery* — Level 5 vs **The Pastry Golem**: a three-phase solo boss with telegraphed
      Grand Soufflé slams, frosting sprays that glaze the floor, ovens that spawn gingerbread guards,
      cream puffs that burst when popped, jam jars, and a cinnamon roll that bowls you over.
 - **Items** (`js/data/items.js`): each hero starts every fight with one random consumable in their pack:
@@ -29,7 +38,7 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
   dressing that can revive a dying ally. Item attacks use the item's bonus + level, not an ability score.
 - **Party builder** (`js/builder.js`): point-buy abilities, ancestry, class/subclass, feats per level,
   power picks per slot; parties are saved in the browser and can be exported/imported as a code.
-  One build covers all three scenarios — level 3 and 5 choices unlock automatically.
+  One build covers every scenario — level 2, 3 and 5 choices unlock automatically.
 - **AI** (`js/ai.js`): scores every reachable hex × power × target by expected value; artillery keeps its
   distance, skirmishers hunt flanks, leaders heal, monsters ignore the fallen with area attacks.
 - **Keyword popups** (`js/keywords.js`): tooltips for units, terrain and powers get side panels explaining
@@ -42,9 +51,11 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
 ```
 node tests/rules.js           # rules regression checks (line of sight, movement, charge, dying, Large creatures)
 node tests/sim.js 20          # headless AI-vs-AI balance runs for every scenario × premade party
+node tests/campaign.js 30      # headless AI runs through the whole campaign, with rests and level ups
 node tests/one.js golem 0 5   # one verbose battle log (scenario, party index, seed)
 node tests/shot.js /tmp/shots # Playwright screenshots of menu, builder and each battle
-node tests/auto.js /tmp/shots # full in-browser autoplay of all three battles, reports JS errors
+node tests/auto.js /tmp/shots # full in-browser autoplay of all four battles, reports JS errors
+node tests/campaign-ui.js /tmp/shots # in-browser campaign: party creation, map, autoplayed fights, camp, record
 ```
 
 ## Licensing note

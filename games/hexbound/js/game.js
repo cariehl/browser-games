@@ -26,13 +26,17 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   function menu() {
     show('menu');
+    const run = G.Campaign.loadRun();
     $('#menu').innerHTML = `
       <div class="menu-inner">
         <div class="logo"><span class="hexmark">⬢</span> HEXBOUND <small>Tactics · Combat Prototype</small></div>
         <p class="tag">A party of four. A hex grid. A truly unreasonable amount of pastry.</p>
         <div class="menu-btns">
+          ${run ? `<button class="btn big on" data-go="continue">▶ Continue Campaign<small>${esc(run.partyName)} · Level ${run.level} · ${run.path.length} of ${G.Campaign.mapOf(run).nodes.length} fights won</small></button>` : ''}
+          <button class="btn big" data-go="campaign">🗺 Start a Campaign</button>
           <button class="btn big" data-go="select">⚔ Play a Scenario</button>
           <button class="btn big" data-go="builder">✎ Party Builder</button>
+          <button class="btn big" data-go="record">📜 Record of Heroes</button>
           <button class="btn big ghost" data-go="help">? How to Play</button>
         </div>
         <div class="menu-opts">
@@ -49,6 +53,9 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (where === 'select') selectScreen();
     else if (where === 'builder') { show('builder'); G.Builder.open($('#builder'), menu); }
     else if (where === 'help') help();
+    else if (where === 'campaign') G.CampaignUI.start();
+    else if (where === 'continue') G.CampaignUI.resume();
+    else if (where === 'record') G.CampaignUI.record();
     else menu();
   }
 
@@ -69,7 +76,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         <div class="sel-party">${parties[pIdx].heroes.map(h => { const C = G.Build.CLASSES[h.cls]; const bad = G.validateHero(h); return `<div class="mini cls-${h.cls}"><span class="ico">${G.ICON[h.cls]}</span><b>${esc(h.name)}</b><small>${G.Build.ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name}</small>${bad.length ? `<em class="bad">${esc(bad[0])}</em>` : ''}</div>`; }).join('')}</div>
         <div class="scen-cards">${G.Scenarios.map((s, i) => `
           <div class="scen s-${s.id}">
-            <div class="scen-art">${{ goblins: '🌲⚔🌲', bandits: '🔥🪓🛒', golem: '🎂👁👁🎂' }[s.id]}</div>
+            <div class="scen-art">${G.SCEN_ART[s.id]}</div>
             <h3>${s.name}</h3><div class="scen-sub">${s.sub}</div>
             <p>${s.blurb}</p>
             <ul>${s.tips.map(t => `<li>${t}</li>`).join('')}</ul>
@@ -126,7 +133,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ================= Battle =================
-  let B = null, scenRef = null, partyRef = null;
+  let B = null, scenRef = null, partyRef = null, campRef = null;
   let ui = { mode: null, power: null, hero: null, busy: false, choice: null, hover: null, deploying: false, deploySel: null };
   let logIdx = 0;
 
@@ -135,15 +142,17 @@ var G = (typeof G !== 'undefined') ? G : {};
     return Object.assign({}, scen, { events: (scen.events || []).map(e => Object.assign({}, e, { done: false })) });
   }
 
-  function startBattle(scen, party) {
-    scenRef = scen; partyRef = party;
-    B = E().newBattle(prepScenario(scen), party.heroes);
-    const d = DIFF[G.Settings.difficulty] || DIFF.normal;
+  // opts (campaign fights): { campaign: { onEnd(B) }, difficulty, items, carry }
+  function startBattle(scen, party, opts = {}) {
+    scenRef = scen; partyRef = party; campRef = opts.campaign || null;
+    B = E().newBattle(prepScenario(scen), party.heroes, { items: opts.items, carry: opts.carry });
+    const diff = opts.difficulty || G.Settings.difficulty;
+    const d = DIFF[diff] || DIFF.normal;
     for (const u of B.units) if (u.side === 'enemy') {
       if (!u.minion) { u.maxHp = u.hp = Math.round(u.maxHp * d.hp); }
       u.powers = u.powers.map(p => p.atk ? Object.assign({}, p, { atk: Object.assign({}, p.atk, { bonus: (p.atk.bonus || 0) + d.atk }) }) : p);
     }
-    B.difficulty = G.Settings.difficulty;
+    B.difficulty = DIFF[diff] ? diff : 'normal';
     logIdx = 0; hiddenChips.clear();
     show('battle');
     buildHud();
@@ -619,8 +628,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       <button class="btn" data-a="speed">Animation speed: ${G.Settings.speed}×</button>
       <button class="btn" data-a="auto">Auto-end turn: ${G.Settings.autoEndTurn ? 'on' : 'off'}</button>
       <button class="btn" data-a="ai">Autoplay heroes (watch the AI): ${G.Settings.autoHeroes ? 'on' : 'off'}</button>
-      <button class="btn" data-a="restart">Restart battle</button>
-      <button class="btn danger" data-a="quit">Quit to scenario select</button></div>`, 'small');
+      ${campRef ? `<button class="btn danger" data-a="quitrun">Save and quit to menu</button><p class="muted fine-c">The campaign is saved from before this fight. When you continue, the fight starts over.</p>` : `<button class="btn" data-a="restart">Restart battle</button>
+      <button class="btn danger" data-a="quit">Quit to scenario select</button>`}</div>`, 'small');
     m.querySelectorAll('[data-a]').forEach(b => b.onclick = () => {
       const a = b.dataset.a; m.remove();
       if (a === 'help') help();
@@ -629,6 +638,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (a === 'ai') { G.Settings.autoHeroes = !G.Settings.autoHeroes; if (G.Settings.autoHeroes && ui.hero && !ui.busy) { const u = ui.hero; ui.hero = null; ui.mode = null; clearHL(); (async () => { await run(G.AI.takeTurn(B, u)); await run(E().endTurn(B, u)); advance(); })(); } }
       if (a === 'restart') { B.over = B.over || 'quit'; startBattle(scenRef, partyRef); }
       if (a === 'quit') { B.over = B.over || 'quit'; selectScreen(); }
+      if (a === 'quitrun') { B.over = B.over || 'quit'; menu(); }
     });
   }
 
@@ -778,8 +788,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (d) d.done();
   }
 
-  function shortName(n) { return n.replace(/^(Goblin|Bandit|The) /, '').split(' ')[0]; }
-  function monIcon(u) { return { bandit_thug: '👊', bandit_cutthroat: '🗡', bandit_xbow: '🏹', bandit_bruiser: '🔨', bandit_captain: '👑', goblin_boss: '👑', goblin_hexer: '🔮', goblin_slinger: '🪨' }[u.id] || { goblin: '👺', wolf: '🐺', human: '🗡', golem: '🎂', ginger: '🍪', puff: '☁', macaron: '🍬', roll: '🌀' }[u.look && u.look.kind] || '●'; }
+  function shortName(n) { return n.replace(/^(Goblin|Bandit|Barrow|Grave|Soul|The|Old) /, '').split(' ')[0]; }
+  function monIcon(u) { return { bandit_thug: '👊', bandit_cutthroat: '🗡', bandit_xbow: '🏹', bandit_bruiser: '🔨', bandit_captain: '👑', goblin_boss: '👑', goblin_hexer: '🔮', goblin_slinger: '🪨', barrow_archer: '🏹', barrow_warden: '🛡', lantern_widow: '🏮', grave_hound: '🐺' }[u.id] || { skeleton: '💀', goblin: '👺', wolf: '🐺', human: '🗡', golem: '🎂', ginger: '🍪', puff: '☁', macaron: '🍬', roll: '🌀' }[u.look && u.look.kind] || '●'; }
   function updateParty() {
     const heroes = B.units.filter(u => u.side === 'hero');
     $('#hud-party').innerHTML = heroes.map(u => {
@@ -950,6 +960,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const win = B.over === 'win';
     if (B.over === 'quit') return;
     G.Audio.play(win ? 'win' : 'lose');
+    const camp = campRef ? campRef.onEnd(B) : null;
     if (win) { try { const best = JSON.parse(localStorage.getItem('hexbound.best') || '{}'); const order = ['story', 'normal', 'hard']; const cur = best[scenRef.id]; const d = DIFF[B.difficulty].label; if (!cur || order.indexOf(B.difficulty) > order.indexOf(Object.keys(DIFF).find(k => DIFF[k].label === cur))) best[scenRef.id] = d; localStorage.setItem('hexbound.best', JSON.stringify(best)); } catch (e) { } }
     const heroes = B.units.filter(u => u.side === 'hero');
     const st = (u) => B.stats[u.uid];
@@ -960,13 +971,16 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (B !== myB || !$('#battle').classList.contains('on')) return;
       const m = modal(`
         <h2 class="${win ? 'win' : 'lose'}">${win ? 'Victory!' : 'Defeat'}</h2>
-        <p>${esc(win ? scenRef.winText : 'The party has fallen. The ' + (scenRef.id === 'golem' ? 'bakery remains a confectionery horror.' : 'road remains closed.'))}</p>
+        <p>${esc(win ? scenRef.winText : scenRef.loseText || 'The party has fallen. The ' + (scenRef.id === 'golem' ? 'bakery remains a confectionery horror.' : 'road remains closed.'))}</p>
+        ${camp && camp.fallen.length ? `<p class="bad">Fallen for good: ${camp.fallen.map(esc).join(', ')}.</p>` : ''}
         <p class="muted">${B.round} rounds · ${DIFF[B.difficulty].label} difficulty</p>
         <table class="stats"><tr><th></th><th>Damage</th><th>Kills</th><th>Crits</th><th>Healed</th><th>Taken</th></tr>
         ${heroes.map(u => `<tr class="${u === mvp ? 'mvp' : ''}"><td>${G.ICON[u.cls]} ${esc(u.name)}${u === mvp ? ' <b>★ MVP</b>' : ''}${u.dead ? ' ☠' : ''}</td><td>${st(u).dmg}</td><td>${st(u).kills}</td><td>${st(u).crits}</td><td>${st(u).healed}</td><td>${st(u).taken}</td></tr>`).join('')}</table>
-        <div class="modal-btns"><button class="btn" data-a="retry">${win ? 'Fight again' : 'Try again'}</button><button class="btn" data-a="select">Scenarios</button><button class="btn ghost" data-a="builder">Party Builder</button></div>`, win ? 'result win' : 'result lose');
+        <div class="modal-btns">${camp
+          ? `<button class="btn" data-a="camp">${!win ? 'See how it ended' : camp.over ? 'Claim victory ▶' : 'Make camp ▶'}</button>`
+          : `<button class="btn" data-a="retry">${win ? 'Fight again' : 'Try again'}</button><button class="btn" data-a="select">Scenarios</button><button class="btn ghost" data-a="builder">Party Builder</button>`}</div>`, win ? 'result win' : 'result lose');
       m.dataset.sticky = 1;
-      m.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { m.remove(); const a = b.dataset.a; if (a === 'retry') startBattle(scenRef, partyRef); else if (a === 'select') selectScreen(); else go('builder'); });
+      m.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { m.remove(); const a = b.dataset.a; if (a === 'camp') camp.next(); else if (a === 'retry') startBattle(scenRef, partyRef); else if (a === 'select') selectScreen(); else go('builder'); });
     }, 900);
   }
 
@@ -996,7 +1010,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     G.UI = { powerBanner, roundBanner, turnBanner, story, event: storyEvent, rollInitiative, joinInitiative, momentumPulse, onRoll: (ev) => { } };
     menu();
     // debug/testing hooks
-    G.App = { startBattle, get B() { return B; }, get ui() { return ui; }, beginBattle, menu, selectScreen, go };
+    G.App = { startBattle, get B() { return B; }, get ui() { return ui; }, beginBattle, menu, selectScreen, go, show, modal, DIFF };
   }
   G.Game = { init };
 })();

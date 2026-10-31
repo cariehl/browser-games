@@ -16,7 +16,7 @@ const path = require('path');
   await page.screenshot({ path: out + '/builder.png' });
   await page.click('[data-act=back]'); await page.click('[data-go=select]'); await page.waitForTimeout(300);
   await page.screenshot({ path: out + '/select.png' });
-  for (const i of (process.argv[3] || '0,1,2').split(',').map(Number)) {
+  for (const i of (process.argv[3] || '0,1,2,3').split(',').map(Number)) {
     await page.evaluate((i) => { G.Settings.speed = 4; G.App.startBattle(G.Scenarios[i], G.Store.load()[0]); }, i);
     await page.waitForTimeout(900);
     await page.screenshot({ path: out + `/deploy${i}.png` });
