@@ -198,10 +198,86 @@ var G = (typeof G !== 'undefined') ? G : {};
       name: 'Jam Jar', side: 'object', role: 'Object', level: 1, hp: 1, def: { AC: 5, Fort: 5, Ref: 5, Will: 5 }, speed: 0,
       powers: [], traits: ['jamBurst'], look: { kind: 'jar', color: 0xa4133c }, desc: 'Smash it: sticky jam floods every hex within 1 (difficult terrain that immobilizes).',
     },
+    // ---------------- Campaign additions: Thornwood beasts and the elites of each faction ----------------
+    spiderling: {
+      name: 'Spiderling', role: 'Minion', level: 1, minion: true, hp: 1, def: { AC: 15, Fort: 12, Ref: 14, Will: 11 }, speed: 7, init: 4,
+      powers: [melee({ id: 'nip', name: 'Venom Nip', basicMelee: true, atk: { bonus: 6, vs: 'AC' }, dmg: '4', dtype: 'poison' })],
+      look: { kind: 'spider', color: 0x4a3a2a, scale: 0.55 }, ai: 'minion',
+      desc: 'Dies to any hit. Comes in swarms.',
+    },
+    thorn_spider: {
+      name: 'Thornback Spider', role: 'Lurker', level: 1, hp: 26, def: { AC: 15, Fort: 13, Ref: 15, Will: 12 }, speed: 6, init: 5,
+      powers: [
+        melee({ id: 'fangs', name: 'Barbed Fangs', basicMelee: true, atk: { bonus: 6, vs: 'AC' }, dmg: '1d6+3', dtype: 'poison', hit: [{ t: 'ongoing', amt: 2, dtype: 'poison' }] }),
+        ranged({ id: 'web', name: 'Web Spray', range: 5, recharge: 5, atk: { bonus: 5, vs: 'Ref' }, hit: [{ t: 'cond', c: 'immobilized', dur: 'save', label: 'webbed (immobilized)' }], bark: 'Sssss...' }),
+      ],
+      traits: ['caDamage'], caDmg: '1d6', look: { kind: 'spider', color: 0x3a4a22, scale: 0.9 }, ai: 'skirmisher',
+      desc: 'Poison bites (ongoing 2 poison, save ends) and +1d6 damage with combat advantage. Its web holds a hero in place.',
+    },
+    boar: {
+      name: 'Bristleback Boar', role: 'Brute', level: 2, hp: 46, def: { AC: 14, Fort: 16, Ref: 13, Will: 12 }, speed: 6, init: 2,
+      powers: [melee({ id: 'gore', name: 'Gore', basicMelee: true, atk: { bonus: 7, vs: 'AC' }, dmg: '1d10+4' })],
+      traits: ['tuskRush'], look: { kind: 'boar', color: 0x5a4030, scale: 1 }, ai: 'brute',
+      desc: 'Tusk Rush: after moving 3+ hexes in a turn, its gore knocks the target prone.',
+    },
+    mossback: {
+      name: 'Old Gnarl', title: 'Mossback Ogre', role: 'Elite Brute', level: 2, elite: true, hp: 94, def: { AC: 15, Fort: 17, Ref: 13, Will: 13 }, speed: 5, init: 0, saveBonus: 2, actionPoints: 1, reach: 2,
+      powers: [
+        melee({ id: 'log', name: 'Log Club', basicMelee: true, atk: { bonus: 7, vs: 'AC' }, dmg: '2d8+3' }),
+        melee({ id: 'stomp', name: 'Earth-Shaking Stomp', tgt: 'closeBurst', size: 1, recharge: 5, atk: { bonus: 5, vs: 'Fort' }, dmg: '1d10+3', targets: 'enemy', hit: [{ t: 'cond', c: 'prone', dur: 'enc', label: 'knocked prone' }], bark: 'GNARL SMASH TINY.' }),
+      ],
+      traits: ['regen'], regen: 4, look: { kind: 'brute', color: 0x5f7a3a, scale: 1.3 }, ai: 'brute',
+      barks: ['Tiny things in Gnarl\'s wood!', 'Hrrrm. That one stings.', 'Gnarl... go... sleep...'],
+      desc: 'Regenerates 4 HP at the start of each of its turns while above 0 HP.',
+    },
+    goblin_warchief: {
+      name: 'Goblin Warchief', title: 'Goblin Warchief', role: 'Elite Soldier', level: 2, elite: true, hp: 72, def: { AC: 18, Fort: 15, Ref: 14, Will: 13 }, speed: 6, init: 4, saveBonus: 2, actionPoints: 1,
+      powers: [
+        melee({ id: 'cleaver', name: 'Big Cleaver', basicMelee: true, atk: { bonus: 7, vs: 'AC' }, dmg: '1d10+3', hit: [{ t: 'mark' }] }),
+        melee({ id: 'sweep', name: 'Bully Sweep', tgt: 'closeBurst', size: 1, recharge: 5, atk: { bonus: 5, vs: 'Fort' }, dmg: '1d8+3', targets: 'enemy', hit: [{ t: 'push', n: 1 }], bark: 'OUTTA MY WAY!' }),
+      ],
+      traits: ['goblinTactics', 'bossRally'], look: { kind: 'goblin', color: 0x5a7b2f, scale: 1.15, crown: true }, ai: 'soldier',
+      barks: ['This is goblin road now!', 'Pay up or bleed out!', 'CUTTERS! TO ME!'],
+      desc: 'Calls two more cutters when bloodied.',
+    },
+    ashen_knight: {
+      name: 'Ashen Knight', title: 'Oathbound Dead', role: 'Elite Soldier', level: 3, elite: true, hp: 86, def: { AC: 19, Fort: 16, Ref: 14, Will: 15 }, speed: 5, init: 3, saveBonus: 2, actionPoints: 1,
+      powers: [
+        melee({ id: 'blade', name: 'Grave-Rusted Blade', basicMelee: true, atk: { bonus: 8, vs: 'AC' }, dmg: '1d10+4', hit: [{ t: 'mark' }] }),
+        melee({ id: 'oath', name: 'Oath of Ashes', tgt: 'closeBurst', size: 2, recharge: 5, atk: { bonus: 6, vs: 'Will' }, dmg: '1d8+3', dtype: 'necrotic', targets: 'enemy', hit: [{ t: 'cond', c: 'slowed', dur: 'save', label: 'ash-choked (slowed)' }], bark: 'KNEEL.' }),
+      ],
+      traits: ['undead'], look: { kind: 'skeleton', color: 0x8a8070, scale: 1.3, shield: true, helm: true }, ai: 'soldier',
+      barks: ['None pass. None ever pass.', 'My oath... outlives me.', 'At last... rest.'],
+      desc: 'Marks whoever it strikes. Its oath slows everyone around it.',
+    },
+    bandit_enforcer: {
+      name: 'Toll Enforcer', title: 'Bandit Enforcer', role: 'Elite Brute', level: 3, elite: true, hp: 98, def: { AC: 16, Fort: 18, Ref: 14, Will: 14 }, speed: 5, init: 1, saveBonus: 2, actionPoints: 1,
+      powers: [
+        melee({ id: 'greatclub', name: 'Spiked Greatclub', basicMelee: true, atk: { bonus: 8, vs: 'AC' }, dmg: '2d8+4' }),
+        melee({ id: 'shoulder', name: 'Shoulder Charge', recharge: 5, atk: { bonus: 6, vs: 'Fort' }, dmg: '2d6+4', hit: [{ t: 'push', n: 2 }, { t: 'cond', c: 'prone', dur: 'enc', label: 'knocked prone' }], bark: 'TOLL\'S DUE!' }),
+      ],
+      look: { kind: 'human', color: 0x6a3a1a, scale: 1.35 }, ai: 'brute',
+      barks: ['Coin or teeth. Your pick.', 'Now I\'m angry.', 'Not... the face...'],
+    },
+    fondant_knight: {
+      name: 'Fondant Knight', title: 'Royal Confection Guard', role: 'Elite Soldier', level: 5, elite: true, hp: 120, def: { AC: 21, Fort: 18, Ref: 16, Will: 16 }, speed: 5, init: 3, saveBonus: 2, actionPoints: 1, reach: 2,
+      powers: [
+        melee({ id: 'lance', name: 'Candy-Cane Lance', basicMelee: true, atk: { bonus: 10, vs: 'AC' }, dmg: '1d10+5', hit: [{ t: 'mark' }] }),
+        melee({ id: 'rush', name: 'Sugar Rush', tgt: 'closeBurst', size: 1, recharge: 5, atk: { bonus: 8, vs: 'Ref' }, dmg: '1d8+4', targets: 'enemy', hit: [{ t: 'cond', c: 'slowed', label: 'sticky (slowed)' }], bark: 'FOR THE GOLEM!' }),
+      ],
+      look: { kind: 'ginger', color: 0xf0a0c0, scale: 1.35 }, ai: 'soldier',
+      barks: ['Halt! The bakery is closed!', 'My fondant... cracks...', 'Crumbs... to crumbs...'],
+    },
   };
 
   // ---------- Monster traits ----------
   Object.assign(T, {
+    tuskRush: {
+      onHit: function* (B, u, t) { if (u.turnFlags && u.turnFlags.moved >= 3 && !t.dead) { E().addCond(B, t, 'prone', { dur: 'enc', src: u.uid }); E().log(B, `${t.name} is bowled over by the charge!`, 'cond'); } },
+    },
+    regen: {
+      onTurnStart: function* (B, u) { if (!u.dead && u.hp > 0 && u.hp < u.maxHp) { const n = E().heal(B, u, u, G.Monsters[u.id].regen || 3); if (n) E().log(B, `${u.name} regenerates ${n} HP.`, 'heal'); } },
+    },
     goblinTactics: {
       onMissedBy: function* (B, u, att, p, ctx) {
         if (!ctx.melee || u.dead || !E().canReact(u)) return;
