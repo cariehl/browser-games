@@ -9,7 +9,7 @@ const { chromium } = require('playwright'); const path = require('path');
   await page.goto('file://' + path.resolve(__dirname, '../index.html'));
   await page.waitForTimeout(500);
   const out = process.argv[2] || '/tmp/shots';
-  for (const i of (process.argv[3] || '0,1,2').split(',').map(Number)) {
+  for (const i of (process.argv[3] || '0,1,2,3').split(',').map(Number)) {
     await page.evaluate((i) => { G.Settings.speed = 25; G.Settings.autoHeroes = true; G.App.startBattle(G.Scenarios[i], G.Store.load()[+(new URLSearchParams(location.search).get('p') || 0)]); G.App.beginBattle(); }, i);
     const t0 = Date.now();
     let res;

@@ -220,7 +220,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   const TCOL = {
     grass: 0x6a9a45, rough: 0x4f7a34, road: 0xb59a6a, tree: 0x4f7a34, rock: 0x6a9a45, water: 0x3a7fb8, bridge: 0x3a7fb8,
     wagon: 0xb59a6a, tent: 0x8a9a55, fire: 0x7a6a50, wall: 0x9a8f86, tile: 0xffffff, oven: 0xb5654a, frosting: 0xff9ec7,
-    pillar: 0xffffff, counter: 0xffffff, flames: 0x8a3a10, jam: 0x9a1030, floor: 0x9a9a9a,
+    pillar: 0xffffff, counter: 0xffffff, flames: 0x8a3a10, jam: 0x9a1030, floor: 0x9a9a9a, grave: 0x55704a,
   };
   function tileColor(t) {
     if (t.terrain === 'tile' || t.terrain === 'pillar' || t.terrain === 'counter') {
@@ -316,6 +316,14 @@ var G = (typeof G !== 'undefined') ? G : {};
         const tp = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.08, 1.3), mat(0xffffff)); tp.position.y = 0.84; g.add(tp);
         const cake = new THREE.Mesh(new THREE.CylinderGeometry(0.3, 0.3, 0.3, 12), mat(0xffc0d9)); cake.position.y = 1.03; g.add(cake);
         break;
+      }
+      case 'grave': {
+        // a weathered headstone with a little mound of earth in front of it
+        const tilt = (rnd(1) - 0.5) * 0.3;
+        const st = new THREE.Mesh(new THREE.BoxGeometry(0.75, 0.95, 0.2), mat(new THREE.Color(0x8d9095).offsetHSL(0, 0, (rnd(2) - 0.5) * 0.1))); st.position.set(0, 0.47, -0.25); st.rotation.z = tilt; g.add(st);
+        const top = new THREE.Mesh(new THREE.CylinderGeometry(0.375, 0.375, 0.2, 10, 1, false, 0, Math.PI), mat(0x8d9095)); top.rotation.set(Math.PI / 2, 0, Math.PI / 2 + tilt); top.position.set(-Math.sin(tilt) * 0.47, 0.95, -0.25); g.add(top);
+        const mound = new THREE.Mesh(new THREE.SphereGeometry(0.42, 8, 6), mat(0x4a3a2a)); mound.scale.set(1, 0.3, 1.3); mound.position.set(0, 0.02, 0.3); g.add(mound);
+        g.rotation.y = (rnd(3) - 0.5) * 0.5; break;
       }
       case 'water': { m.material.emissive = new THREE.Color(0x0a2a4a); flickers.push({ m, s: rnd(1) * 10, water: true }); break; }
     }
@@ -494,6 +502,28 @@ var G = (typeof G !== 'undefined') ? G : {};
         else if (s > 1.1) { add(Cyl(0.04, 0.04, 1.0, 5), 0x5a3a2a, 0.42, 0.7, 0.12); add(new THREE.BoxGeometry(0.28, 0.25, 0.25), 0x666666, 0.42, 1.2, 0.12); }
         else add(Cyl(0.05, 0.07, 0.6, 5), 0x4a3a2a, 0.36, 0.6, 0.15);
         g.scale.setScalar(s); height = 1.7 * s; break;
+      }
+      case 'skeleton': {
+        const c = L.color; const s = L.scale || 1;
+        add(Cyl(0.05, 0.05, 0.5, 5), c, 0, 0.62, 0); // spine
+        for (let i = 0; i < 3; i++) add(new THREE.TorusGeometry(0.17 - i * 0.02, 0.025, 4, 10), c, 0, 0.72 + i * 0.1, 0).rotation.x = Math.PI / 2;
+        add(Cyl(0.16, 0.12, 0.08, 8), c, 0, 0.38, 0); // pelvis
+        for (const sx of [1, -1]) { add(Cyl(0.035, 0.03, 0.4, 5), c, sx * 0.09, 0.18, 0); add(Cyl(0.03, 0.03, 0.45, 5), c, sx * 0.24, 0.72, 0.04).rotation.z = sx * 0.2; }
+        add(Sph(0.17, 8), c, 0, 1.12, 0);
+        add(new THREE.BoxGeometry(0.2, 0.08, 0.14), c, 0, 0.98, 0.04);
+        for (const sx of [1, -1]) add(Sph(0.04, 5), 0x7affc8, sx * 0.065, 1.13, 0.14, { emissive: 0x2aff9a, emissiveIntensity: 1 });
+        if (L.helm) add(new THREE.SphereGeometry(0.19, 10, 6, 0, Math.PI * 2, 0, Math.PI * 0.5), 0x6a5a48, 0, 1.15, 0, { metalness: 0.5, roughness: 0.6 });
+        if (L.shield) { const sh = add(Cyl(0.3, 0.3, 0.05, 8), 0x5a4a3a, -0.34, 0.7, 0.12); sh.rotation.z = Math.PI / 2; add(Cyl(0.025, 0.025, 1.4, 5), 0x5a3a2a, 0.34, 0.75, 0.12); add(new THREE.ConeGeometry(0.07, 0.3, 4), 0x8a7a6a, 0.34, 1.55, 0.12, { metalness: 0.5 }); }
+        else if (L.bow) g.add(longbow(-0.32, 0.75, 0.1));
+        g.scale.setScalar(s); height = 1.4 * s; break;
+      }
+      case 'lantern': {
+        add(Cyl(0.04, 0.04, 1.1, 5), 0x2a2a2a, 0, 0.55, 0, { metalness: 0.6 });
+        add(new THREE.BoxGeometry(0.4, 0.04, 0.04), 0x2a2a2a, 0.15, 1.08, 0, { metalness: 0.6 });
+        const glass = add(Cyl(0.13, 0.11, 0.28, 6), 0x7affc8, 0.3, 0.88, 0, { emissive: 0x2aff9a, emissiveIntensity: 1.2, transparent: true, opacity: 0.85 });
+        add(new THREE.ConeGeometry(0.15, 0.12, 6), 0x2a2a2a, 0.3, 1.08, 0, { metalness: 0.6 });
+        const l = new THREE.PointLight(0x5affb0, 0.9, 5); l.position.set(0.3, 0.9, 0); g.add(l);
+        height = 1.2; break;
       }
       case 'barrel': {
         add(Cyl(0.33, 0.33, 0.75, 12), 0x7a4a1f, 0, 0.38, 0);

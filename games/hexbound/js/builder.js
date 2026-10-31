@@ -77,10 +77,12 @@ var G = (typeof G !== 'undefined') ? G : {};
   let state = { parties: [], pi: 0, hi: 0, previewLevel: 5, tab: 'class' };
   let root;
 
-  function open(container, onBack) {
+  // opts.onBegin(party): campaign mode, the builder is the party-creation step and gets a Begin button
+  function open(container, onBack, opts = {}) {
     root = container;
     state.parties = Store.load();
     state.onBack = onBack;
+    state.onBegin = opts.onBegin || null;
     render();
   }
 
@@ -124,11 +126,12 @@ var G = (typeof G !== 'undefined') ? G : {};
     <div class="pb">
       <header class="pb-head">
         <button class="btn ghost" data-act="back">← Menu</button>
-        <h2>Party Builder</h2>
+        <h2>${state.onBegin ? 'Create Your Party' : 'Party Builder'}</h2>
         <span class="pb-flash"></span>
         <div class="pb-head-r">
           <button class="btn ghost" data-act="export">Export code</button>
           <button class="btn ghost" data-act="import">Import code</button>
+          ${state.onBegin ? `<button class="btn pb-begin" data-act="begin">Begin Campaign with ${esc(P.name)} ▶</button>` : ''}
         </div>
       </header>
       <div class="pb-body">
@@ -330,6 +333,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     inp('bump1', v => hero().bump4[1] = v);
     const act = (a, fn) => root.querySelectorAll(`[data-act="${a}"]`).forEach(el => el.onclick = fn);
     act('back', () => state.onBack && state.onBack());
+    act('begin', () => state.onBegin && state.onBegin(clone(party())));
     act('randname', () => { hero().name = NAMES[Math.floor(Math.random() * NAMES.length)] + ' ' + EPI[Math.floor(Math.random() * EPI.length)]; persist(); render(); });
     act('autostats', () => { const h = hero(); const nb = blankHero(h.cls).base; h.base = nb; persist(); render(); });
     act('newparty', () => {

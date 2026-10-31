@@ -61,6 +61,53 @@ var G = (typeof G !== 'undefined') ? G : {};
       barks: ['Who dares cross Grizzlenack\'s bridge?!', 'Toll is EVERYTHING you own!', 'Bah! Retreat is for cowards... and ME!'],
     },
 
+    // ---------------- Barrow dead (level 2 scenario) ----------------
+    rattlebone: {
+      name: 'Rattlebone', role: 'Minion', level: 2, minion: true, hp: 1, def: { AC: 16, Fort: 13, Ref: 14, Will: 12 }, speed: 6, init: 2,
+      powers: [melee({ id: 'claw', name: 'Bone Claw', basicMelee: true, atk: { bonus: 7, vs: 'AC' }, dmg: '4' })],
+      traits: ['undead'], look: { kind: 'skeleton', color: 0xd8d0b8, scale: 0.9 }, ai: 'minion',
+      desc: 'Dies to any hit. While a soul lantern burns, the Lantern Widow can pull fallen bones back up.',
+    },
+    barrow_archer: {
+      name: 'Barrow Archer', role: 'Artillery', level: 2, hp: 26, def: { AC: 15, Fort: 13, Ref: 15, Will: 13 }, speed: 6, init: 3,
+      powers: [
+        ranged({ id: 'bonebow', name: 'Yew Bow', basicRanged: true, range: 15, atk: { bonus: 7, vs: 'AC' }, dmg: '1d8+2' }),
+        melee({ id: 'jab', name: 'Bone Jab', basicMelee: true, atk: { bonus: 5, vs: 'AC' }, dmg: '1d4+2' }),
+        ranged({ id: 'chill', name: 'Grave-Chill Arrow', range: 15, recharge: 6, atk: { bonus: 7, vs: 'Fort' }, dmg: '1d8+3', dtype: 'cold', hit: [{ t: 'cond', c: 'slowed', dur: 'save', label: 'chilled (slowed)' }] }),
+      ],
+      traits: ['undead'], look: { kind: 'skeleton', color: 0xc8c0a4, scale: 0.95, bow: true }, ai: 'artillery',
+    },
+    grave_hound: {
+      name: 'Grave Hound', role: 'Skirmisher', level: 2, hp: 32, def: { AC: 16, Fort: 14, Ref: 15, Will: 12 }, speed: 7, init: 5,
+      powers: [melee({ id: 'gnaw', name: 'Gnaw', basicMelee: true, atk: { bonus: 7, vs: 'AC' }, dmg: '1d8+2', shiftAfter: 1 })],
+      traits: ['undead', 'caDamage'], caDmg: '1d6', look: { kind: 'wolf', color: 0x9a9488, scale: 1 }, ai: 'skirmisher',
+      desc: '+1d6 damage with combat advantage. Shifts after biting.',
+    },
+    barrow_warden: {
+      name: 'Barrow Warden', role: 'Soldier', level: 2, hp: 42, def: { AC: 18, Fort: 15, Ref: 13, Will: 14 }, speed: 5, init: 2,
+      powers: [
+        melee({ id: 'glaive', name: 'Rusted Glaive', basicMelee: true, atk: { bonus: 8, vs: 'AC' }, dmg: '1d10+3', hit: [{ t: 'mark' }] }),
+        melee({ id: 'grasp', name: 'Tomb-Cold Grasp', recharge: 5, atk: { bonus: 6, vs: 'Fort' }, dmg: '1d8+3', dtype: 'cold', hit: [{ t: 'cond', c: 'immobilized', dur: 'save', label: 'grasped (immobilized)' }] }),
+      ],
+      traits: ['undead'], look: { kind: 'skeleton', color: 0xb8b09a, scale: 1.1, shield: true, helm: true }, ai: 'soldier',
+      desc: 'Marks whoever it hits. Its cold grasp holds heroes in place.',
+    },
+    lantern_widow: {
+      name: 'Old Sallow', title: 'The Lantern Widow', role: 'Elite Controller', level: 3, elite: true, hp: 62, def: { AC: 17, Fort: 15, Ref: 16, Will: 18 }, speed: 6, init: 3, saveBonus: 2, actionPoints: 1,
+      powers: [
+        melee({ id: 'touch', name: 'Grave-Cold Touch', basicMelee: true, atk: { bonus: 7, vs: 'Ref' }, dmg: '1d8+3', dtype: 'cold' }),
+        ranged({ id: 'wail', name: 'Lantern Wail', range: 10, atk: { bonus: 7, vs: 'Will' }, dmg: '1d10+3', dtype: 'psychic', hit: [{ t: 'cond', c: 'slowed', label: 'haunted (slowed)' }] }),
+        ranged({ id: 'mist', name: 'Barrow Mist', tgt: 'areaBurst', size: 1, range: 10, recharge: 5, atk: { bonus: 6, vs: 'Fort' }, dmg: '1d8+2', dtype: 'necrotic', targets: 'enemy', hit: [{ t: 'cond', c: 'weakened', label: 'weakened' }], bark: 'Breathe deep, little candles.' }),
+      ],
+      traits: ['undead', 'lanternCall', 'widowEnd'], look: { kind: 'human', color: 0x46524c, scale: 1.05, hood: true }, ai: 'controller',
+      barks: ['More guests for my garden.', 'Up, my darlings. Up!', 'My lanterns... NO!'],
+      desc: 'At the start of her turn, each soul lantern still burning raises a Rattlebone beside it. When she falls, her dead fall with her.',
+    },
+    soul_lantern: {
+      name: 'Soul Lantern', side: 'object', role: 'Object', level: 2, hp: 1, def: { AC: 13, Fort: 13, Ref: 13, Will: 13 }, speed: 0,
+      powers: [], traits: ['lanternBreak'], look: { kind: 'lantern', color: 0x7affc8 }, desc: 'Each one lets the Lantern Widow raise a Rattlebone every turn. Smash it (AC 13): the freed souls deal 6 radiant damage to every undead within 2.',
+    },
+
     // ---------------- Bandits (level 3 scenario) ----------------
     bandit_thug: {
       name: 'Bandit Thug', role: 'Minion', level: 3, minion: true, hp: 1, def: { AC: 17, Fort: 15, Ref: 14, Will: 13 }, speed: 6, init: 2,
@@ -198,6 +245,42 @@ var G = (typeof G !== 'undefined') ? G : {};
         yield* E().attackRoll(B, u, u.powers[0], att, { melee: true });
       },
       onBloodied: function* (B, u) { E().fx(B, { t: 'bark', u: u.uid, text: u.barks[1] }); },
+    },
+    lanternCall: {
+      onTurnStart: function* (B, u) {
+        if (u.dead) return;
+        const lanterns = B.units.filter(o => !o.dead && o.id === 'soul_lantern');
+        let bones = B.units.filter(o => !o.dead && o.id === 'rattlebone').length;
+        let raised = 0;
+        for (const l of lanterns) {
+          if (bones >= 4) break;
+          const spot = Hex.within(l.pos, 1).find(h => !Hex.eq(h, l.pos) && E().passable(B, h) && !E().unitAt(B, h));
+          if (!spot) continue;
+          if (E().spawnMonster(B, 'rattlebone', spot)) { bones++; raised++; }
+        }
+        if (raised) { E().fx(B, { t: 'bark', u: u.uid, text: u.barks[1] }); E().log(B, `Green lantern-light pulls ${raised === 1 ? 'a Rattlebone' : raised + ' Rattlebones'} out of the earth.`, 'story'); }
+      },
+      onBloodied: function* (B, u) { E().fx(B, { t: 'bark', u: u.uid, text: u.barks[0] }); },
+    },
+    widowEnd: {
+      onDeath: function* (B, u) {
+        const bones = B.units.filter(o => !o.dead && o.id === 'rattlebone');
+        if (!bones.length) return;
+        E().log(B, 'With the Widow gone, her Rattlebones clatter apart.', 'story');
+        for (const o of bones) yield* E().kill(B, null, o);
+      },
+    },
+    lanternBreak: {
+      onDeath: function* (B, u) {
+        E().log(B, 'The soul lantern shatters, and the souls inside flee in a rush of white light!', 'hazard');
+        E().fx(B, { t: 'explode', at: u.pos, color: 0xdfffee, r: 2 });
+        const w = B.units.find(o => !o.dead && o.id === 'lantern_widow');
+        if (w) E().fx(B, { t: 'bark', u: w.uid, text: w.barks[2] });
+        for (const o of B.units.slice()) {
+          if (o.dead || o === u || !o.traits.includes('undead') || E().udist(o, u) > 2) continue;
+          yield* E().dealDamage(B, null, o, 6, { dtype: 'radiant', label: 'freed souls' });
+        }
+      },
     },
     explosive: {
       onDeath: function* (B, u) {

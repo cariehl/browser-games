@@ -3,6 +3,9 @@ var G = (typeof G !== 'undefined') ? G : {};
 (function () {
   const L = (terrain, extra) => Object.assign({ terrain }, extra || {});
 
+  // emoji banner art for scenario cards and campaign map nodes
+  G.SCEN_ART = { goblins: '🌲⚔🌲', barrow: '🪦🏮🪦', bandits: '🔥🪓🛒', golem: '🎂👁👁🎂' };
+
   G.Scenarios = [
     {
       id: 'goblins', level: 1, deployRows: [9, 11], name: 'Thornwood Crossing', sub: 'Level 1 · Party vs Goblins',
@@ -38,6 +41,43 @@ var G = (typeof G !== 'undefined') ? G : {};
         { round: 3, msg: 'Shrill whoops from the treeline — three more goblin cutters rush the creek!', spawn: [{ id: 'goblin_cutter', at: [2, 0] }, { id: 'goblin_cutter', at: [14, 0] }, { id: 'goblin_cutter', at: [5, 0] }] },
       ],
       tips: ['Goblin Cutters die to any hit. Area attacks shred them.', 'The ford (rough ground) and two bridges are chokepoints. A Fighter on a bridge is a wall.', 'Grizzlenack calls for help when bloodied.'],
+    },
+    {
+      id: 'barrow', level: 2, deployRows: [9, 11], name: 'The Lantern Barrow', sub: 'Level 2 · Party vs the Restless Dead',
+      blurb: 'Past the Thornwood, the road climbs through an old hill cemetery. Old Sallow, the Lantern Widow, tends it with green soul lanterns, and nothing buried there stays down for long.',
+      intro: 'Green lights bob between the headstones. Somewhere in the crypt, an old woman hums. "Visitors! Come in, come in. Everyone stays for supper."',
+      winText: 'The last lantern gutters out. Old Sallow crumbles to dust and grave-moss, and the hill goes quiet at last.',
+      loseText: 'The party joins the Widow\'s garden. The lanterns glow a little brighter.',
+      palette: { ground: 0x4a5a44, sky: 0x5a6a8a, fog: 0x6a7a7f, light: 0xc8d8ff },
+      legend: {
+        '.': L('grass'), ',': L('rough'), 'T': L('tree'), 'R': L('rock'), '+': L('grave'), '#': L('wall'), 'H': L('grass', { spawn: 'hero' }),
+      },
+      map: [
+        'TT,...##.##...,TT',
+        'T,....#...#....,T',
+        '..+.+.......+.+..',
+        '.,......,.......,',
+        '..+.+..+.+..+.+..',
+        '.......,.........',
+        ',.+.+.......+.+.,',
+        '.......R.........',
+        '..,...........,..',
+        '.....,....,......',
+        'T,..H.H..H.H...,T',
+        'TT,.....T.....,TT',
+      ],
+      enemies: [
+        { id: 'lantern_widow', at: [8, 1] },
+        { id: 'barrow_warden', at: [8, 3] },
+        { id: 'barrow_archer', at: [5, 2] }, { id: 'barrow_archer', at: [11, 2] },
+        { id: 'grave_hound', at: [15, 3] },
+        { id: 'rattlebone', at: [3, 5] }, { id: 'rattlebone', at: [6, 5] }, { id: 'rattlebone', at: [10, 5] }, { id: 'rattlebone', at: [13, 5] },
+      ],
+      objects: [{ id: 'soul_lantern', at: [3, 3] }, { id: 'soul_lantern', at: [13, 3] }],
+      events: [
+        { round: 3, msg: 'The ground heaves near the crypt. Two more Rattlebones claw their way up!', spawn: [{ id: 'rattlebone', at: [6, 1] }, { id: 'rattlebone', at: [11, 1] }] },
+      ],
+      tips: ['Each soul lantern lets the Widow raise a Rattlebone every turn. Smashing one also blasts the undead around it with radiant light.', 'Headstones block movement but not line of sight. Use them to funnel the dead.', 'Kill the Widow and every Rattlebone falls with her.'],
     },
     {
       id: 'bandits', level: 3, deployRows: [9, 11], name: 'The Red Toll', sub: 'Level 3 · Party vs Bandits',
