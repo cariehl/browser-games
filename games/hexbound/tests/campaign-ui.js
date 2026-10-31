@@ -1,5 +1,6 @@
 // Playwright walk through the campaign: menu → party creation → map → autoplayed fights → camp → end → Record of Heroes.
-// Usage: node tests/campaign-ui.js [outDir] [fights]
+// Usage: node tests/campaign-ui.js [outDir] [fights] [full]. Without `full`, each fight autoplays for ~20s and is
+// then won on the spot (software WebGL is too slow to autoplay three whole fights).
 const { chromium } = require('playwright'); const path = require('path');
 (async () => {
   const browser = await chromium.launch({ args: ['--use-gl=swiftshader', '--enable-webgl', '--ignore-gpu-blocklist'] });
@@ -23,7 +24,9 @@ const { chromium } = require('playwright'); const path = require('path');
     if (f === 0) await shot('c4-deploy');
     await page.evaluate(() => G.App.beginBattle());
     const t0 = Date.now(); let res;
-    while (Date.now() - t0 < 300000) { await page.waitForTimeout(1000); res = await page.evaluate(() => ({ over: G.App.B.over, round: G.App.B.round })); if (res.over) break; }
+    const limit = process.argv[4] === 'full' ? 600000 : 20000;
+    while (Date.now() - t0 < limit) { await page.waitForTimeout(1000); res = await page.evaluate(() => ({ over: G.App.B.over, round: G.App.B.round })); if (res.over) break; }
+    if (!res.over) res = await page.evaluate(() => { const B = G.App.B; for (const u of B.units) if (u.side === 'enemy') u.dead = true; G.Engine.checkEnd(B); return { over: B.over, round: B.round, forced: true }; });
     console.log('fight', f + 1, await page.evaluate(() => G.App.B.scen.id), JSON.stringify(res), Math.round((Date.now() - t0) / 1000) + 's');
     await page.waitForSelector('[data-a=camp]', { timeout: 15000 }); await shot(`c5-result${f + 1}`);
     await page.evaluate(() => document.querySelector('[data-a=camp]').click()); await page.waitForTimeout(500);

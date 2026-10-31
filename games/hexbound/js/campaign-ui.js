@@ -199,7 +199,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     $('#ov-menu').onclick = A().menu;
   }
   function recordHeroes(r) {
-    return `<div class="rec-heroes">${r.heroes.map(h => `<div class="rec-h ${h.fell ? 'fallen' : ''} cls-${h.cls}"><span class="ic-${h.cls}">${G.ICON[h.cls]}</span><b>${esc(h.name)}</b>${r.mvp === h.name ? ' <span class="mvp-b">★ MVP</span>' : ''}<small>${G.Build.CLASSES[h.cls].name} · ${h.kills} kills · ${h.dmg} dmg</small>${h.fell ? `<small class="bad">☠ Fell at ${esc(h.fellAt)}</small>` : '<small class="good">Survived</small>'}</div>`).join('')}</div>`;
+    return `<div class="rec-heroes">${r.heroes.map(h => `<div class="rec-h ${h.fell ? 'fallen' : ''} cls-${h.cls}"><div><span class="ic-${h.cls}">${G.ICON[h.cls]}</span> <b>${esc(h.name)}</b>${r.mvp === h.name ? ' <span class="mvp-b">★ MVP</span>' : ''}</div><small>${G.Build.CLASSES[h.cls].name} · ${h.kills} kills · ${h.dmg} dmg</small>${h.fell ? `<small class="bad">☠ Fell at ${esc(h.fellAt)}</small>` : '<small class="good">Survived</small>'}</div>`).join('')}</div>`;
   }
 
   // ---------- Record of Heroes ----------
