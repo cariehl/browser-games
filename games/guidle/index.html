@@ -15,7 +15,7 @@
   --bg: #e9edfb; --surface: #ffffff; --surface-2: #f2f4fd; --ink: #121a44; --muted: #5a628f; --line: #d3d9f2;
   --accent: #2443f0; --accent-ink: #ffffff; --accent-deep: #1529a8; --sun: #ffc23d;
   --shadow: rgba(18, 26, 68, .12);
-  --t-common: #737ba3; --t-uncommon: #138a62; --t-rare: #1f74d8; --t-epic: #b02f96; --t-legendary: #c98200;
+  --t-common: #737ba3; --t-uncommon: #138a62; --t-rare: #1f74d8; --t-epic: #b02f96; --t-legendary: #c98200; --t-mythic: #d42a5b;
   --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --body: "Figtree", "Segoe UI", system-ui, sans-serif;
   --mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -24,14 +24,14 @@
   --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
   --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
   --shadow: rgba(0, 0, 0, .45);
-  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233;
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233; --t-mythic: #ff6b8f;
   color-scheme: dark;
 } }
 :root[data-theme="dark"] {
   --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
   --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
   --shadow: rgba(0, 0, 0, .45);
-  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233;
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233; --t-mythic: #ff6b8f;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -124,12 +124,13 @@ button { font: inherit; color: inherit; }
 .badge .pt { font-family: var(--display); font-weight: 800; color: var(--tc); font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
 .badge .pt small { display: block; font-family: var(--body); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
 .badge .new { position: absolute; top: -8px; right: 10px; background: var(--sun); color: #2a1d00; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 2px 6px; border-radius: 6px; }
-.t-common { --tc: var(--t-common); } .t-uncommon { --tc: var(--t-uncommon); } .t-rare { --tc: var(--t-rare); } .t-epic { --tc: var(--t-epic); } .t-legendary { --tc: var(--t-legendary); }
+.t-common { --tc: var(--t-common); } .t-uncommon { --tc: var(--t-uncommon); } .t-rare { --tc: var(--t-rare); } .t-epic { --tc: var(--t-epic); } .t-legendary { --tc: var(--t-legendary); } .t-mythic { --tc: var(--t-mythic); }
 
 .gem { width: 30px; height: 27px; flex: none; clip-path: polygon(25% 2%, 75% 2%, 100% 50%, 75% 98%, 25% 98%, 0 50%); background: var(--tc);
   display: grid; place-items: center; color: var(--surface); font-family: var(--mono); font-size: 10px; font-weight: 700; }
 .t-legendary .gem, .gem.t-legendary { background: linear-gradient(110deg, var(--t-legendary) 30%, #fff6d6 50%, var(--t-legendary) 70%); background-size: 250% 100%; animation: shimmer 2.2s linear infinite; }
 .t-epic .gem, .gem.t-epic { background: linear-gradient(110deg, var(--t-epic) 35%, color-mix(in srgb, var(--t-epic) 40%, #fff) 50%, var(--t-epic) 65%); background-size: 250% 100%; animation: shimmer 3s linear infinite; }
+.t-mythic .gem, .gem.t-mythic { background: linear-gradient(110deg, #ff5f6d, #ffc371, #47e891, #4facfe, #b06ab3, #ff5f6d); background-size: 300% 100%; animation: shimmer 1.6s linear infinite; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
 
 /* Panels */
@@ -246,7 +247,7 @@ footer a { color: inherit; }
       <div class="collection" id="collection"></div>
     </section>
   </div>
-  <footer>Every roll is a random version 4 UUID from your browser. Odds come from two million simulated rolls. Your history stays in this browser.</footer>
+  <footer>Every roll is a random version 4 UUID from your browser. Badge odds are exact where the math allows and otherwise come from 24 million simulated rolls. Your history stays in this browser.</footer>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -386,8 +387,40 @@ footer a { color: inherit; }
   const isPal = s => s === [...s].reverse().join('');
   const year = String(new Date().getFullYear());
 
+  // ---- Exact probabilities where the math is tractable ----
+  // A v4 UUID has 30 free hex characters: position 12 is always '4', position 16 is one of 8, 9, a, b.
+  const C = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return r; };
+  const anyOf = ps => 1 - ps.reduce((a, p) => a * (1 - p), 1);
+  const binomTail = (n, p, k) => { let t = 0; for (let i = k; i <= n; i++) t += C(n, i) * p ** i * (1 - p) ** (n - i); return t; };
+  const LET = (() => { // distribution of the letter count: 30 free chars (6/16 letters) plus the variant char (2 of 4 are letters)
+    const d = new Array(32).fill(0);
+    for (let i = 0; i <= 30; i++) { const b = C(30, i) * (6 / 16) ** i * (10 / 16) ** (30 - i); d[i] += b / 2; d[i + 1] += b / 2; }
+    return d;
+  })();
+  const sum = (a, from, to) => a.slice(from, to + 1).reduce((x, y) => x + y, 0);
+  const P_SOLID = 1 / 4096, P_TWO = 1680 / 65536; // per four-character group, same for groups 2, 3 and 4
+  const P_SORTED8 = C(23, 8) / 16 ** 8;
+  const EXACT = {
+    bookends: 1 / 16, freshstart: 1 / 256, strongfinish: 1 / 256,
+    digifirst: (10 / 16) ** 8, letfirst: (6 / 16) ** 8, phonebook: (10 / 16) ** 12,
+    hallmirror: 16 ** -4, sorted8: P_SORTED8, twins: 2 / 65536,
+    solid: anyOf([P_SOLID, P_SOLID, P_SOLID]),
+    twotone: (1 - P_SOLID) ** 3 - (1 - P_SOLID - P_TWO) ** 3, // some group is two-tone and none is solid (solid outranks it)
+    mirror: anyOf([1 / 256, 1 / 256, 1 / 256]),
+    numgroup: anyOf([(10 / 16) ** 4, (10 / 16) ** 3, 0.5 * (10 / 16) ** 3]),
+    letgroup: anyOf([(6 / 16) ** 4, 0, 0.5 * (6 / 16) ** 3]),
+    sorted: anyOf([C(19, 4) / 65536, C(14, 3) / 4096, (C(10, 3) + C(9, 3) + C(8, 3) + C(7, 3)) / 4 / 4096]) * (1 - P_SORTED8),
+    sevens: binomTail(30, 1 / 16, 5),
+    letterlover: sum(LET, 18, 31), digitdiet: sum(LET, 0, 6),
+  };
+  // Rough estimates for patterns too rare to simulate well (rounded to 1 / 5 / 10 / 50... million style buckets).
+  const EST = {
+    six: 9.5 / 16 ** 5, pimaster: 12 / 16 ** 5, decaf: 12 / 16 ** 5,
+    coffee: 10 / 16 ** 6, office: 10 / 16 ** 6, seafood: 8 / 16 ** 7,
+  };
+
   const BADGES = [];
-  const add = (id, name, desc, test, opt = {}) => BADGES.push({ id, name, desc, test, family: opt.family || id, rank: opt.rank || 0, analytic: opt.analytic });
+  const add = (id, name, desc, test, opt = {}) => BADGES.push({ id, name, desc, test, family: opt.family || id, rank: opt.rank || 0, exact: opt.exact, est: opt.est });
 
   // Repeated characters
   add('triple', 'Hat Trick', 'Three of the same character in a row.', A => run(A).len === 3 ? run(A) : null, { family: 'run', rank: 1 });
@@ -443,7 +476,7 @@ footer a { color: inherit; }
   add('teapot', 'I’m a Teapot', 'Contains 418, the status code for teapots.', contains('418'));
   add('secret', 'Secret Agent', 'Contains 007.', contains('007'));
   add('pi', 'Slice of Pi', 'Contains 314.', contains('314'), { family: 'pi', rank: 1 });
-  add('pimaster', 'Pi Master', 'Contains 31415.', contains('31415'), { family: 'pi', rank: 2, analytic: 12 / 16 ** 5 });
+  add('pimaster', 'Pi Master', 'Contains 31415.', contains('31415'), { family: 'pi', rank: 2});
   add('elite', 'Elite', 'Contains 1337.', contains('1337'));
   add('fib', 'Fibonacci Fan', 'Contains 1123, the start of the Fibonacci sequence.', contains('1123'));
   add('year', 'Calendar Roll', `Contains the current year (${year}).`, contains(year));
@@ -459,23 +492,30 @@ footer a { color: inherit; }
   add('data', 'Data Driven', 'Spells DA7A.', spells('data'));
   add('idea', 'Bright Idea', 'Spells 1DEA.', spells('idea'));
   add('taco', 'Taco Tuesday', 'Spells 7AC0.', spells('taco'));
-  add('decaf', 'Decaf Mode', 'Spells DECAF.', spells('decaf'), { analytic: 12 / 16 ** 5 });
-  add('coffee', 'Coffee Break', 'Spells C0FFEE.', spells('coffee'), { analytic: 10 / 16 ** 6 });
-  add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'), { analytic: 10 / 16 ** 6 });
-  add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'), { analytic: 8 / 16 ** 7 });
+  add('decaf', 'Decaf Mode', 'Spells DECAF.', spells('decaf'));
+  add('coffee', 'Coffee Break', 'Spells C0FFEE.', spells('coffee'));
+  add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'));
+  add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'));
   // Consolation (awarded only when nothing else hits)
   add('average', 'Perfectly Average', 'No patterns at all. Impressively ordinary.', () => null);
 
   const BY_ID = Object.fromEntries(BADGES.map(b => [b.id, b]));
-  const TIERS = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-  const POINTS = { common: 10, uncommon: 25, rare: 75, epic: 250, legendary: 1000 };
-  const tierFor = p => p >= 0.06 ? 'common' : p >= 0.012 ? 'uncommon' : p >= 0.002 ? 'rare' : p >= 0.0002 ? 'epic' : 'legendary';
+  for (const b of BADGES) { if (b.id in EXACT) b.exact = EXACT[b.id]; if (b.id in EST) b.est = EST[b.id]; }
+  const TIERS = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+  // Tier by "1 in N" odds.
+  const TIER_MAX_N = { common: 20, uncommon: 200, rare: 2000, epic: 20000, legendary: 1e6, mythic: Infinity };
+  const tierFor = p => TIERS.find(t => 1 / p < TIER_MAX_N[t]);
+  const twoSig = n => Number(n.toPrecision(2));
+  // Nearest (on a log scale) of 1, 5, 10, 50, 100, 500... used for estimated odds.
+  const bucket = n => { const k = Math.floor(Math.log10(n)); const c = [1, 5, 10].map(m => m * 10 ** k); return c.reduce((a, b) => Math.abs(Math.log10(b / n)) < Math.abs(Math.log10(a / n)) ? b : a); };
 
   function applyOdds(odds) {
     for (const b of BADGES) {
-      b.p = odds[b.id]; b.tier = tierFor(b.p); b.points = POINTS[b.tier];
-      // Legendary finds scale with how unlikely they are, so a 1-in-a-million roll feels like one.
-      if (b.tier === 'legendary') b.points = Math.max(1000, Number((0.15 / b.p).toPrecision(2)));
+      // A badge is worth its odds: a 1-in-4,096 pattern scores 4,100 points.
+      const o = odds[b.id]; b.method = o.m;
+      b.odds = o.m === 'estimate' ? bucket(1 / o.p) : 1 / o.p;
+      b.p = 1 / b.odds; b.tier = tierFor(b.p);
+      b.points = Math.max(1, Math.round(o.m === 'estimate' ? b.odds : twoSig(b.odds)));
     }
   }
 
@@ -499,36 +539,37 @@ footer a { color: inherit; }
     return { base, total: base };
   }
 
-  const api = { BADGES, BY_ID, TIERS, POINTS, tierFor, applyOdds, evaluate, scoreOf, analyze };
+  const api = { BADGES, BY_ID, TIERS, TIER_MAX_N, tierFor, bucket, applyOdds, evaluate, scoreOf, analyze };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.GUIDLE = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
 <script>
-GUIDLE.applyOdds({"triple":0.0751085,"quad":0.003795,"five":0.000166,"six":0.000003,"stepup":0.067113,"stepdown":0.0671065,"stairs":0.006348,"escalator":0.000242,"racecar":0.0458785,"reflect":0.00208,"mirror":0.0117425,"hallmirror":0.0000135,"dejavu":0.044706,"echo":0.0015935,"twins":0.000031,"numgroup":0.4377405,"digifirst":0.023149,"phonebook":0.0036025,"letgroup":0.045575,"letfirst":0.000383,"sorted":0.1581575,"sorted8":0.0001255,"twotone":0.0750375,"solid":0.0007555,"fullhouse":0.0745465,"picky":0.0016905,"letterlover":0.017818,"digitdiet":0.022274,"numcrunch":0.079583,"spreadsheet":0.0129485,"letstreak":0.0357135,"wordsalad":0.004757,"binary":0.0004875,"sevens":0.036697,"freshstart":0.0038545,"strongfinish":0.003918,"bookends":0.0620775,"answer":0.150462,"ok200":0.004915,"notfound":0.008763,"teapot":0.0087855,"secret":0.004879,"pi":0.004923,"pimaster":0.000011444091796875,"elite":0.0002335,"fib":0.000236,"year":0.0002355,"word3":0.161301,"word4":0.0095825,"word5":0.000144,"word6":0.000005,"code":0.0002485,"cafe":0.0002175,"food":0.000235,"boss":0.000308,"data":0.0002355,"idea":0.000241,"taco":0.000232,"decaf":0.000011444091796875,"coffee":5.960464477539062e-7,"office":5.960464477539062e-7,"seafood":2.9802322387695312e-8,"average":0.171596});
+GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003779875,"m":"sim"},"five":{"p":0.000166375,"m":"sim"},"six":{"p":0.000008,"m":"sim"},"stepup":{"p":0.06699154166666667,"m":"sim"},"stepdown":{"p":0.06709445833333333,"m":"sim"},"stairs":{"p":0.006390166666666666,"m":"sim"},"escalator":{"p":0.0002573333333333333,"m":"sim"},"racecar":{"p":0.046214,"m":"sim"},"reflect":{"p":0.002027375,"m":"sim"},"mirror":{"p":0.011673033237457275,"m":"exact"},"hallmirror":{"p":0.0000152587890625,"m":"exact"},"dejavu":{"p":0.04476920833333333,"m":"sim"},"echo":{"p":0.0015660833333333334,"m":"sim"},"twins":{"p":0.000030517578125,"m":"exact"},"numgroup":{"p":0.4376646247692406,"m":"exact"},"digifirst":{"p":0.023283064365386963,"m":"exact"},"phonebook":{"p":0.003552713678800501,"m":"exact"},"letgroup":{"p":0.04562115669250488,"m":"exact"},"letfirst":{"p":0.0003910660743713379,"m":"exact"},"sorted":{"p":0.15817134259266566,"m":"exact"},"sorted8":{"p":0.00011416012421250343,"m":"exact"},"twotone":{"p":0.07491265387216117,"m":"exact"},"solid":{"p":0.0007322430756175891,"m":"exact"},"fullhouse":{"p":0.07455854166666667,"m":"sim"},"picky":{"p":0.0016515,"m":"sim"},"letterlover":{"p":0.017873096228278557,"m":"exact"},"digitdiet":{"p":0.02222124259620201,"m":"exact"},"numcrunch":{"p":0.07945779166666667,"m":"sim"},"spreadsheet":{"p":0.012993041666666667,"m":"sim"},"letstreak":{"p":0.035648791666666665,"m":"sim"},"wordsalad":{"p":0.004769833333333333,"m":"sim"},"binary":{"p":0.000514,"m":"sim"},"sevens":{"p":0.03670208669486749,"m":"exact"},"freshstart":{"p":0.00390625,"m":"exact"},"strongfinish":{"p":0.00390625,"m":"exact"},"bookends":{"p":0.0625,"m":"exact"},"answer":{"p":0.15035216666666668,"m":"sim"},"ok200":{"p":0.00485425,"m":"sim"},"notfound":{"p":0.008714958333333333,"m":"sim"},"teapot":{"p":0.008734458333333334,"m":"sim"},"secret":{"p":0.004889416666666667,"m":"sim"},"pi":{"p":0.004859125,"m":"sim"},"pimaster":{"p":0.00001175,"m":"sim"},"elite":{"p":0.000229625,"m":"sim"},"fib":{"p":0.00023345833333333332,"m":"sim"},"year":{"p":0.000223,"m":"sim"},"word3":{"p":0.16155908333333333,"m":"sim"},"word4":{"p":0.009493708333333333,"m":"sim"},"word5":{"p":0.000146,"m":"sim"},"word6":{"p":0.000005166666666666667,"m":"sim"},"code":{"p":0.00023475,"m":"sim"},"cafe":{"p":0.000232375,"m":"sim"},"food":{"p":0.00023079166666666666,"m":"sim"},"boss":{"p":0.00028891666666666665,"m":"sim"},"data":{"p":0.00022858333333333332,"m":"sim"},"idea":{"p":0.000232875,"m":"sim"},"taco":{"p":0.0002315,"m":"sim"},"decaf":{"p":0.00001175,"m":"sim"},"coffee":{"p":5.960464477539062e-7,"m":"estimate"},"office":{"p":5.960464477539062e-7,"m":"estimate"},"seafood":{"p":2.9802322387695312e-8,"m":"estimate"},"average":{"p":0.171696,"m":"sim"}});
 (function () {
   const G = GUIDLE;
   const $ = s => document.querySelector(s);
-  const TIER_NAME = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' };
+  const TIER_NAME = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic' };
+  const METHOD = { exact: 'exact odds', sim: 'simulated', estimate: 'estimated' };
   const tierIdx = t => G.TIERS.indexOf(t);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const KEY = 'guidle:v1';
   const EXAMPLE = 'b0a7f542-1234-4cab-a404-7e5ca1ab1e99';
   const HEXCH = '0123456789abcdef';
   const fmt = n => n.toLocaleString('en-US');
-  const oddsText = p => '1 in ' + fmt(Math.max(1, Math.round(1 / p)));
+  const oddsText = b => (b.method === 'estimate' ? '≈ ' : '') + '1 in ' + fmt(Math.max(1, Math.round(b.odds)));
   const wait = ms => new Promise(r => setTimeout(r, ms));
 
   // ---------- state ----------
-  let S = { v: 2, total: 0, best: null, counts: {}, history: [], muted: false };
+  let S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: false };
   try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
-  if ((S.v || 1) < 2) { // v1 scores included a combo multiplier; rescore saved rolls without it
+  if ((S.v || 1) < 3) { // scoring changed (v2 dropped the combo, v3 scores by odds); rescore saved rolls
     for (const r of S.history) r.s = G.scoreOf(G.evaluate(r.u)).total;
     if (S.best) S.best.s = G.scoreOf(G.evaluate(S.best.u)).total;
     for (const r of S.history) if (!S.best || r.s > S.best.s) S.best = { u: r.u, s: r.s, n: r.n, t: r.t };
-    S.v = 2; save();
+    S.v = 3; save();
   }
 
   // ---------- audio ----------
@@ -584,7 +625,7 @@ GUIDLE.applyOdds({"triple":0.0751085,"quad":0.003795,"five":0.000166,"six":0.000
     raf = parts.length ? requestAnimationFrame(tickFx) : 0;
   }
   const rectOf = el => el.getBoundingClientRect();
-  const tierColors = () => ['--t-legendary', '--t-epic', '--t-rare', '--t-uncommon', '--accent', '--sun'].map(css);
+  const tierColors = () => ['--t-mythic', '--t-legendary', '--t-epic', '--t-rare', '--t-uncommon', '--accent', '--sun'].map(css);
   function confetti(big) {
     const cols = tierColors();
     const waves = big ? 3 : 1;
@@ -632,7 +673,7 @@ GUIDLE.applyOdds({"triple":0.0751085,"quad":0.003795,"five":0.000166,"six":0.000
     if (segs) { mt.append('Matched'); for (const sg of segs) { const c = document.createElement('code'); c.textContent = sg; mt.append(c); } }
     else mt.textContent = 'Matched the whole ID';
     d.querySelector('.txt').appendChild(mt);
-    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b.p)}`;
+    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b)} (${METHOD[b.method]})`;
     d._h = h;
     const on = () => { if (!revealing) focusChars(h.idx, b.tier); };
     const off = () => { if (!revealing) focusChars(pinned ? pinned._h.idx : null, pinned ? pinned._h.b.tier : null); };
@@ -779,7 +820,7 @@ GUIDLE.applyOdds({"triple":0.0751085,"quad":0.003795,"five":0.000166,"six":0.000
     } else if (isBest) {
       $('#newbest-sub').textContent = 'Your first roll sets the bar';
       $('#newbest').classList.add('show'); sfx.chime(); confetti(false);
-    } else if (topI >= 3) confetti(topI === 4);
+    } else if (topI >= 3) confetti(topI >= 4);
     renderStats(); renderHistory(false); renderCollection(newIds);
   }
   function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
@@ -827,7 +868,8 @@ GUIDLE.applyOdds({"triple":0.0751085,"quad":0.003795,"five":0.000166,"six":0.000
       d.className = `tile t-${b.tier}` + (got ? '' : ' locked') + (fresh && fresh.has(b.id) ? ' fresh' : '');
       d.innerHTML = `<div class="gem"></div><div class="nm"></div><div class="od"></div><div class="ds"></div>`;
       d.querySelector('.nm').textContent = got ? b.name : '? ? ?';
-      d.querySelector('.od').textContent = `${TIER_NAME[b.tier]} · ${oddsText(b.p)}` + (got ? ` · ×${fmt(got)}` : '');
+      d.querySelector('.od').textContent = `${oddsText(b)} · ${METHOD[b.method]}` + (got ? ` · ×${fmt(got)}` : '');
+      d.title = `${TIER_NAME[b.tier]} · worth ${fmt(b.points)} pts`;
       d.querySelector('.ds').textContent = b.desc;
       box.appendChild(d);
     }
@@ -840,7 +882,10 @@ GUIDLE.applyOdds({"triple":0.0751085,"quad":0.003795,"five":0.000166,"six":0.000
       c.addEventListener('click', () => { filter = k; renderFilters(); renderCollection(); }); f.appendChild(c);
     }
     const lg = $('#legend'); lg.textContent = '';
-    for (const t of G.TIERS) { const s = document.createElement('span'); s.innerHTML = `<i class="gem t-${t}" style="--tc:var(--t-${t})"></i>${TIER_NAME[t]} ${t === 'legendary' ? '1,000+' : G.POINTS[t]} pts`; lg.appendChild(s); }
+    let lo = 1;
+    for (const t of G.TIERS) { const hi = G.TIER_MAX_N[t], s = document.createElement('span');
+      s.innerHTML = `<i class="gem t-${t}" style="--tc:var(--t-${t})"></i>${TIER_NAME[t]} ${hi === Infinity ? fmt(lo) + '+' : fmt(lo) + '–' + fmt(hi)}`; lg.appendChild(s); lo = hi; }
+    const note = document.createElement('span'); note.textContent = 'A badge that happens 1 in N rolls is worth about N points.'; lg.appendChild(note);
   }
 
   // ---------- controls ----------
@@ -865,7 +910,7 @@ GUIDLE.applyOdds({"triple":0.0751085,"quad":0.003795,"five":0.000166,"six":0.000
   function resetClear() { clearArea.innerHTML = '<button class="ghost" id="clear" type="button">Erase history</button>'; $('#clear').addEventListener('click', askClear); }
   function askClear() {
     clearArea.innerHTML = '<span>Erase every roll, your high score, and all badges?</span><button class="danger" type="button" id="clear-yes">Erase everything</button><button class="ghost" type="button" id="clear-no">Keep</button>';
-    $('#clear-yes').addEventListener('click', () => { const m = S.muted; S = { v: 2, total: 0, best: null, counts: {}, history: [], muted: m }; save(); resetClear(); showStatic(EXAMPLE, 'Example roll · press Roll to start', 0); renderAll(); toast('History erased'); });
+    $('#clear-yes').addEventListener('click', () => { const m = S.muted; S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: m }; save(); resetClear(); showStatic(EXAMPLE, 'Example roll · press Roll to start', 0); renderAll(); toast('History erased'); });
     $('#clear-no').addEventListener('click', resetClear);
   }
   $('#clear').addEventListener('click', askClear);

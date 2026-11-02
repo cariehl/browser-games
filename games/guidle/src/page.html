@@ -10,7 +10,7 @@
   --bg: #e9edfb; --surface: #ffffff; --surface-2: #f2f4fd; --ink: #121a44; --muted: #5a628f; --line: #d3d9f2;
   --accent: #2443f0; --accent-ink: #ffffff; --accent-deep: #1529a8; --sun: #ffc23d;
   --shadow: rgba(18, 26, 68, .12);
-  --t-common: #737ba3; --t-uncommon: #138a62; --t-rare: #1f74d8; --t-epic: #b02f96; --t-legendary: #c98200;
+  --t-common: #737ba3; --t-uncommon: #138a62; --t-rare: #1f74d8; --t-epic: #b02f96; --t-legendary: #c98200; --t-mythic: #d42a5b;
   --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
   --body: "Figtree", "Segoe UI", system-ui, sans-serif;
   --mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
@@ -19,14 +19,14 @@
   --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
   --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
   --shadow: rgba(0, 0, 0, .45);
-  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233;
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233; --t-mythic: #ff6b8f;
   color-scheme: dark;
 } }
 :root[data-theme="dark"] {
   --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
   --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
   --shadow: rgba(0, 0, 0, .45);
-  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233;
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233; --t-mythic: #ff6b8f;
   color-scheme: dark;
 }
 * { box-sizing: border-box; }
@@ -119,12 +119,13 @@ button { font: inherit; color: inherit; }
 .badge .pt { font-family: var(--display); font-weight: 800; color: var(--tc); font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
 .badge .pt small { display: block; font-family: var(--body); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
 .badge .new { position: absolute; top: -8px; right: 10px; background: var(--sun); color: #2a1d00; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 2px 6px; border-radius: 6px; }
-.t-common { --tc: var(--t-common); } .t-uncommon { --tc: var(--t-uncommon); } .t-rare { --tc: var(--t-rare); } .t-epic { --tc: var(--t-epic); } .t-legendary { --tc: var(--t-legendary); }
+.t-common { --tc: var(--t-common); } .t-uncommon { --tc: var(--t-uncommon); } .t-rare { --tc: var(--t-rare); } .t-epic { --tc: var(--t-epic); } .t-legendary { --tc: var(--t-legendary); } .t-mythic { --tc: var(--t-mythic); }
 
 .gem { width: 30px; height: 27px; flex: none; clip-path: polygon(25% 2%, 75% 2%, 100% 50%, 75% 98%, 25% 98%, 0 50%); background: var(--tc);
   display: grid; place-items: center; color: var(--surface); font-family: var(--mono); font-size: 10px; font-weight: 700; }
 .t-legendary .gem, .gem.t-legendary { background: linear-gradient(110deg, var(--t-legendary) 30%, #fff6d6 50%, var(--t-legendary) 70%); background-size: 250% 100%; animation: shimmer 2.2s linear infinite; }
 .t-epic .gem, .gem.t-epic { background: linear-gradient(110deg, var(--t-epic) 35%, color-mix(in srgb, var(--t-epic) 40%, #fff) 50%, var(--t-epic) 65%); background-size: 250% 100%; animation: shimmer 3s linear infinite; }
+.t-mythic .gem, .gem.t-mythic { background: linear-gradient(110deg, #ff5f6d, #ffc371, #47e891, #4facfe, #b06ab3, #ff5f6d); background-size: 300% 100%; animation: shimmer 1.6s linear infinite; }
 @keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
 
 /* Panels */
@@ -238,7 +239,7 @@ footer a { color: inherit; }
       <div class="collection" id="collection"></div>
     </section>
   </div>
-  <footer>Every roll is a random version 4 UUID from your browser. Odds come from two million simulated rolls. Your history stays in this browser.</footer>
+  <footer>Every roll is a random version 4 UUID from your browser. Badge odds are exact where the math allows and otherwise come from /*__ROLLS__*/ simulated rolls. Your history stays in this browser.</footer>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -250,25 +251,26 @@ GUIDLE.applyOdds(/*__ODDS__*/);
 (function () {
   const G = GUIDLE;
   const $ = s => document.querySelector(s);
-  const TIER_NAME = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' };
+  const TIER_NAME = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic' };
+  const METHOD = { exact: 'exact odds', sim: 'simulated', estimate: 'estimated' };
   const tierIdx = t => G.TIERS.indexOf(t);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const KEY = 'guidle:v1';
   const EXAMPLE = 'b0a7f542-1234-4cab-a404-7e5ca1ab1e99';
   const HEXCH = '0123456789abcdef';
   const fmt = n => n.toLocaleString('en-US');
-  const oddsText = p => '1 in ' + fmt(Math.max(1, Math.round(1 / p)));
+  const oddsText = b => (b.method === 'estimate' ? '≈ ' : '') + '1 in ' + fmt(Math.max(1, Math.round(b.odds)));
   const wait = ms => new Promise(r => setTimeout(r, ms));
 
   // ---------- state ----------
-  let S = { v: 2, total: 0, best: null, counts: {}, history: [], muted: false };
+  let S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: false };
   try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
-  if ((S.v || 1) < 2) { // v1 scores included a combo multiplier; rescore saved rolls without it
+  if ((S.v || 1) < 3) { // scoring changed (v2 dropped the combo, v3 scores by odds); rescore saved rolls
     for (const r of S.history) r.s = G.scoreOf(G.evaluate(r.u)).total;
     if (S.best) S.best.s = G.scoreOf(G.evaluate(S.best.u)).total;
     for (const r of S.history) if (!S.best || r.s > S.best.s) S.best = { u: r.u, s: r.s, n: r.n, t: r.t };
-    S.v = 2; save();
+    S.v = 3; save();
   }
 
   // ---------- audio ----------
@@ -324,7 +326,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     raf = parts.length ? requestAnimationFrame(tickFx) : 0;
   }
   const rectOf = el => el.getBoundingClientRect();
-  const tierColors = () => ['--t-legendary', '--t-epic', '--t-rare', '--t-uncommon', '--accent', '--sun'].map(css);
+  const tierColors = () => ['--t-mythic', '--t-legendary', '--t-epic', '--t-rare', '--t-uncommon', '--accent', '--sun'].map(css);
   function confetti(big) {
     const cols = tierColors();
     const waves = big ? 3 : 1;
@@ -372,7 +374,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     if (segs) { mt.append('Matched'); for (const sg of segs) { const c = document.createElement('code'); c.textContent = sg; mt.append(c); } }
     else mt.textContent = 'Matched the whole ID';
     d.querySelector('.txt').appendChild(mt);
-    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b.p)}`;
+    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b)} (${METHOD[b.method]})`;
     d._h = h;
     const on = () => { if (!revealing) focusChars(h.idx, b.tier); };
     const off = () => { if (!revealing) focusChars(pinned ? pinned._h.idx : null, pinned ? pinned._h.b.tier : null); };
@@ -519,7 +521,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     } else if (isBest) {
       $('#newbest-sub').textContent = 'Your first roll sets the bar';
       $('#newbest').classList.add('show'); sfx.chime(); confetti(false);
-    } else if (topI >= 3) confetti(topI === 4);
+    } else if (topI >= 3) confetti(topI >= 4);
     renderStats(); renderHistory(false); renderCollection(newIds);
   }
   function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
@@ -567,7 +569,8 @@ GUIDLE.applyOdds(/*__ODDS__*/);
       d.className = `tile t-${b.tier}` + (got ? '' : ' locked') + (fresh && fresh.has(b.id) ? ' fresh' : '');
       d.innerHTML = `<div class="gem"></div><div class="nm"></div><div class="od"></div><div class="ds"></div>`;
       d.querySelector('.nm').textContent = got ? b.name : '? ? ?';
-      d.querySelector('.od').textContent = `${TIER_NAME[b.tier]} · ${oddsText(b.p)}` + (got ? ` · ×${fmt(got)}` : '');
+      d.querySelector('.od').textContent = `${oddsText(b)} · ${METHOD[b.method]}` + (got ? ` · ×${fmt(got)}` : '');
+      d.title = `${TIER_NAME[b.tier]} · worth ${fmt(b.points)} pts`;
       d.querySelector('.ds').textContent = b.desc;
       box.appendChild(d);
     }
@@ -580,7 +583,10 @@ GUIDLE.applyOdds(/*__ODDS__*/);
       c.addEventListener('click', () => { filter = k; renderFilters(); renderCollection(); }); f.appendChild(c);
     }
     const lg = $('#legend'); lg.textContent = '';
-    for (const t of G.TIERS) { const s = document.createElement('span'); s.innerHTML = `<i class="gem t-${t}" style="--tc:var(--t-${t})"></i>${TIER_NAME[t]} ${t === 'legendary' ? '1,000+' : G.POINTS[t]} pts`; lg.appendChild(s); }
+    let lo = 1;
+    for (const t of G.TIERS) { const hi = G.TIER_MAX_N[t], s = document.createElement('span');
+      s.innerHTML = `<i class="gem t-${t}" style="--tc:var(--t-${t})"></i>${TIER_NAME[t]} ${hi === Infinity ? fmt(lo) + '+' : fmt(lo) + '–' + fmt(hi)}`; lg.appendChild(s); lo = hi; }
+    const note = document.createElement('span'); note.textContent = 'A badge that happens 1 in N rolls is worth about N points.'; lg.appendChild(note);
   }
 
   // ---------- controls ----------
@@ -605,7 +611,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   function resetClear() { clearArea.innerHTML = '<button class="ghost" id="clear" type="button">Erase history</button>'; $('#clear').addEventListener('click', askClear); }
   function askClear() {
     clearArea.innerHTML = '<span>Erase every roll, your high score, and all badges?</span><button class="danger" type="button" id="clear-yes">Erase everything</button><button class="ghost" type="button" id="clear-no">Keep</button>';
-    $('#clear-yes').addEventListener('click', () => { const m = S.muted; S = { v: 2, total: 0, best: null, counts: {}, history: [], muted: m }; save(); resetClear(); showStatic(EXAMPLE, 'Example roll · press Roll to start', 0); renderAll(); toast('History erased'); });
+    $('#clear-yes').addEventListener('click', () => { const m = S.muted; S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: m }; save(); resetClear(); showStatic(EXAMPLE, 'Example roll · press Roll to start', 0); renderAll(); toast('History erased'); });
     $('#clear-no').addEventListener('click', resetClear);
   }
   $('#clear').addEventListener('click', askClear);

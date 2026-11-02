@@ -133,8 +133,40 @@
   const isPal = s => s === [...s].reverse().join('');
   const year = String(new Date().getFullYear());
 
+  // ---- Exact probabilities where the math is tractable ----
+  // A v4 UUID has 30 free hex characters: position 12 is always '4', position 16 is one of 8, 9, a, b.
+  const C = (n, k) => { let r = 1; for (let i = 1; i <= k; i++) r = r * (n - k + i) / i; return r; };
+  const anyOf = ps => 1 - ps.reduce((a, p) => a * (1 - p), 1);
+  const binomTail = (n, p, k) => { let t = 0; for (let i = k; i <= n; i++) t += C(n, i) * p ** i * (1 - p) ** (n - i); return t; };
+  const LET = (() => { // distribution of the letter count: 30 free chars (6/16 letters) plus the variant char (2 of 4 are letters)
+    const d = new Array(32).fill(0);
+    for (let i = 0; i <= 30; i++) { const b = C(30, i) * (6 / 16) ** i * (10 / 16) ** (30 - i); d[i] += b / 2; d[i + 1] += b / 2; }
+    return d;
+  })();
+  const sum = (a, from, to) => a.slice(from, to + 1).reduce((x, y) => x + y, 0);
+  const P_SOLID = 1 / 4096, P_TWO = 1680 / 65536; // per four-character group, same for groups 2, 3 and 4
+  const P_SORTED8 = C(23, 8) / 16 ** 8;
+  const EXACT = {
+    bookends: 1 / 16, freshstart: 1 / 256, strongfinish: 1 / 256,
+    digifirst: (10 / 16) ** 8, letfirst: (6 / 16) ** 8, phonebook: (10 / 16) ** 12,
+    hallmirror: 16 ** -4, sorted8: P_SORTED8, twins: 2 / 65536,
+    solid: anyOf([P_SOLID, P_SOLID, P_SOLID]),
+    twotone: (1 - P_SOLID) ** 3 - (1 - P_SOLID - P_TWO) ** 3, // some group is two-tone and none is solid (solid outranks it)
+    mirror: anyOf([1 / 256, 1 / 256, 1 / 256]),
+    numgroup: anyOf([(10 / 16) ** 4, (10 / 16) ** 3, 0.5 * (10 / 16) ** 3]),
+    letgroup: anyOf([(6 / 16) ** 4, 0, 0.5 * (6 / 16) ** 3]),
+    sorted: anyOf([C(19, 4) / 65536, C(14, 3) / 4096, (C(10, 3) + C(9, 3) + C(8, 3) + C(7, 3)) / 4 / 4096]) * (1 - P_SORTED8),
+    sevens: binomTail(30, 1 / 16, 5),
+    letterlover: sum(LET, 18, 31), digitdiet: sum(LET, 0, 6),
+  };
+  // Rough estimates for patterns too rare to simulate well (rounded to 1 / 5 / 10 / 50... million style buckets).
+  const EST = {
+    six: 9.5 / 16 ** 5, pimaster: 12 / 16 ** 5, decaf: 12 / 16 ** 5,
+    coffee: 10 / 16 ** 6, office: 10 / 16 ** 6, seafood: 8 / 16 ** 7,
+  };
+
   const BADGES = [];
-  const add = (id, name, desc, test, opt = {}) => BADGES.push({ id, name, desc, test, family: opt.family || id, rank: opt.rank || 0, analytic: opt.analytic });
+  const add = (id, name, desc, test, opt = {}) => BADGES.push({ id, name, desc, test, family: opt.family || id, rank: opt.rank || 0, exact: opt.exact, est: opt.est });
 
   // Repeated characters
   add('triple', 'Hat Trick', 'Three of the same character in a row.', A => run(A).len === 3 ? run(A) : null, { family: 'run', rank: 1 });
@@ -190,7 +222,7 @@
   add('teapot', 'I’m a Teapot', 'Contains 418, the status code for teapots.', contains('418'));
   add('secret', 'Secret Agent', 'Contains 007.', contains('007'));
   add('pi', 'Slice of Pi', 'Contains 314.', contains('314'), { family: 'pi', rank: 1 });
-  add('pimaster', 'Pi Master', 'Contains 31415.', contains('31415'), { family: 'pi', rank: 2, analytic: 12 / 16 ** 5 });
+  add('pimaster', 'Pi Master', 'Contains 31415.', contains('31415'), { family: 'pi', rank: 2});
   add('elite', 'Elite', 'Contains 1337.', contains('1337'));
   add('fib', 'Fibonacci Fan', 'Contains 1123, the start of the Fibonacci sequence.', contains('1123'));
   add('year', 'Calendar Roll', `Contains the current year (${year}).`, contains(year));
@@ -206,23 +238,30 @@
   add('data', 'Data Driven', 'Spells DA7A.', spells('data'));
   add('idea', 'Bright Idea', 'Spells 1DEA.', spells('idea'));
   add('taco', 'Taco Tuesday', 'Spells 7AC0.', spells('taco'));
-  add('decaf', 'Decaf Mode', 'Spells DECAF.', spells('decaf'), { analytic: 12 / 16 ** 5 });
-  add('coffee', 'Coffee Break', 'Spells C0FFEE.', spells('coffee'), { analytic: 10 / 16 ** 6 });
-  add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'), { analytic: 10 / 16 ** 6 });
-  add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'), { analytic: 8 / 16 ** 7 });
+  add('decaf', 'Decaf Mode', 'Spells DECAF.', spells('decaf'));
+  add('coffee', 'Coffee Break', 'Spells C0FFEE.', spells('coffee'));
+  add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'));
+  add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'));
   // Consolation (awarded only when nothing else hits)
   add('average', 'Perfectly Average', 'No patterns at all. Impressively ordinary.', () => null);
 
   const BY_ID = Object.fromEntries(BADGES.map(b => [b.id, b]));
-  const TIERS = ['common', 'uncommon', 'rare', 'epic', 'legendary'];
-  const POINTS = { common: 10, uncommon: 25, rare: 75, epic: 250, legendary: 1000 };
-  const tierFor = p => p >= 0.06 ? 'common' : p >= 0.012 ? 'uncommon' : p >= 0.002 ? 'rare' : p >= 0.0002 ? 'epic' : 'legendary';
+  for (const b of BADGES) { if (b.id in EXACT) b.exact = EXACT[b.id]; if (b.id in EST) b.est = EST[b.id]; }
+  const TIERS = ['common', 'uncommon', 'rare', 'epic', 'legendary', 'mythic'];
+  // Tier by "1 in N" odds.
+  const TIER_MAX_N = { common: 20, uncommon: 200, rare: 2000, epic: 20000, legendary: 1e6, mythic: Infinity };
+  const tierFor = p => TIERS.find(t => 1 / p < TIER_MAX_N[t]);
+  const twoSig = n => Number(n.toPrecision(2));
+  // Nearest (on a log scale) of 1, 5, 10, 50, 100, 500... used for estimated odds.
+  const bucket = n => { const k = Math.floor(Math.log10(n)); const c = [1, 5, 10].map(m => m * 10 ** k); return c.reduce((a, b) => Math.abs(Math.log10(b / n)) < Math.abs(Math.log10(a / n)) ? b : a); };
 
   function applyOdds(odds) {
     for (const b of BADGES) {
-      b.p = odds[b.id]; b.tier = tierFor(b.p); b.points = POINTS[b.tier];
-      // Legendary finds scale with how unlikely they are, so a 1-in-a-million roll feels like one.
-      if (b.tier === 'legendary') b.points = Math.max(1000, Number((0.15 / b.p).toPrecision(2)));
+      // A badge is worth its odds: a 1-in-4,096 pattern scores 4,100 points.
+      const o = odds[b.id]; b.method = o.m;
+      b.odds = o.m === 'estimate' ? bucket(1 / o.p) : 1 / o.p;
+      b.p = 1 / b.odds; b.tier = tierFor(b.p);
+      b.points = Math.max(1, Math.round(o.m === 'estimate' ? b.odds : twoSig(b.odds)));
     }
   }
 
@@ -246,7 +285,7 @@
     return { base, total: base };
   }
 
-  const api = { BADGES, BY_ID, TIERS, POINTS, tierFor, applyOdds, evaluate, scoreOf, analyze };
+  const api = { BADGES, BY_ID, TIERS, TIER_MAX_N, tierFor, bucket, applyOdds, evaluate, scoreOf, analyze };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.GUIDLE = api;
 })(typeof window !== 'undefined' ? window : globalThis);

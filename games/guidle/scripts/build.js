@@ -5,9 +5,11 @@ const path = require('path');
 const root = path.join(__dirname, '..');
 const read = p => fs.readFileSync(path.join(root, p), 'utf8');
 
+const odds = JSON.parse(read('src/odds.json'));
 const page = read('src/page.html')
   .replace('/*__BADGES__*/', () => read('src/badges.js'))
-  .replace('/*__ODDS__*/', () => JSON.stringify(JSON.parse(read('src/odds.json'))));
+  .replace('/*__ODDS__*/', () => JSON.stringify(odds.odds))
+  .replace('/*__ROLLS__*/', () => (odds.rolls / 1e6).toLocaleString('en-US') + ' million');
 
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });
 fs.writeFileSync(path.join(root, 'dist/artifact.html'), page);
