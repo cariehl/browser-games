@@ -646,7 +646,7 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
   const fmt = n => n.toLocaleString('en-US');
   const oddsText = b => (b.method === 'estimate' ? '≈ ' : '') + '1 in ' + fmt(Math.max(1, Math.round(b.odds)));
   const wait = ms => new Promise(r => setTimeout(r, ms));
-  const PACE = 1.33; // stretches every step of the roll and reveal timing
+  const PACE = 1.33; // stretches the ID reel and the build-up to the rating; the badge reveal keeps its own pace
 
   // ---------- state ----------
   // history: newest first, one entry per day: { u: uuid, s: score, t: timestamp, d: day key, n: day number }
@@ -921,13 +921,13 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
     await reel(u, topI >= 3);
     reeling = false; updateRollBtn();
     if (token !== rollToken) return;
-    await wait(reduced ? 30 : 650 * PACE);
+    await wait(reduced ? 30 : 650);
     if (token !== rollToken) return;
 
     // One badge at a time: spotlight its characters, then show the card that explains them.
     let running = 0, prevCard = null;
     for (let i = 0; i < sorted.length; i++) {
-      if (i) await wait(reduced ? 30 : 1250 * PACE);
+      if (i) await wait(reduced ? 30 : 1250);
       if (token !== rollToken) return;
       const h = sorted[i], card = badgeCard(h, newIds.has(h.b.id), true);
       if (prevCard) prevCard.classList.remove('current');
@@ -941,7 +941,7 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
         burst(r.left + 24, r.top + r.height / 2, 6 + ti * 10, [col, css('--sun')], { speed: 3 + ti * 1.5, size: 5, decay: .03, gravity: .05, shape: ti >= 2 ? 'spark' : 'hex' }); });
       if (ti >= 3) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); flash(); }
     }
-    await wait(reduced ? 30 : 1300 * PACE);
+    await wait(reduced ? 30 : 1300);
     if (token !== rollToken) return;
     if (prevCard) prevCard.classList.remove('current');
     revealing = false; focusChars(null); highlight(res, true); setScore(sc.total, true);
