@@ -70,6 +70,7 @@ button { font: inherit; color: inherit; }
 .grp { display: inline-flex; white-space: nowrap; }
 .dash { color: var(--muted); opacity: .55; padding: 0 .08em; }
 .ch { display: inline-block; width: 1ch; text-align: center; border-radius: .18em; transition: background .3s, color .3s, box-shadow .3s; }
+.uuid.blank .ch { color: var(--muted); opacity: .5; }
 .ch.spin { color: var(--muted); opacity: .6; filter: blur(.4px); }
 .ch.lock { animation: lock .5s cubic-bezier(.2, 1.6, .4, 1); }
 @keyframes lock { 0% { transform: translateY(-.45em) scale(1.4); } 100% { transform: none; } }
@@ -279,7 +280,6 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   const topText = f => { const pct = f * 100; return 'Top ' + (pct >= 10 ? Math.round(pct) : Number(pct.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 })) + '%'; };
   const ratingOf = score => { const f = rank(score); return { f, tier: G.tierFor(f), top: topText(f) }; };
   const whenFmt = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
-  const EXAMPLE = 'b0a7f542-1234-4cab-a404-7e5ca1ab1e99';
   const HEXCH = '0123456789abcdef';
   const fmt = n => n.toLocaleString('en-US');
   const oddsText = b => (b.method === 'estimate' ? '≈ ' : '') + '1 in ' + fmt(Math.max(1, Math.round(b.odds)));
@@ -443,7 +443,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   function showStatic(u, captionText, n) {
     const res = G.evaluate(u), sc = G.scoreOf(res);
     current = { u, res, sc, n }; revealing = false; pinned = null;
-    buildUUID(u); highlight(res, false); setScore(sc.total, false); showRating(sc.total, false);
+    buildUUID(u); uuidEl.classList.remove('blank'); $('#hint').hidden = false; highlight(res, false); setScore(sc.total, false); showRating(sc.total, false);
     resultsEl.textContent = ''; for (const h of sortByTier(res)) resultsEl.appendChild(badgeCard(h, false, false));
     $('#caption').textContent = captionText;
     const top = sortByTier(res).pop().b.tier; stage.style.setProperty('--glow', `var(--t-${top})`); stage.classList.toggle('glowing', tierIdx(top) >= 3);
@@ -458,6 +458,16 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     return r;
   }
 
+  // Before today's roll: an unrevealed ID of question marks, no score or badges.
+  function showBlank() {
+    current = null; revealing = false; pinned = null;
+    buildUUID('????????-????-????-????-????????????'); uuidEl.classList.add('blank'); focusChars(null);
+    setScore(0, false); scoreEl.textContent = '?';
+    resultsEl.textContent = ''; $('#rating').hidden = true; $('#hint').hidden = true; $('#newbest').classList.remove('show');
+    stage.classList.remove('glowing');
+    $('#caption').textContent = `GUIDle #${dayNum(new Date())} · your roll for today is ready`;
+  }
+
   // ---------- daily gate ----------
   function untilMidnight() { const now = new Date(), m = new Date(now); m.setHours(24, 0, 0, 0); return m - now; }
   const hms = ms => { const t = Math.ceil(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
@@ -466,7 +476,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     const done = rolledToday();
     if (done && !reeling) { rollBtn.classList.add('waiting'); rollBtn.innerHTML = `Next roll in ${hms(untilMidnight())}<kbd>Come back tomorrow</kbd>`; }
     else if (!done) { rollBtn.classList.remove('waiting'); rollBtn.innerHTML = `Roll GUIDle #${dayNum(new Date())}<kbd>Space</kbd>`; }
-    if (wasRolled === true && !done) { showStatic(EXAMPLE, 'Example roll · a new roll is ready', 0); $('#rating').hidden = true; renderAll(); }
+    if (wasRolled === true && !done) { showBlank(); renderAll(); }
     wasRolled = done;
   }
   setInterval(updateRollBtn, 1000);
@@ -524,7 +534,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     current = { u, res, sc, n };
 
     // reset stage
-    resultsEl.textContent = ''; setScore(0, false); $('#newbest').classList.remove('show'); $('#rating').hidden = true; pinned = null; revealing = true;
+    resultsEl.textContent = ''; setScore(0, false); uuidEl.classList.remove('blank'); $('#hint').hidden = false; $('#newbest').classList.remove('show'); $('#rating').hidden = true; pinned = null; revealing = true;
     stage.classList.remove('glowing', 'shake'); focusChars(null);
     $('#caption').textContent = `GUIDle #${n} · ${whenFmt(now)}`;
     renderHistory(true);
@@ -657,8 +667,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   $('#mute').addEventListener('click', () => { S.muted = !S.muted; save(); renderStats(); if (!S.muted) sfx.chime(); });
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
   $('#copy').addEventListener('click', () => {
-    if (!current) return;
-    if (!current.n) { toast('Roll first, then share your result.'); return; }
+    if (!current || !current.n) { toast('Roll first, then share your result.'); return; }
     const rt = ratingOf(current.sc.total), best = sortByTier(current.res).pop().b;
     const tierName = rt.tier[0].toUpperCase() + rt.tier.slice(1);
     const text = `GUIDle #${current.n} · ${tierName} roll · ${rt.top}\n${fmt(current.sc.total)} pts from ${current.res.length} ${current.res.length === 1 ? 'badge' : 'badges'}, best: ${best.name} (${oddsText(best)})\n${current.u}\n${SITE}`;
@@ -670,7 +679,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   // ---------- boot ----------
   renderFilters();
   if (rolledToday()) { const r = S.history[0]; showStatic(r.u, `GUIDle #${r.n} · ${whenFmt(r.t)}`, r.n); }
-  else { showStatic(EXAMPLE, 'Example roll · your roll for today is ready', 0); $('#rating').hidden = true; }
+  else showBlank();
   renderAll(); updateRollBtn();
 })();
 </script>
