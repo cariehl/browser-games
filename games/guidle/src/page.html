@@ -691,11 +691,32 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   });
   $('#mute').addEventListener('click', () => { S.muted = !S.muted; save(); renderStats(); if (!S.muted) sfx.chime(); });
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
+  const SQUARE = { common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', legendary: '🟨', mythic: '🟥' };
+  // Map ASCII letters and digits to Unicode Mathematical Sans-Serif Bold / Monospace.
+  const restyle = (str, upper, lower, digit) => [...str].map(ch => {
+    const c = ch.codePointAt(0);
+    if (c >= 65 && c <= 90) return String.fromCodePoint(upper + c - 65);
+    if (c >= 97 && c <= 122) return String.fromCodePoint(lower + c - 97);
+    if (c >= 48 && c <= 57) return String.fromCodePoint(digit + c - 48);
+    return ch;
+  }).join('');
+  const bold = str => restyle(str, 0x1D5D4, 0x1D5EE, 0x1D7EC);
+  const mono = str => restyle(str, 0x1D670, 0x1D68A, 0x1D7F6);
   $('#copy').addEventListener('click', () => {
     if (!current) { toast('Roll first, then share your result.'); return; } // day #0 is a real day, so test for a roll, not a truthy number
     const rt = ratingOf(current.sc.total), best = sortByTier(current.res).pop().b;
     const tierName = rt.tier[0].toUpperCase() + rt.tier.slice(1);
-    const text = `GUIDle #${current.n} · ${tierName} roll · ${rt.top}\n${fmt(current.sc.total)} pts from ${current.res.length} ${current.res.length === 1 ? 'badge' : 'badges'}, best: ${best.name} (${oddsText(best)})\n${current.u}\n${SITE}`;
+    // Plain text can't carry color, so the share uses colored squares (one per badge, by rarity)
+    // and Unicode bold / monospace letters for emphasis.
+    const n = current.res.length;
+    const text = [
+      `${bold('GUIDle #' + current.n)} ${SQUARE[rt.tier]} ${bold(tierName + ' roll')} · ${rt.top}`,
+      sortByTier(current.res).map(h => SQUARE[h.b.tier]).join(''),
+      `✨ ${bold(fmt(current.sc.total))} pts from ${n} ${n === 1 ? 'badge' : 'badges'}`,
+      `🏅 Best: ${best.name} (${oddsText(best)})`,
+      `🔑 ${mono(current.u)}`,
+      SITE,
+    ].join('\n');
     const box = $('#share-text');
     const fallback = () => {
       box.value = text; box.hidden = false; box.focus(); box.select();
