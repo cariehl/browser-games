@@ -95,7 +95,7 @@
     const seen = {};
     for (const g of A.groups) for (let i = 0; i + len <= g.l; i++) {
       const sub = g.str.substr(i, len), pos = g.s + i;
-      if (sub in seen && pos - seen[sub] >= len) return { idx: [...rng(seen[sub], len), ...rng(pos, len)], detail: sub };
+      if (sub in seen && pos - seen[sub] >= len) return { idx: [...rng(seen[sub], len), ...rng(pos, len)] };
       if (!(sub in seen)) seen[sub] = pos;
     }
     return null;
@@ -115,7 +115,7 @@
     if (!f.length) return null;
     const L = f[0].e.length;
     if (L < min || L > max) return null;
-    return { idx: f[0].idx, detail: f[0].w.toUpperCase() + (f[0].w !== f[0].e ? ` (${f[0].e.toUpperCase()})` : '') };
+    return { idx: f[0].idx, detail: f[0].w.toUpperCase() };
   };
   const spells = word => A => {
     const h = words(A).find(x => x.w === word);
@@ -243,8 +243,7 @@
 
   function scoreOf(res) {
     const base = res.reduce((s, h) => s + (h.b.points || 0), 0);
-    const mult = 1 + 0.2 * (res.length - 1);
-    return { base, mult, total: Math.round(base * mult) };
+    return { base, total: base };
   }
 
   const api = { BADGES, BY_ID, TIERS, POINTS, tierFor, applyOdds, evaluate, scoreOf, analyze };

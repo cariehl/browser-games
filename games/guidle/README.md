@@ -2,11 +2,12 @@
 
 A browser game where every roll is a random UUID. The game scans each ID for fun patterns
 (runs, palindromes, counting sequences, hex words like `C0FFEE`, famous numbers like `404`)
-and awards badges for them. Rarer badges score more points, multiple badges build a combo,
-and beating your high score sets off a celebration.
+and awards badges for them. Rarer badges score more points, a roll scores the sum of its
+badges, and beating your high score sets off a celebration.
 
 Open `index.html` in any modern browser to play. Press **Space** or click **Roll**.
-Clicking Roll again while the ID is spinning skips the animation.
+Clicking Roll again while the ID is spinning skips the spin. As each badge is revealed, the
+characters it matched light up; hover or tap any badge afterwards to light them up again.
 
 ## How scoring works
 
@@ -16,7 +17,6 @@ Clicking Roll again while the ID is spinning skips the animation.
   - Legendary badges are worth at least 1,000 and scale with rarity, so `C0FFEE` pays far more than a run of five.
 - Some badges are a ladder (for example Hat Trick → Four of a Kind → High Five → Broken Record);
   only the highest rung on a ladder is awarded.
-- Each badge beyond the first adds ×0.2 to the combo multiplier.
 - A roll with no patterns earns **Perfectly Average**.
 
 Roll history (last 250 rolls), lifetime badge counts, and your high score are saved in
