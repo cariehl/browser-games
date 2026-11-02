@@ -41,7 +41,10 @@ Common (under 1 in 20), Uncommon (to 1 in 200), Rare (to 1 in 2,000), Epic (to 1
 Legendary (to 1 in a million), and Mythic beyond that.
 
 Some badges are a ladder (for example Hat Trick → Four of a Kind → High Five → Broken Record);
-only the highest rung on a ladder is awarded. A roll with no patterns earns **Perfectly Average**.
+only the highest rung on a ladder is awarded.
+Extended badges are stronger versions of a regular badge and sit one rung above it on its ladder: for example
+**Triple Threat** (three doubled characters) and **Pair Parade** (four or more) extend Twin Peaks, and **Group Hug**
+(all four group joins match) extends Handshake. The collection marks each one with the badge it extends. A roll with no patterns earns **Perfectly Average**.
 
 Roll history, lifetime badge counts, and your high score are saved in
 `localStorage` in your browser.

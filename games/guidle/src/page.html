@@ -181,6 +181,7 @@ button { font: inherit; color: inherit; }
 .tile .gem { grid-row: span 2; width: 26px; height: 23px; }
 .tile .nm { font-weight: 700; font-size: 14px; line-height: 1.2; }
 .tile .ds { grid-column: 1 / -1; font-size: 12px; color: var(--muted); line-height: 1.3; }
+.tile .ex { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; color: var(--tc); }
 .tile .od { font-size: 11px; color: var(--tc); font-weight: 700; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
 .tile.locked .gem { background: transparent; box-shadow: none; outline: 0; animation: none;
   background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--tc) 35%, transparent) 0 3px, transparent 3px 6px); }
@@ -415,7 +416,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     if (segs) { mt.append('Matched'); for (const sg of segs) { const c = document.createElement('code'); c.textContent = sg; mt.append(c); } }
     else mt.textContent = 'Matched the whole ID';
     d.querySelector('.txt').appendChild(mt);
-    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b)} (${METHOD[b.method]})`;
+    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b)} (${METHOD[b.method]})` + (b.ext ? ` · extends ${G.BY_ID[b.ext].name}` : '');
     d._h = h;
     const on = () => { if (!revealing) focusChars(h.idx, b.tier); };
     const off = () => { if (!revealing) focusChars(pinned ? pinned._h.idx : null, pinned ? pinned._h.b.tier : null); };
@@ -663,6 +664,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
       d.querySelector('.od').textContent = `${oddsText(b)} · ${METHOD[b.method]}` + (got ? ` · ×${fmt(got)}` : '');
       d.title = `${TIER_NAME[b.tier]} · worth ${fmt(b.points)} pts`;
       d.querySelector('.ds').textContent = b.desc;
+      if (b.ext) { const ex = document.createElement('span'); ex.className = 'ex'; ex.textContent = `Extends ${G.BY_ID[b.ext].name}`; d.querySelector('.ds').appendChild(ex); }
       box.appendChild(d);
     }
     if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = filter === 'found' ? 'No badges yet. Roll to start your collection, or pick All to see every badge.' : 'Nothing here yet.'; box.appendChild(e); }
