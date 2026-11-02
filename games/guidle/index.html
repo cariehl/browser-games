@@ -131,6 +131,7 @@ button { font: inherit; color: inherit; }
 .badge.current { transform: translateY(-2px); }
 .badge .mt { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 5px; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
 .badge .mt code { font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--tc); background: color-mix(in srgb, var(--tc) 18%, transparent); padding: 1px 6px; border-radius: 5px; }
+.share-text { width: min(100%, 520px); font-family: var(--mono); font-size: 12.5px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface-2); color: var(--ink); resize: none; }
 .hint { font-size: 12.5px; color: var(--muted); text-align: center; min-height: 1.2em; }
 .badge.in { animation: badgeIn .75s cubic-bezier(.2, 1.5, .4, 1) both; }
 @keyframes badgeIn { 0% { transform: translateY(14px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
@@ -246,6 +247,7 @@ footer a { color: inherit; }
       <button class="roll" id="roll" type="button">Roll<kbd>Space</kbd></button>
       <button class="ghost" id="copy" type="button">Share result</button>
     </div>
+    <textarea class="share-text" id="share-text" rows="4" readonly hidden aria-label="Result to share"></textarea>
     <div class="results" id="results"></div>
     <div class="hint" id="hint">Hover or tap a badge to light up the characters it matched.</div>
   </section>
@@ -1043,12 +1045,17 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
   $('#mute').addEventListener('click', () => { S.muted = !S.muted; save(); renderStats(); if (!S.muted) sfx.chime(); });
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
   $('#copy').addEventListener('click', () => {
-    if (!current || !current.n) { toast('Roll first, then share your result.'); return; }
+    if (!current) { toast('Roll first, then share your result.'); return; } // day #0 is a real day, so test for a roll, not a truthy number
     const rt = ratingOf(current.sc.total), best = sortByTier(current.res).pop().b;
     const tierName = rt.tier[0].toUpperCase() + rt.tier.slice(1);
     const text = `GUIDle #${current.n} · ${tierName} roll · ${rt.top}\n${fmt(current.sc.total)} pts from ${current.res.length} ${current.res.length === 1 ? 'badge' : 'badges'}, best: ${best.name} (${oddsText(best)})\n${current.u}\n${SITE}`;
-    const fallback = () => { const r = document.createRange(); r.selectNodeContents(uuidEl); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected. Press Ctrl+C to copy.'); };
-    try { navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard'), fallback); } catch (e) { fallback(); }
+    const box = $('#share-text');
+    const fallback = () => {
+      box.value = text; box.hidden = false; box.focus(); box.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      if (ok) { box.hidden = true; toast('Copied to clipboard'); } else toast('Copy the text below to share it.');
+    };
+    try { navigator.clipboard.writeText(text).then(() => { box.hidden = true; toast('Copied to clipboard'); }, fallback); } catch (e) { fallback(); }
   });
   function renderAll() { renderStats(); renderHistory(false); renderCollection(); }
 
