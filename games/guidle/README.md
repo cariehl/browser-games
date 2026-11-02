@@ -12,14 +12,15 @@ characters it matched light up; hover or tap any badge afterwards to light them 
 ## Daily roll
 
 You get one roll per day, and a new one unlocks at midnight in your own time zone. Days are numbered
-from GUIDle #1 on 2 November 2026. History keeps every day's roll with its date and time, and you can
+from GUIDle #0 on 2 November 2026, so 3 November is GUIDle #1. History keeps every day's roll with its date and time, and you can
 replay any of them. **Share result** copies a summary with the day number, rating, and Top X%.
 
 Each roll gets a rating from Common to Mythic and a "Top X%": the share of all rolls that score at
 least as much. Both come from the score distribution of 8 million simulated rolls (`src/scores.json`);
 above the range the simulation covers well, the share is the summed odds of the badges worth that much
-on their own. The rating uses the same odds bands as the badge tiers, so a Rare roll is one that only
-1 in 200 to 1 in 2,000 rolls beat or match.
+on their own. The rating uses the same odds bands as the badge tiers, except that a roll is Uncommon from
+Top 25%: Common above 25%, Uncommon down to 5%, Rare to 0.5%, Epic to 0.05%, Legendary to
+1 in a million, and Mythic beyond.
 
 ## How scoring works
 

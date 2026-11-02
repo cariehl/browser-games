@@ -151,9 +151,11 @@ button { font: inherit; color: inherit; }
 .phead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
 .phead .sub { font-size: 13px; color: var(--muted); }
 
-.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 520px; overflow-y: auto; overscroll-behavior: contain; }
+.history { list-style: none; margin: 0; padding: 2px; display: grid; gap: 6px; max-height: 520px; overflow-y: auto; overscroll-behavior: contain; }
 .hrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; cursor: pointer; border: 0; background: transparent; text-align: left; width: 100%; }
-.hrow:hover, .hrow.active { background: var(--surface-2); }
+.hrow { background: color-mix(in srgb, var(--tc) 9%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); transition: box-shadow .2s; }
+.hrow:hover, .hrow.active { box-shadow: 0 0 0 2px var(--tc); }
+.hrow.masked { --tc: var(--line); }
 .hrow .gem { width: 24px; height: 21px; font-size: 9px; }
 .hrow .hid { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; line-height: 1.35; }
 .hrow .hmeta { font-size: 11.5px; color: var(--muted); }
@@ -170,7 +172,9 @@ button { font: inherit; color: inherit; }
 .progress { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
 .progress i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .6s cubic-bezier(.2,1,.3,1); }
 .collection { max-height: 560px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 4px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 8px; }
-.tile { --tc: var(--t-common); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; padding: 10px; border-radius: 12px; background: var(--surface-2); align-content: start; }
+.tile { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--tc) 12%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--tc) 50%, transparent); align-content: start; }
+.tile .nm { color: var(--tc); }
+.tile.locked { background: var(--surface-2); border: 1.5px dashed color-mix(in srgb, var(--tc) 40%, transparent); }
 .tile .gem { grid-row: span 2; width: 26px; height: 23px; }
 .tile .nm { font-weight: 700; font-size: 14px; line-height: 1.2; }
 .tile .ds { grid-column: 1 / -1; font-size: 12px; color: var(--muted); line-height: 1.3; }
@@ -274,11 +278,12 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   const KEY = 'guidle:daily';
   const SITE = 'https://cariehl.github.io/guidle/';
   const rank = G.makeRanker(/*__SCORES__*/);
-  // Day 1 is 2 November 2026; days follow the player's local calendar.
+  // GUIDle #0 is 2 November 2026 (launch day); days follow the player's local calendar.
   const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
-  const dayNum = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(2026, 10, 2)) / 864e5) + 1;
+  const dayNum = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(2026, 10, 2)) / 864e5);
   const topText = f => { const pct = f * 100; return 'Top ' + (pct >= 10 ? Math.round(pct) : Number(pct.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 })) + '%'; };
-  const ratingOf = score => { const f = rank(score); return { f, tier: G.tierFor(f), top: topText(f) }; };
+  // Roll ratings use the badge bands, except a roll counts as Uncommon from Top 25%.
+  const ratingOf = score => { const f = rank(score); return { f, tier: f > 0.25 ? 'common' : f > 0.05 ? 'uncommon' : G.tierFor(f), top: topText(f) }; };
   const whenFmt = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const HEXCH = '0123456789abcdef';
   const fmt = n => n.toLocaleString('en-US');
@@ -290,6 +295,10 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   let S = { v: 1, best: null, counts: {}, history: [], muted: false };
   try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  // Day numbers are derived from each roll's date, so renumbering (launch day became #0) fixes old saves.
+  const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+  for (const r of S.history) if (r.d) r.n = dayNum(fromKey(r.d));
+  if (S.best && S.best.t) S.best.n = dayNum(new Date(S.best.t));
   const rolledToday = () => S.history.length > 0 && S.history[0].d === dayKey(new Date());
   function streak() {
     let n = 0; const d = new Date(); if (!rolledToday()) d.setDate(d.getDate() - 1);
@@ -496,8 +505,14 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     return new Promise(resolve => {
       buildUUID(u.replace(/[0-9a-f]/g, () => HEXCH[Math.random() * 16 | 0]));
       const order = []; for (let i = 0; i < 36; i++) if (chEls[i]) { order.push(i); chEls[i].classList.add('spin'); }
-      const base = reduced ? 80 : 700, step = reduced ? 5 : 80;
-      const lockAt = order.map((p, k) => { let t = base + k * step; if (tease && k >= 24 && !reduced) t += (k - 23) * (k - 23) * 50; return t; });
+      // Each group locks in as a quick sweep, with a pause at every dash. A big roll holds longer before the last group.
+      const base = reduced ? 80 : 900, step = reduced ? 5 : 45, gap = reduced ? 20 : 650;
+      const lockAt = order.map((p, k) => {
+        const g = (u.slice(0, p).match(/-/g) || []).length;
+        let t = base + k * step + g * gap;
+        if (tease && g === 4 && !reduced) t += 1400 + (k - 20) * 40;
+        return t;
+      });
       const done = new Array(order.length).fill(false); let left = order.length, last = 0; const t0 = performance.now();
       function frame(now) {
         const el = now - t0, scramble = now - last > 70; if (scramble) last = now;
@@ -609,6 +624,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
       btn.type = 'button'; btn.className = 'hrow' + (current && current.n === r.n && current.u === r.u ? ' active' : '');
       const res = G.evaluate(r.u), rt = ratingOf(r.s), top = rt.tier;
       const masked = i === 0 && skipFirstReveal; // don't spoil the roll that's still revealing
+      btn.classList.add(masked ? 'masked' : `t-${top}`);
       btn.innerHTML = `<span class="gem t-${masked ? 'common' : top}"></span><span><div class="hmeta"></div><div class="hid"></div><div class="hmeta hrt"></div></span><span class="hs"></span>`;
       btn.querySelector('.hid').textContent = r.u;
       btn.querySelector('.hmeta').textContent = `GUIDle #${r.n} · ${whenFmt(r.t)}`;
@@ -623,7 +639,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     });
   }
 
-  let filter = 'all';
+  let filter = 'found';
   function renderCollection(fresh) {
     const found = G.BADGES.filter(b => S.counts[b.id]).length;
     $('#coll-sub').textContent = `${found} of ${G.BADGES.length} found`;
@@ -640,7 +656,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
       d.querySelector('.ds').textContent = b.desc;
       box.appendChild(d);
     }
-    if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Nothing here yet.'; box.appendChild(e); }
+    if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = filter === 'found' ? 'No badges yet. Roll to start your collection, or pick All to see every badge.' : 'Nothing here yet.'; box.appendChild(e); }
   }
   function renderFilters() {
     const f = $('#filters'); f.textContent = '';
