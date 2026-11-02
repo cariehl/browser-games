@@ -1064,10 +1064,11 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
     const n = current.res.length;
     const text = [
       `${bold('GUIDle #' + current.n)} ${SQUARE[rt.tier]} ${bold(tierName + ' roll')} · ${rt.top}`,
+      mono(current.u),
       sortByTier(current.res).map(h => SQUARE[h.b.tier]).join(''),
       `✨ ${bold(fmt(current.sc.total))} pts from ${n} ${n === 1 ? 'badge' : 'badges'}`,
       `🏅 Best: ${best.name} (${oddsText(best)})`,
-      `🔑 ${mono(current.u)}`,
+      '',
       SITE,
     ].join('\n');
     const box = $('#share-text');
