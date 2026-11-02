@@ -18,14 +18,15 @@ replay any of them. **Share result** copies a summary with the day number, ratin
 Each roll gets a rating from Common to Mythic and a "Top X%": the share of all rolls that score at
 least as much. Both come from the score distribution of 8 million simulated rolls (`src/scores.json`);
 above the range the simulation covers well, the share is the summed odds of the badges worth that much
-on their own. The rating uses the same odds bands as the badge tiers, except that a roll is Uncommon from
-Top 25%: Common above 25%, Uncommon down to 5%, Rare to 0.5%, Epic to 0.05%, Legendary to
-1 in a million, and Mythic beyond.
+on their own. Rating bands by Top %: Common above 33%, Uncommon 33% to 10%, Rare 10% to 3%, Epic 3% to 1%,
+Legendary 1% to 1 in a million, and Mythic beyond. Rolls past Top 70% read as "Bottom (100 − X)%"
+instead, so a Top 91% roll shows as Bottom 9%.
 
 ## How scoring works
 
 Like RNGdle, a badge is worth its odds: a pattern that turns up 1 in N rolls scores about N points,
 and a roll scores the sum of its badges.
+The 16 opener badges ("starts with 0" … "starts with f") are a consolation prize worth 1 point each.
 
 Each badge's odds come from one of three methods, shown in the badge collection:
 

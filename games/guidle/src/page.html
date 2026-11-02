@@ -281,9 +281,11 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   // GUIDle #0 is 2 November 2026 (launch day); days follow the player's local calendar.
   const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
   const dayNum = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(2026, 10, 2)) / 864e5);
-  const topText = f => { const pct = f * 100; return 'Top ' + (pct >= 10 ? Math.round(pct) : Number(pct.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 })) + '%'; };
-  // Roll ratings use the badge bands, except a roll counts as Uncommon from Top 25%.
-  const ratingOf = score => { const f = rank(score); return { f, tier: f > 0.25 ? 'common' : f > 0.05 ? 'uncommon' : G.tierFor(f), top: topText(f) }; };
+  const pctText = pct => (pct >= 10 ? Math.round(pct) : Number(pct.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 })) + '%';
+  // Top X% for most rolls; past Top 70% it reads as Bottom (100 - X)%.
+  const topText = f => { const pct = f * 100; return pct > 70 ? 'Bottom ' + pctText(Math.max(100 - pct, 1)) : 'Top ' + pctText(pct); };
+  // Roll rating bands by Top %: Common above 33, Uncommon to 10, Rare to 3, Epic to 1, Legendary to 1 in a million, then Mythic.
+  const ratingOf = score => { const f = rank(score); return { f, tier: f > 0.33 ? 'common' : f > 0.10 ? 'uncommon' : f > 0.03 ? 'rare' : f > 0.01 ? 'epic' : f > 1e-6 ? 'legendary' : 'mythic', top: topText(f) }; };
   const whenFmt = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const HEXCH = '0123456789abcdef';
   const fmt = n => n.toLocaleString('en-US');
@@ -297,8 +299,9 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
   // Day numbers are derived from each roll's date, so renumbering (launch day became #0) fixes old saves.
   const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
-  for (const r of S.history) if (r.d) r.n = dayNum(fromKey(r.d));
-  if (S.best && S.best.t) S.best.n = dayNum(new Date(S.best.t));
+  // Scores are recomputed from each saved ID too, so scoring changes apply to old rolls.
+  for (const r of S.history) { if (r.d) r.n = dayNum(fromKey(r.d)); r.s = G.scoreOf(G.evaluate(r.u)).total; }
+  if (S.history.length) S.best = S.history.reduce((b, r) => (!b || r.s > b.s ? { u: r.u, s: r.s, n: r.n, t: r.t } : b), null);
   const rolledToday = () => S.history.length > 0 && S.history[0].d === dayKey(new Date());
   function streak() {
     let n = 0; const d = new Date(); if (!rolledToday()) d.setDate(d.getDate() - 1);
@@ -462,7 +465,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     const el = $('#rating'), r = ratingOf(score);
     el.style.setProperty('--tc', `var(--t-${r.tier})`); el.querySelector('.gem').className = `gem t-${r.tier}`;
     $('#rating-name').textContent = `${r.tier} roll`;
-    $('#rating-top').textContent = `${r.top} of all rolls`;
+    $('#rating-top').textContent = `${r.top} of rolls`;
     el.hidden = false; el.classList.remove('in'); if (animate) { void el.offsetWidth; el.classList.add('in'); }
     return r;
   }

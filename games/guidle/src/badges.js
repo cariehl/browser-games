@@ -292,6 +292,7 @@
       b.odds = o.m === 'estimate' ? bucket(1 / o.p) : 1 / o.p;
       b.p = 1 / b.odds; b.tier = tierFor(b.p);
       b.points = Math.max(1, Math.round(o.m === 'estimate' ? b.odds : twoSig(b.odds)));
+      if (b.family === 'opener') b.points = 1; // openers are a consolation prize, not a pattern
     }
   }
 
