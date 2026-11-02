@@ -9,6 +9,7 @@ const odds = JSON.parse(read('src/odds.json'));
 const page = read('src/page.html')
   .replace('/*__BADGES__*/', () => read('src/badges.js'))
   .replace('/*__ODDS__*/', () => JSON.stringify(odds.odds))
+  .replace('/*__SCORES__*/', () => read('src/scores.json').trim())
   .replace('/*__ROLLS__*/', () => (odds.rolls / 1e6).toLocaleString('en-US') + ' million');
 
 fs.mkdirSync(path.join(root, 'dist'), { recursive: true });

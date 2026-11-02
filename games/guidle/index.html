@@ -52,6 +52,7 @@ button { font: inherit; color: inherit; }
 .stat { display: grid; gap: 0; }
 .stat b { font-family: var(--display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .stat small { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.stat b small { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; }
 .stat.pulse b { animation: statPulse .9s ease; color: var(--t-legendary); }
 @keyframes statPulse { 0% { transform: scale(1); } 30% { transform: scale(1.35); } 100% { transform: scale(1); } }
 .iconbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -96,6 +97,19 @@ button { font: inherit; color: inherit; }
   padding: 14px 46px 16px; border-radius: 16px; box-shadow: 0 6px 0 var(--accent-deep), 0 14px 24px -10px var(--accent); transition: transform .08s, box-shadow .08s; }
 .roll:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--accent-deep), 0 18px 28px -10px var(--accent); }
 .roll:active, .roll.pressed { transform: translateY(5px); box-shadow: 0 1px 0 var(--accent-deep), 0 6px 12px -8px var(--accent); }
+.roll.waiting { background: var(--surface-2); color: var(--ink); box-shadow: 0 6px 0 var(--line); cursor: default; font-size: 20px; font-variant-numeric: tabular-nums; }
+.roll.waiting:hover, .roll.waiting:active { transform: none; box-shadow: 0 6px 0 var(--line); }
+.rating { --tc: var(--t-common); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.rating[hidden] { display: none; }
+.rating .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 16%, var(--surface));
+  border: 2px solid var(--tc); color: var(--tc); font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: .04em; text-transform: uppercase; }
+.rating .pill .gem { width: 24px; height: 21px; }
+.rating .top { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rating .top small { font-family: var(--body); font-weight: 500; font-size: 13px; color: var(--muted); }
+.rating.in { animation: ratingIn .9s cubic-bezier(.2, 1.7, .4, 1) both; }
+@keyframes ratingIn { 0% { transform: scale(2.6) rotate(-8deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.rating.in .gem { animation-delay: .9s; }
+.hrow .rt { font-weight: 700; color: var(--tc); }
 .roll kbd { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; opacity: .75; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
 .ghost { border: 1.5px solid var(--line); background: transparent; border-radius: 12px; padding: 10px 14px; font-weight: 600; cursor: pointer; font-size: 14px; }
 .ghost:hover { border-color: var(--accent); color: var(--accent); }
@@ -185,6 +199,8 @@ footer a { color: inherit; }
 @media (max-width: 520px) {
   .brand .tag { display: none; }
   .roll { font-size: 22px; padding: 12px 34px 14px; }
+  .newbest { top: 6px; right: 6px; font-size: 13px; padding: 5px 9px 6px; }
+  .newbest small { font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -199,10 +215,11 @@ footer a { color: inherit; }
   <header class="top">
     <div class="brand">
       <h1>GUID<span>le</span></h1>
-      <div class="tag">Roll a random ID. Collect badges for the patterns hiding inside it.</div>
+      <div class="tag">One random ID a day. Collect badges for the patterns hiding inside it.</div>
     </div>
     <div class="stats">
-      <div class="stat" id="st-rolls"><b>0</b><small>Rolls</small></div>
+      <div class="stat" id="st-rolls"><b>0</b><small>Days played</small></div>
+      <div class="stat" id="st-streak"><b>0</b><small>Streak</small></div>
       <div class="stat" id="st-best"><b>–</b><small>High score</small></div>
       <div class="stat" id="st-found"><b>0</b><small>Badges found</small></div>
       <button class="iconbtn" id="mute" type="button" aria-pressed="false">Sound on</button>
@@ -217,9 +234,10 @@ footer a { color: inherit; }
     <div class="scorerow">
       <div class="score" id="score">0</div><div class="pts">pts</div>
     </div>
+    <div class="rating" id="rating" hidden><span class="pill"><span class="gem"></span><span id="rating-name"></span></span><span class="top" id="rating-top"></span></div>
     <div class="actions">
       <button class="roll" id="roll" type="button">Roll<kbd>Space</kbd></button>
-      <button class="ghost" id="copy" type="button">Copy result</button>
+      <button class="ghost" id="copy" type="button">Share result</button>
     </div>
     <div class="results" id="results"></div>
     <div class="hint" id="hint">Hover or tap a badge to light up the characters it matched.</div>
@@ -232,9 +250,6 @@ footer a { color: inherit; }
         <span class="sub" id="hist-sub"></span>
       </div>
       <ol class="history" id="history"></ol>
-      <div class="confirm" id="clear-area">
-        <button class="ghost" id="clear" type="button">Erase history</button>
-      </div>
     </section>
     <section class="panel">
       <div class="phead">
@@ -247,7 +262,7 @@ footer a { color: inherit; }
       <div class="collection" id="collection"></div>
     </section>
   </div>
-  <footer>Every roll is a random version 4 UUID from your browser. Badge odds are exact where the math allows and otherwise come from 24 million simulated rolls. Your history stays in this browser.</footer>
+  <footer>Every roll is a random version 4 UUID from your browser. Badge odds are exact where the math allows and otherwise come from 24 million simulated rolls. A new roll unlocks at midnight your time. Your history stays in this browser.</footer>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -412,6 +427,10 @@ footer a { color: inherit; }
     sorted: anyOf([C(19, 4) / 65536, C(14, 3) / 4096, (C(10, 3) + C(9, 3) + C(8, 3) + C(7, 3)) / 4 / 4096]) * (1 - P_SORTED8),
     sevens: binomTail(30, 1 / 16, 5),
     letterlover: sum(LET, 18, 31), digitdiet: sum(LET, 0, 6),
+    handshake: 1 - (15 / 16) ** 4, nozeros: (15 / 16) ** 30,
+    evensteven: 5 / 16, oddcouple: (5 / 16) ** 2, letteropener: (6 / 16) ** 2,
+    frontloaded: 8 * (10 / 16) ** 7 * (6 / 16), // exactly seven digits; all eight is Digital Native
+    topheavy: (1 / 2) ** 8, alleven: (1 / 2) ** 8, bottomheavy: (1 / 2) ** 12,
   };
   // Rough estimates for patterns too rare to simulate well (rounded to 1 / 5 / 10 / 50... million style buckets).
   const EST = {
@@ -447,7 +466,7 @@ footer a { color: inherit; }
   });
   // Group makeup
   add('numgroup', 'By the Numbers', 'A four-character group made only of digits.', A => firstGroup(A, allDigits));
-  add('digifirst', 'Digital Native', 'The whole first group is digits.', A => allDigits(A.groups[0].str) ? { idx: rng(0, 8) } : null);
+  add('digifirst', 'Digital Native', 'The whole first group is digits.', A => allDigits(A.groups[0].str) ? { idx: rng(0, 8) } : null, { family: 'front', rank: 2 });
   add('phonebook', 'Phone Book', 'The last twelve characters are all digits.', A => allDigits(A.groups[4].str) ? { idx: rng(24, 12) } : null);
   add('letgroup', 'Spelling Bee', 'A four-character group made only of letters.', A => firstGroup(A, allLetters));
   add('letfirst', 'Alphabet Soup', 'The whole first group is letters.', A => allLetters(A.groups[0].str) ? { idx: rng(0, 8) } : null);
@@ -468,6 +487,24 @@ footer a { color: inherit; }
   add('sevens', 'Lucky Sevens', 'Five or more 7s anywhere in the ID.', A => (counts(A)['7'] || 0) >= 5 ? { idx: A.raw.filter(i => A.u[i] === '7') } : null);
   add('freshstart', 'Fresh Start', 'Begins with 00.', A => A.u.startsWith('00') ? { idx: [0, 1] } : null);
   add('strongfinish', 'Strong Finish', 'Ends with ff.', A => A.u.endsWith('ff') ? { idx: [34, 35] } : null);
+  add('handshake', 'Handshake', 'Two neighbouring groups meet on the same character, like 3f-f9.', A => {
+    for (let k = 1; k < 5; k++) { const a = A.groups[k - 1], b = A.groups[k]; if (a.str[a.l - 1] === b.str[0]) return { idx: [a.s + a.l - 1, b.s] }; }
+    return null;
+  });
+  add('nozeros', 'Zero Waste', 'Not a single 0 anywhere in the ID.', A => A.rawStr.includes('0') ? null : { idx: [] });
+  add('evensteven', 'Even Steven', 'Ends on an even digit (0, 2, 4, 6 or 8).', A => '02468'.includes(A.u[35]) ? { idx: [35] } : null);
+  add('oddcouple', 'Odd Couple', 'Starts with two odd digits.', A => '13579'.includes(A.u[0]) && '13579'.includes(A.u[1]) ? { idx: [0, 1] } : null);
+  add('letteropener', 'Letter Opener', 'Starts with two letters.', A => !isDigit(A.u[0]) && !isDigit(A.u[1]) ? { idx: [0, 1] } : null);
+  add('frontloaded', 'Front-Loaded', 'Seven of the first eight characters are digits.', A => A.groups[0].str.replace(/[a-f]/g, '').length === 7 ? { idx: rng(0, 8).filter(i => isDigit(A.u[i])) } : null, { family: 'front', rank: 1 });
+  add('balanced', 'Balanced Books', 'All 32 characters, read as hex values, add up to a multiple of 10.', A => [...A.rawStr].reduce((t, ch) => t + HEX.indexOf(ch), 0) % 10 === 0 ? { idx: [] } : null);
+  add('twinpeaks', 'Twin Peaks', 'Two separate doubled characters, like 55 and cc.', A => {
+    const idx = [];
+    for (const g of A.groups) { let st = 0; for (let i = 1; i <= g.l; i++) if (i === g.l || g.str[i] !== g.str[st]) { if (i - st === 2) idx.push(g.s + st, g.s + st + 1); st = i; } }
+    return idx.length >= 4 ? { idx: idx.slice(0, 4) } : null;
+  });
+  add('topheavy', 'Top Heavy', 'Every character in the first group is 8 or higher.', A => /^[89a-f]{8}$/.test(A.groups[0].str) ? { idx: rng(0, 8) } : null);
+  add('alleven', 'Even Keel', 'Every character in the first group is even (0, 2, 4 … e).', A => /^[02468ace]{8}$/.test(A.groups[0].str) ? { idx: rng(0, 8) } : null);
+  add('bottomheavy', 'Low Profile', 'Every character in the last group is 7 or lower.', A => /^[0-7]{12}$/.test(A.groups[4].str) ? { idx: rng(24, 12) } : null);
   add('bookends', 'Bookends', 'The first and last characters match.', A => A.u[0] === A.u[35] ? { idx: [0, 35] } : null);
   // Famous numbers
   add('answer', 'Deep Thought', 'Contains 42, the answer to everything.', contains('42'));
@@ -497,7 +534,15 @@ footer a { color: inherit; }
   add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'));
   add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'));
   // Consolation (awarded only when nothing else hits)
-  add('average', 'Perfectly Average', 'No patterns at all. Impressively ordinary.', () => null);
+  // Openers: exactly one per roll, so every roll earns at least one badge.
+  const OPENERS = { 0: 'Ground Zero', 1: 'Number One', 2: 'Two’s Company', 3: 'Third Time’s the Charm', 4: 'Four-Leaf Clover', 5: 'Take Five', 6: 'Sixth Sense', 7: 'Lucky Number Seven',
+    8: 'Figure Eight', 9: 'Cloud Nine', a: 'Straight A’s', b: 'Plan B', c: 'C-Suite', d: 'Vitamin D', e: 'E for Effort', f: 'F-Stop' };
+  for (const ch of HEX) {
+    add('open' + ch, OPENERS[ch], `Starts with ${ch}.`, A => A.u[0] === ch ? { idx: [0] } : null, { family: 'opener' });
+    EXACT['open' + ch] = 1 / 16;
+  }
+  // Consolation (awarded only when nothing besides an opener hits)
+  add('average', 'Perfectly Average', 'Nothing but an opener. Impressively ordinary.', () => null);
 
   const BY_ID = Object.fromEntries(BADGES.map(b => [b.id, b]));
   for (const b of BADGES) { if (b.id in EXACT) b.exact = EXACT[b.id]; if (b.id in EST) b.est = EST[b.id]; }
@@ -530,7 +575,7 @@ footer a { color: inherit; }
     const best = {};
     for (const h of hits) best[h.b.family] = Math.max(best[h.b.family] ?? -1, h.b.rank);
     let res = hits.filter(h => h.b.rank === best[h.b.family]);
-    if (!res.length) res = [{ b: BY_ID.average, idx: [] }];
+    if (res.every(h => h.b.family === 'opener')) res.push({ b: BY_ID.average, idx: [] });
     return res;
   }
 
@@ -539,14 +584,37 @@ footer a { color: inherit; }
     return { base, total: base };
   }
 
-  const api = { BADGES, BY_ID, TIERS, TIER_MAX_N, tierFor, bucket, applyOdds, evaluate, scoreOf, analyze };
+  // Builds score -> fraction of rolls scoring at least that much, from the simulated distribution
+  // (src/scores.json). Where the simulation has too few rolls that high, falls back to the summed
+  // odds of the badges that alone are worth that much.
+  function makeRanker(dist) {
+    const { rolls, dense, log } = dist, D = dense.length;
+    const logKeys = Object.keys(log).map(Number).sort((a, b) => a - b);
+    const logTotal = logKeys.reduce((t, k) => t + log[k], 0);
+    const denseSuffix = new Array(D + 1).fill(0);
+    for (let i = D - 1; i >= 0; i--) denseSuffix[i] = denseSuffix[i + 1] + dense[i];
+    const countAtLeast = s => {
+      if (s < D) return denseSuffix[Math.max(0, Math.ceil(s))] + logTotal;
+      const x = Math.log10(s) * 100, k = Math.floor(x);
+      let c = 0; for (const key of logKeys) if (key > k) c += log[key]; else if (key === k) c += log[key] * (1 - (x - k));
+      return c;
+    };
+    return score => {
+      const c = countAtLeast(score), sim = c / rolls;
+      if (c >= 100) return Math.min(1, sim);
+      const tail = BADGES.reduce((t, b) => t + (b.points >= score ? b.p : 0), 0);
+      return Math.min(1, Math.max(sim, tail, 1e-12));
+    };
+  }
+
+  const api = { BADGES, makeRanker, BY_ID, TIERS, TIER_MAX_N, tierFor, bucket, applyOdds, evaluate, scoreOf, analyze };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.GUIDLE = api;
 })(typeof window !== 'undefined' ? window : globalThis);
 
 </script>
 <script>
-GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003779875,"m":"sim"},"five":{"p":0.000166375,"m":"sim"},"six":{"p":0.000008,"m":"sim"},"stepup":{"p":0.06699154166666667,"m":"sim"},"stepdown":{"p":0.06709445833333333,"m":"sim"},"stairs":{"p":0.006390166666666666,"m":"sim"},"escalator":{"p":0.0002573333333333333,"m":"sim"},"racecar":{"p":0.046214,"m":"sim"},"reflect":{"p":0.002027375,"m":"sim"},"mirror":{"p":0.011673033237457275,"m":"exact"},"hallmirror":{"p":0.0000152587890625,"m":"exact"},"dejavu":{"p":0.04476920833333333,"m":"sim"},"echo":{"p":0.0015660833333333334,"m":"sim"},"twins":{"p":0.000030517578125,"m":"exact"},"numgroup":{"p":0.4376646247692406,"m":"exact"},"digifirst":{"p":0.023283064365386963,"m":"exact"},"phonebook":{"p":0.003552713678800501,"m":"exact"},"letgroup":{"p":0.04562115669250488,"m":"exact"},"letfirst":{"p":0.0003910660743713379,"m":"exact"},"sorted":{"p":0.15817134259266566,"m":"exact"},"sorted8":{"p":0.00011416012421250343,"m":"exact"},"twotone":{"p":0.07491265387216117,"m":"exact"},"solid":{"p":0.0007322430756175891,"m":"exact"},"fullhouse":{"p":0.07455854166666667,"m":"sim"},"picky":{"p":0.0016515,"m":"sim"},"letterlover":{"p":0.017873096228278557,"m":"exact"},"digitdiet":{"p":0.02222124259620201,"m":"exact"},"numcrunch":{"p":0.07945779166666667,"m":"sim"},"spreadsheet":{"p":0.012993041666666667,"m":"sim"},"letstreak":{"p":0.035648791666666665,"m":"sim"},"wordsalad":{"p":0.004769833333333333,"m":"sim"},"binary":{"p":0.000514,"m":"sim"},"sevens":{"p":0.03670208669486749,"m":"exact"},"freshstart":{"p":0.00390625,"m":"exact"},"strongfinish":{"p":0.00390625,"m":"exact"},"bookends":{"p":0.0625,"m":"exact"},"answer":{"p":0.15035216666666668,"m":"sim"},"ok200":{"p":0.00485425,"m":"sim"},"notfound":{"p":0.008714958333333333,"m":"sim"},"teapot":{"p":0.008734458333333334,"m":"sim"},"secret":{"p":0.004889416666666667,"m":"sim"},"pi":{"p":0.004859125,"m":"sim"},"pimaster":{"p":0.00001175,"m":"sim"},"elite":{"p":0.000229625,"m":"sim"},"fib":{"p":0.00023345833333333332,"m":"sim"},"year":{"p":0.000223,"m":"sim"},"word3":{"p":0.16155908333333333,"m":"sim"},"word4":{"p":0.009493708333333333,"m":"sim"},"word5":{"p":0.000146,"m":"sim"},"word6":{"p":0.000005166666666666667,"m":"sim"},"code":{"p":0.00023475,"m":"sim"},"cafe":{"p":0.000232375,"m":"sim"},"food":{"p":0.00023079166666666666,"m":"sim"},"boss":{"p":0.00028891666666666665,"m":"sim"},"data":{"p":0.00022858333333333332,"m":"sim"},"idea":{"p":0.000232875,"m":"sim"},"taco":{"p":0.0002315,"m":"sim"},"decaf":{"p":0.00001175,"m":"sim"},"coffee":{"p":5.960464477539062e-7,"m":"estimate"},"office":{"p":5.960464477539062e-7,"m":"estimate"},"seafood":{"p":2.9802322387695312e-8,"m":"estimate"},"average":{"p":0.171696,"m":"sim"}});
+GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003797875,"m":"sim"},"five":{"p":0.00016533333333333333,"m":"sim"},"six":{"p":0.000008958333333333334,"m":"sim"},"stepup":{"p":0.06712645833333333,"m":"sim"},"stepdown":{"p":0.06702025,"m":"sim"},"stairs":{"p":0.006360875,"m":"sim"},"escalator":{"p":0.00026116666666666665,"m":"sim"},"racecar":{"p":0.04614179166666667,"m":"sim"},"reflect":{"p":0.0020399583333333333,"m":"sim"},"mirror":{"p":0.011673033237457275,"m":"exact"},"hallmirror":{"p":0.0000152587890625,"m":"exact"},"dejavu":{"p":0.044781458333333336,"m":"sim"},"echo":{"p":0.0015522083333333334,"m":"sim"},"twins":{"p":0.000030517578125,"m":"exact"},"numgroup":{"p":0.4376646247692406,"m":"exact"},"digifirst":{"p":0.023283064365386963,"m":"exact"},"phonebook":{"p":0.003552713678800501,"m":"exact"},"letgroup":{"p":0.04562115669250488,"m":"exact"},"letfirst":{"p":0.0003910660743713379,"m":"exact"},"sorted":{"p":0.15817134259266566,"m":"exact"},"sorted8":{"p":0.00011416012421250343,"m":"exact"},"twotone":{"p":0.07491265387216117,"m":"exact"},"solid":{"p":0.0007322430756175891,"m":"exact"},"fullhouse":{"p":0.074438375,"m":"sim"},"picky":{"p":0.0016585416666666667,"m":"sim"},"letterlover":{"p":0.017873096228278557,"m":"exact"},"digitdiet":{"p":0.02222124259620201,"m":"exact"},"numcrunch":{"p":0.07925908333333333,"m":"sim"},"spreadsheet":{"p":0.012987625,"m":"sim"},"letstreak":{"p":0.035661625,"m":"sim"},"wordsalad":{"p":0.004770958333333334,"m":"sim"},"binary":{"p":0.00052025,"m":"sim"},"sevens":{"p":0.03670208669486749,"m":"exact"},"freshstart":{"p":0.00390625,"m":"exact"},"strongfinish":{"p":0.00390625,"m":"exact"},"handshake":{"p":0.2275238037109375,"m":"exact"},"nozeros":{"p":0.14425746361116484,"m":"exact"},"evensteven":{"p":0.3125,"m":"exact"},"oddcouple":{"p":0.09765625,"m":"exact"},"letteropener":{"p":0.140625,"m":"exact"},"frontloaded":{"p":0.11175870895385742,"m":"exact"},"balanced":{"p":0.10001858333333333,"m":"sim"},"twinpeaks":{"p":0.46188454166666665,"m":"sim"},"topheavy":{"p":0.00390625,"m":"exact"},"alleven":{"p":0.00390625,"m":"exact"},"bottomheavy":{"p":0.000244140625,"m":"exact"},"bookends":{"p":0.0625,"m":"exact"},"answer":{"p":0.15038633333333334,"m":"sim"},"ok200":{"p":0.004886125,"m":"sim"},"notfound":{"p":0.008754958333333333,"m":"sim"},"teapot":{"p":0.008709125,"m":"sim"},"secret":{"p":0.004863625,"m":"sim"},"pi":{"p":0.004864333333333333,"m":"sim"},"pimaster":{"p":0.000012375,"m":"sim"},"elite":{"p":0.0002255,"m":"sim"},"fib":{"p":0.00022875,"m":"sim"},"year":{"p":0.000228375,"m":"sim"},"word3":{"p":0.16128895833333334,"m":"sim"},"word4":{"p":0.009462333333333333,"m":"sim"},"word5":{"p":0.000149125,"m":"sim"},"word6":{"p":0.000005416666666666667,"m":"sim"},"code":{"p":0.00022520833333333334,"m":"sim"},"cafe":{"p":0.00023041666666666667,"m":"sim"},"food":{"p":0.000221875,"m":"sim"},"boss":{"p":0.00029516666666666667,"m":"sim"},"data":{"p":0.00022420833333333334,"m":"sim"},"idea":{"p":0.00022945833333333333,"m":"sim"},"taco":{"p":0.00023216666666666665,"m":"sim"},"decaf":{"p":0.00001175,"m":"sim"},"coffee":{"p":5.960464477539062e-7,"m":"estimate"},"office":{"p":5.960464477539062e-7,"m":"estimate"},"seafood":{"p":2.9802322387695312e-8,"m":"estimate"},"open0":{"p":0.0625,"m":"exact"},"open1":{"p":0.0625,"m":"exact"},"open2":{"p":0.0625,"m":"exact"},"open3":{"p":0.0625,"m":"exact"},"open4":{"p":0.0625,"m":"exact"},"open5":{"p":0.0625,"m":"exact"},"open6":{"p":0.0625,"m":"exact"},"open7":{"p":0.0625,"m":"exact"},"open8":{"p":0.0625,"m":"exact"},"open9":{"p":0.0625,"m":"exact"},"opena":{"p":0.0625,"m":"exact"},"openb":{"p":0.0625,"m":"exact"},"openc":{"p":0.0625,"m":"exact"},"opend":{"p":0.0625,"m":"exact"},"opene":{"p":0.0625,"m":"exact"},"openf":{"p":0.0625,"m":"exact"},"average":{"p":0.02829125,"m":"sim"}});
 (function () {
   const G = GUIDLE;
   const $ = s => document.querySelector(s);
@@ -554,7 +622,15 @@ GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003
   const METHOD = { exact: 'exact odds', sim: 'simulated', estimate: 'estimated' };
   const tierIdx = t => G.TIERS.indexOf(t);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const KEY = 'guidle:v1';
+  const KEY = 'guidle:daily';
+  const SITE = 'https://cariehl.github.io/guidle/';
+  const rank = G.makeRanker({"rolls":8000000,"dense":[0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,279415,106292,171655,130980,155742,198282,132318,257503,161721,193718,180501,204771,141992,237983,163868,189678,167569,165843,141035,147534,182166,125279,173173,137407,128664,122002,132632,112398,115392,119453,101130,92826,98533,314614,78798,90397,73851,72684,68457,63995,55359,61392,55411,52039,49808,47415,40389,40634,41224,34226,35913,33452,30100,28095,34396,24573,30439,25395,25481,21585,24587,23222,19399,23115,18864,17690,17243,19072,14400,17495,15241,13601,12708,13414,11056,10617,12455,11462,10038,11096,9493,8227,10186,9006,9268,7973,9003,6868,7727,7616,7048,6985,6765,6176,5563,5832,5116,5970,5033,8239,4539,8318,5272,5128,6264,5365,6185,4650,12112,4481,13082,7875,10195,8053,9050,8915,6945,10615,7159,8784,8183,8691,7247,9756,7364,8221,7610,7336,6723,6504,7333,5886,7224,6172,5765,5750,5730,5059,5189,5000,4376,4210,4188,3840,3584,3742,3322,3274,3130,2849,2707,2788,2449,2492,2337,2352,1944,1913,2954,1773,3047,1989,2298,2051,2540,2463,2365,3010,2364,2414,2196,2562,1924,2688,2158,2114,1975,2157,1744,1764,2037,1624,1735,1496,1512,1369,1554,1406,1316,1360,1247,1087,1147,1152,1009,1067,947,868,1345,856,2218,1067,1746,1521,1229,1355,1310,1653,2472,2006,4046,2072,3422,2930,2456,3203,2910,3381,2670,3341,2991,2876,2998,3329,2429,3233,2720,2511,2428,2461,2590,2219,3011,2227,2286,2185,2140,1994,2164,2083,1804,1907,1790,1672,1596,1717,1413,1454,1423,1324,1261,1210,1169,1148,1136,1039,999,967,3607,771,6754,1753,4530,2388,3323,3143,3875,5033,2929,4442,3470,3697,2978,4660,2751,4067,3099,3282,2593,3221,3182,2543,3538,2550,2617,2366,2736,2122,2830,2481,2246,2274,2144,2220,2224,2350,1963,1884,1931,1696,1703,1849,1615,1688,1491,1440,1362,1369,1377,1246,1323,1209,1091,1073,1140,976,1242,941,1062,858,1021,892,907,1020,727,831,733,814,691,811,659,567,596,585,521,543,590,476,585,544,529,517,465,525,470,488,446,465,472,444,445,438,375,422,378,487,321,494,432,426,459,438,436,359,459,431,416,397,433,355,550,374,481,435,409,375,408,431,326,415,348,337,332,378,319,318,291,291,272,291,284,225,270,225,230,227,230,193,208,182,194,178,266,195,272,271,200,286,233,258,270,274,274,220,281,224,222,284,224,246,279,246,220,229,228,207,247,259,207,232,195,206,174,196,170,168,163,173,160,142,168,144,133,118,134,128,117,110,132,112,96,85,87,105,86,107,70,76,89,79,133,74,102,87,74,83,87,83,144,91,240,103,169,139,125,124,166,160,126,184,107,132,146,172,88,175,118,97,533,126,576,346,442,322,386,537,317,583,435,412,439,479,361,503,433,403,376,408,321,311,428,302,398,332,303,281,276,309,304,285,299,228,298,240,231,228,271,243,214,199,225,214,188,207,159,209,162,154,145,159,149,155,127,128,130,101,112,91,141,90,104,111,103,114,94,109,78,97,82,86,86,89,70,83,82,63,76,79,71,56,61,56,53,62,54,56,67,46,44,45,57,42,51,43,43,45,34,41,40,48,36,38,32,36,30,26,35,33,117,36,209,69,156,115,150,181,141,271,142,262,206,245,200,253,193,211,232,209,187,180,270,158,267,209,226,212,209,184,182,232,153,201,187,182,190,200,194,153,532,167,597,331,423,323,380,434,315,534,427,456,378,449,317,428,380,366,331,353,346,273,357,270,286,264,240,259,288,241,204,247,212,189,163,195,157,167,155,141,142,137,122,98,112,128,93,122,98,81,101,103,73,61,81,68,75,75,75,59,97,54,83,69,59,83,67,75,80,67,69,61,62,68,54,61,48,54,35,53,38,48,43,45,52,51,37,54,50,45,55,46,37,36,41,44,26,56,21,44,34,50,39,38,33,31,31,26,38,24,64,25,64,46,52,33,42,43,33,38,44,30,40,38,38,36,36,37,38,29,27,29,39,29,37,32,30,19,28,24,28,21,21,17,21,27,17,22,25,17,25,18,24,21,23,20,16,17,12,11,17,16,16,5,18,25,13,16,16,12,9,15,9,13,10,10,14,9,17,17,13,13,6,18,10,12,9,8,11,10,7,7,8,9,7,10,10,11,5,7,8,11,13,6,7,18,8,4,13,12,8,7,11,6,10,5,4,4,8,8,23,6,10,16,12,12,7,16,13,18,10,16,11,14,19,15,21,9,9,24,13,20,18,12,17,19,9,18,15,8,9,14,7,9,10,8,10,14,11,9,14,22,22,16,17,14,14,18,13,13,16,15,12,10,8,14,6,8,9,7,17,13,10,4,10,13,9,16,10,5,9,12,8,8,8,4,5,5,8,11,11,9,5,4,8,10,7,6,5,7,6,2,6,12,6,9,5,3,5,2,7,1,6,6,8,7,5,5,2,5,2,1,5,2,0,4,0,6,5,0,4,8,5,7,4,1,3,3,2,3,1,3,3,1,4,3,3,3,4,5,5,0,1,2,6,4,5,1,4,6,4,5,1,3,4,6,3,2,2,5,10,0,7,4,2,3,1,5,2,3,3,3,2,3,3,2,1,4,3,0,1,1,2,3,0,1,3,5,1,1,3,7,2,3,1,3,2,3,3,2,4,1,2,1,1,0,1,3,1,2,4,2,2,2,2,1,1,1,3,1,1,2,1,1,1,3,1,2,0,1,0,4,4,1,1,1,0,3,1,0,1,1,2,2,4,6,1,3,4,3,2,3,4,2,5,1,3,1,1,2,2,5,2,2,3,0,3,2,1,1,3,1,4,4,5,3,5,6,3,5,3,7,1,8,3,4,4,5,5,0,3,3,6,4,4,2,3,2,3,6,3,4,4,3,4,1,2,3,2,3,2,3,0,2,1,1,2,1,3,2,1,4,0,2,1,0,1,0,3,2,3,1,3,1,1,2,0,1,0,0,1,0,1,1,2,0,1,1,2,2,1,2,3,1,0,0,0,0,1,0,0,0,1,1,2,1,2,0,0,0,0,0,0,0,1,0,0,1,1,0,2,0,0,0,3,2,4,2,1,4,1,2,1,3,1,4,2,1,5,2,3,2,1,2,1,1,3,6,4,1,0,2,2,0,1,0,0,1,3,0,2,2,1,1,0,0,0,1,1,1,3,1,0,0,2,0,1,0,1,2,0,0,1,0,0,0,3,0,0,0,0,0,0,1,0,0,0,0,0,2,0,1,0,1,1,1,2,0,1,0,0,0,0,1,2,1,0,0,0,0,0,0,0,0,0,1,1,0,1,0,0,0,1,0,0,0,0,0,0,0,1,0,0,2,1,3,0,0,1,0,0,0,0,0,0,1,0,0,1,0,0,1,1,0,0,0,0,0,0,0,1,0,1,2,0,1,0,0,1,0,0,0,0,0,0,0,0,0,0,1,0,1,0,0,0,1,1,0,0,1,0,1,0,0,1,0,2,0,0,0,1,0,0,0,1,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,1,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,1,1,0,0,0,1,0,1,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,0,0,0,1,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,234,0,143,122,64,63,67,171,35,130,118,61,92,134,59,112,101,73,83,76,137,50,184,87,91,111,88,116,63,132,67,83,99,68,56,65,74,54,71,65,51,44,59,43,47,35,40,29,49,29,42,38,29,38,23,44,20,42,25,30,26,29,16,27,32,25,14,19,10,16,15,8,22,16,17,11,16,17,18,13,15,13,16,15,19,15,17,11,13,14,12,5,15,13,10,3,8,9,12,18,7,2,6,3,4,1,11,7,2,3,12,7,6,3,5,6,3,10,2,7,5,2,5,6,7,7,5,4,9,10,4,4,13,4,3,2,7,3,7,4,3,9,2,0,4,3,7,1,31,9,31,21,25,13,52,38,28,45,33,54,35,82,18,70,32,57,43,84,58,57,70,57,52,61,66,40,67,55,48,69,58,56,47,49,41,57,52,35,38,52,44,41,32,34,27,40,38,27,29,24,27,21,33,22,22,29,14,16,19,30,18,24,15,22,19,16,11,20,14,16,13,15,5,17,15,18,10,15,10,12],"log":{"330":377,"331":238,"332":88,"333":165,"334":292,"335":73,"336":31,"337":38,"338":61,"339":30,"340":19,"341":8,"342":5,"343":2,"344":2,"345":2,"346":3,"348":2,"349":1980,"350":773,"351":127,"352":86,"353":55,"354":1382,"355":857,"356":119,"357":56,"358":1710,"359":176,"360":48,"361":65,"362":21,"363":9,"364":7142,"365":5594,"366":4136,"367":891,"368":212,"369":109,"370":71,"371":33,"372":11,"373":6,"374":5,"375":2,"378":889,"379":80,"380":89,"381":58,"382":816,"383":199,"384":41,"385":2,"386":3,"387":17,"388":7,"389":10,"390":103,"391":24,"392":11,"393":5,"394":562,"395":221,"396":76,"397":12,"398":5,"399":4,"400":1,"401":1,"402":5,"403":1,"404":104,"405":8,"407":1,"409":2,"410":17,"412":5,"416":1,"417":9,"418":1,"423":2,"428":1,"452":218,"453":14,"455":1,"456":1,"458":1,"482":112,"483":1,"484":1,"490":88,"491":2,"493":1,"496":93,"498":6,"504":65,"505":3,"507":3,"508":1,"525":31,"526":1,"607":9}});
+  // Day 1 is 2 November 2026; days follow the player's local calendar.
+  const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayNum = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(2026, 10, 2)) / 864e5) + 1;
+  const topText = f => { const pct = f * 100; return 'Top ' + (pct >= 10 ? Math.round(pct) : Number(pct.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 })) + '%'; };
+  const ratingOf = score => { const f = rank(score); return { f, tier: G.tierFor(f), top: topText(f) }; };
+  const whenFmt = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const EXAMPLE = 'b0a7f542-1234-4cab-a404-7e5ca1ab1e99';
   const HEXCH = '0123456789abcdef';
   const fmt = n => n.toLocaleString('en-US');
@@ -562,14 +638,15 @@ GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003
   const wait = ms => new Promise(r => setTimeout(r, ms));
 
   // ---------- state ----------
-  let S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: false };
+  // history: newest first, one entry per day: { u: uuid, s: score, t: timestamp, d: day key, n: day number }
+  let S = { v: 1, best: null, counts: {}, history: [], muted: false };
   try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
-  if ((S.v || 1) < 3) { // scoring changed (v2 dropped the combo, v3 scores by odds); rescore saved rolls
-    for (const r of S.history) r.s = G.scoreOf(G.evaluate(r.u)).total;
-    if (S.best) S.best.s = G.scoreOf(G.evaluate(S.best.u)).total;
-    for (const r of S.history) if (!S.best || r.s > S.best.s) S.best = { u: r.u, s: r.s, n: r.n, t: r.t };
-    S.v = 3; save();
+  const rolledToday = () => S.history.length > 0 && S.history[0].d === dayKey(new Date());
+  function streak() {
+    let n = 0; const d = new Date(); if (!rolledToday()) d.setDate(d.getDate() - 1);
+    for (const r of S.history) { if (r.d !== dayKey(d)) break; n++; d.setDate(d.getDate() - 1); }
+    return n;
   }
 
   // ---------- audio ----------
@@ -718,11 +795,33 @@ GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003
   function showStatic(u, captionText, n) {
     const res = G.evaluate(u), sc = G.scoreOf(res);
     current = { u, res, sc, n }; revealing = false; pinned = null;
-    buildUUID(u); highlight(res, false); setScore(sc.total, false);
+    buildUUID(u); highlight(res, false); setScore(sc.total, false); showRating(sc.total, false);
     resultsEl.textContent = ''; for (const h of sortByTier(res)) resultsEl.appendChild(badgeCard(h, false, false));
     $('#caption').textContent = captionText;
     const top = sortByTier(res).pop().b.tier; stage.style.setProperty('--glow', `var(--t-${top})`); stage.classList.toggle('glowing', tierIdx(top) >= 3);
   }
+
+  function showRating(score, animate) {
+    const el = $('#rating'), r = ratingOf(score);
+    el.style.setProperty('--tc', `var(--t-${r.tier})`); el.querySelector('.gem').className = `gem t-${r.tier}`;
+    $('#rating-name').textContent = `${r.tier} roll`;
+    $('#rating-top').textContent = `${r.top} of all rolls`;
+    el.hidden = false; el.classList.remove('in'); if (animate) { void el.offsetWidth; el.classList.add('in'); }
+    return r;
+  }
+
+  // ---------- daily gate ----------
+  function untilMidnight() { const now = new Date(), m = new Date(now); m.setHours(24, 0, 0, 0); return m - now; }
+  const hms = ms => { const t = Math.ceil(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
+  let wasRolled = null;
+  function updateRollBtn() {
+    const done = rolledToday();
+    if (done && !reeling) { rollBtn.classList.add('waiting'); rollBtn.innerHTML = `Next roll in ${hms(untilMidnight())}<kbd>Come back tomorrow</kbd>`; }
+    else if (!done) { rollBtn.classList.remove('waiting'); rollBtn.innerHTML = `Roll GUIDle #${dayNum(new Date())}<kbd>Space</kbd>`; }
+    if (wasRolled === true && !done) { showStatic(EXAMPLE, 'Example roll · a new roll is ready', 0); $('#rating').hidden = true; renderAll(); }
+    wasRolled = done;
+  }
+  setInterval(updateRollBtn, 1000);
 
   // ---------- rolling ----------
   const stage = $('#stage'), rollBtn = $('#roll');
@@ -759,31 +858,35 @@ GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003
   async function roll() {
     actx();
     if (reeling) { skipReel = true; return; }
+    if (rolledToday()) {
+      if (!revealing) toast(`You've rolled today. Next roll in ${hms(untilMidnight())}.`);
+      return;
+    }
     const token = ++rollToken;
     rollBtn.classList.add('pressed'); setTimeout(() => rollBtn.classList.remove('pressed'), 120);
     const u = newUUID(), res = G.evaluate(u), sc = G.scoreOf(res);
     const prevBest = S.best ? S.best.s : null;
     const newIds = new Set(res.map(h => h.b.id).filter(id => !S.counts[id]));
-    S.total++; const n = S.total;
+    const now = new Date(), n = dayNum(now);
     for (const h of res) S.counts[h.b.id] = (S.counts[h.b.id] || 0) + 1;
     const isBest = prevBest === null || sc.total > prevBest;
-    if (isBest) S.best = { u, s: sc.total, n, t: Date.now() };
-    S.history.unshift({ u, s: sc.total, n, t: Date.now() }); if (S.history.length > 250) S.history.length = 250;
+    if (isBest) S.best = { u, s: sc.total, n, t: now.getTime() };
+    S.history.unshift({ u, s: sc.total, t: now.getTime(), d: dayKey(now), n });
     save();
     current = { u, res, sc, n };
 
     // reset stage
-    resultsEl.textContent = ''; setScore(0, false); $('#newbest').classList.remove('show'); pinned = null; revealing = true;
+    resultsEl.textContent = ''; setScore(0, false); $('#newbest').classList.remove('show'); $('#rating').hidden = true; pinned = null; revealing = true;
     stage.classList.remove('glowing', 'shake'); focusChars(null);
-    $('#caption').textContent = `Roll #${fmt(n)}`;
+    $('#caption').textContent = `GUIDle #${n} · ${whenFmt(now)}`;
     renderHistory(true);
     const sorted = sortByTier(res), top = sorted[sorted.length - 1].b.tier, topI = tierIdx(top);
     stage.style.setProperty('--glow', `var(--t-${top})`);
     if (topI >= 3) { stage.classList.add('glowing'); sfx.whoosh(); }
 
-    reeling = true; skipReel = false;
+    reeling = true; skipReel = false; rollBtn.innerHTML = 'Rolling…<kbd>Press again to skip</kbd>';
     await reel(u, topI >= 3);
-    reeling = false;
+    reeling = false; updateRollBtn();
     if (token !== rollToken) return;
     await wait(reduced ? 30 : 650);
     if (token !== rollToken) return;
@@ -809,8 +912,13 @@ GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003
     if (token !== rollToken) return;
     if (prevCard) prevCard.classList.remove('current');
     revealing = false; focusChars(null); highlight(res, true); setScore(sc.total, true);
+    await wait(reduced ? 30 : 1100);
+    if (token !== rollToken) return;
+    const rt = showRating(sc.total, true); const rti = tierIdx(rt.tier);
+    sfx.badge(rt.tier, 4 + rti);
+    if (rti >= 3) { flash(); confetti(rti >= 4); }
 
-    await wait(reduced ? 30 : 900);
+    await wait(reduced ? 30 : 1400);
     if (token !== rollToken) return;
     if (isBest && prevBest !== null) {
       $('#newbest-sub').textContent = `+${fmt(sc.total - prevBest)} over ${fmt(prevBest)}`;
@@ -820,38 +928,39 @@ GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003
     } else if (isBest) {
       $('#newbest-sub').textContent = 'Your first roll sets the bar';
       $('#newbest').classList.add('show'); sfx.chime(); confetti(false);
-    } else if (topI >= 3) confetti(topI >= 4);
+    }
     renderStats(); renderHistory(false); renderCollection(newIds);
   }
   function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 
   // ---------- side panels ----------
   function renderStats() {
-    $('#st-rolls b').textContent = fmt(S.total);
+    $('#st-rolls b').textContent = fmt(S.history.length);
+    const st = streak(); $('#st-streak b').innerHTML = `${st}<small> ${st === 1 ? 'day' : 'days'}</small>`;
     $('#st-best b').textContent = S.best ? fmt(S.best.s) : '–';
     const found = G.BADGES.filter(b => S.counts[b.id]).length;
     $('#st-found b').textContent = `${found}/${G.BADGES.length}`;
     $('#mute').textContent = S.muted ? 'Sound off' : 'Sound on'; $('#mute').setAttribute('aria-pressed', String(S.muted));
   }
-  const timeFmt = t => { const d = new Date(t), now = new Date();
-    return d.toDateString() === now.toDateString() ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
   function renderHistory(skipFirstReveal) {
     const ol = $('#history'); ol.textContent = '';
-    $('#hist-sub').textContent = S.history.length ? `Last ${S.history.length}${S.total > S.history.length ? ` of ${fmt(S.total)}` : ''}` : '';
-    $('#clear-area').hidden = !S.history.length;
-    if (!S.history.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No rolls yet. Your first roll will show up here.'; ol.appendChild(li); return; }
+    $('#hist-sub').textContent = S.history.length ? `${S.history.length} ${S.history.length === 1 ? 'day' : 'days'}` : '';
+    if (!S.history.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No rolls yet. Each day’s roll will show up here with its date and time.'; ol.appendChild(li); return; }
     S.history.forEach((r, i) => {
       const li = document.createElement('li'), btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'hrow' + (current && current.n === r.n && current.u === r.u ? ' active' : '');
-      const res = G.evaluate(r.u), top = sortByTier(res).pop().b.tier;
+      const res = G.evaluate(r.u), rt = ratingOf(r.s), top = rt.tier;
       const masked = i === 0 && skipFirstReveal; // don't spoil the roll that's still revealing
-      btn.innerHTML = `<span class="gem t-${masked ? 'common' : top}"></span><span><div class="hid"></div><div class="hmeta"></div></span><span class="hs"></span>`;
+      btn.innerHTML = `<span class="gem t-${masked ? 'common' : top}"></span><span><div class="hmeta"></div><div class="hid"></div><div class="hmeta hrt"></div></span><span class="hs"></span>`;
       btn.querySelector('.hid').textContent = r.u;
-      btn.querySelector('.hmeta').textContent = `#${fmt(r.n)} · ${timeFmt(r.t)} · ${masked ? 'rolling…' : res.length + (res.length === 1 ? ' badge' : ' badges')}`;
+      btn.querySelector('.hmeta').textContent = `GUIDle #${r.n} · ${whenFmt(r.t)}`;
+      const hrt = btn.querySelector('.hrt');
+      if (masked) hrt.textContent = 'Rolling…';
+      else { const b = document.createElement('span'); b.className = `rt t-${top}`; b.textContent = top[0].toUpperCase() + top.slice(1); hrt.append(b, ` · ${rt.top} · ${res.length} ${res.length === 1 ? 'badge' : 'badges'}`); }
       const hs = btn.querySelector('.hs'); hs.textContent = masked ? '…' : fmt(r.s);
       if (!masked && S.best && S.best.u === r.u) { const b = document.createElement('span'); b.className = 'best'; b.textContent = 'BEST'; hs.appendChild(b); }
       if (!masked) btn.querySelector('.gem').style.setProperty('--tc', `var(--t-${top})`);
-      btn.addEventListener('click', () => { rollToken++; reeling = false; skipReel = true; showStatic(r.u, `Replaying roll #${fmt(r.n)} from ${timeFmt(r.t)}`, r.n); $('#newbest').classList.remove('show'); renderHistory(false); stage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); });
+      btn.addEventListener('click', () => { rollToken++; reeling = false; skipReel = true; showStatic(r.u, `GUIDle #${r.n} · ${whenFmt(r.t)}`, r.n); updateRollBtn(); $('#newbest').classList.remove('show'); renderHistory(false); stage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); });
       li.appendChild(btn); ol.appendChild(li);
     });
   }
@@ -901,26 +1010,20 @@ GUIDLE.applyOdds({"triple":{"p":0.07511883333333333,"m":"sim"},"quad":{"p":0.003
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
   $('#copy').addEventListener('click', () => {
     if (!current) return;
-    const names = sortByTier(current.res).reverse().map(h => h.b.name).join(', ');
-    const text = `GUIDle${current.n ? ' roll #' + current.n : ''}: ${current.u}\n${fmt(current.sc.total)} pts · ${names}`;
+    if (!current.n) { toast('Roll first, then share your result.'); return; }
+    const rt = ratingOf(current.sc.total), best = sortByTier(current.res).pop().b;
+    const tierName = rt.tier[0].toUpperCase() + rt.tier.slice(1);
+    const text = `GUIDle #${current.n} · ${tierName} roll · ${rt.top}\n${fmt(current.sc.total)} pts from ${current.res.length} ${current.res.length === 1 ? 'badge' : 'badges'}, best: ${best.name} (${oddsText(best)})\n${current.u}\n${SITE}`;
     const fallback = () => { const r = document.createRange(); r.selectNodeContents(uuidEl); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected. Press Ctrl+C to copy.'); };
     try { navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard'), fallback); } catch (e) { fallback(); }
   });
-  const clearArea = $('#clear-area');
-  function resetClear() { clearArea.innerHTML = '<button class="ghost" id="clear" type="button">Erase history</button>'; $('#clear').addEventListener('click', askClear); }
-  function askClear() {
-    clearArea.innerHTML = '<span>Erase every roll, your high score, and all badges?</span><button class="danger" type="button" id="clear-yes">Erase everything</button><button class="ghost" type="button" id="clear-no">Keep</button>';
-    $('#clear-yes').addEventListener('click', () => { const m = S.muted; S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: m }; save(); resetClear(); showStatic(EXAMPLE, 'Example roll · press Roll to start', 0); renderAll(); toast('History erased'); });
-    $('#clear-no').addEventListener('click', resetClear);
-  }
-  $('#clear').addEventListener('click', askClear);
   function renderAll() { renderStats(); renderHistory(false); renderCollection(); }
 
   // ---------- boot ----------
   renderFilters();
-  if (S.history.length) { const r = S.history[0]; showStatic(r.u, `Last roll · #${fmt(r.n)}`, r.n); }
-  else showStatic(EXAMPLE, 'Example roll · press Roll to start', 0);
-  renderAll();
+  if (rolledToday()) { const r = S.history[0]; showStatic(r.u, `GUIDle #${r.n} · ${whenFmt(r.t)}`, r.n); }
+  else { showStatic(EXAMPLE, 'Example roll · your roll for today is ready', 0); $('#rating').hidden = true; }
+  renderAll(); updateRollBtn();
 })();
 </script>
 </body>

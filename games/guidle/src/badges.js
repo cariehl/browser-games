@@ -158,6 +158,10 @@
     sorted: anyOf([C(19, 4) / 65536, C(14, 3) / 4096, (C(10, 3) + C(9, 3) + C(8, 3) + C(7, 3)) / 4 / 4096]) * (1 - P_SORTED8),
     sevens: binomTail(30, 1 / 16, 5),
     letterlover: sum(LET, 18, 31), digitdiet: sum(LET, 0, 6),
+    handshake: 1 - (15 / 16) ** 4, nozeros: (15 / 16) ** 30,
+    evensteven: 5 / 16, oddcouple: (5 / 16) ** 2, letteropener: (6 / 16) ** 2,
+    frontloaded: 8 * (10 / 16) ** 7 * (6 / 16), // exactly seven digits; all eight is Digital Native
+    topheavy: (1 / 2) ** 8, alleven: (1 / 2) ** 8, bottomheavy: (1 / 2) ** 12,
   };
   // Rough estimates for patterns too rare to simulate well (rounded to 1 / 5 / 10 / 50... million style buckets).
   const EST = {
@@ -193,7 +197,7 @@
   });
   // Group makeup
   add('numgroup', 'By the Numbers', 'A four-character group made only of digits.', A => firstGroup(A, allDigits));
-  add('digifirst', 'Digital Native', 'The whole first group is digits.', A => allDigits(A.groups[0].str) ? { idx: rng(0, 8) } : null);
+  add('digifirst', 'Digital Native', 'The whole first group is digits.', A => allDigits(A.groups[0].str) ? { idx: rng(0, 8) } : null, { family: 'front', rank: 2 });
   add('phonebook', 'Phone Book', 'The last twelve characters are all digits.', A => allDigits(A.groups[4].str) ? { idx: rng(24, 12) } : null);
   add('letgroup', 'Spelling Bee', 'A four-character group made only of letters.', A => firstGroup(A, allLetters));
   add('letfirst', 'Alphabet Soup', 'The whole first group is letters.', A => allLetters(A.groups[0].str) ? { idx: rng(0, 8) } : null);
@@ -214,6 +218,24 @@
   add('sevens', 'Lucky Sevens', 'Five or more 7s anywhere in the ID.', A => (counts(A)['7'] || 0) >= 5 ? { idx: A.raw.filter(i => A.u[i] === '7') } : null);
   add('freshstart', 'Fresh Start', 'Begins with 00.', A => A.u.startsWith('00') ? { idx: [0, 1] } : null);
   add('strongfinish', 'Strong Finish', 'Ends with ff.', A => A.u.endsWith('ff') ? { idx: [34, 35] } : null);
+  add('handshake', 'Handshake', 'Two neighbouring groups meet on the same character, like 3f-f9.', A => {
+    for (let k = 1; k < 5; k++) { const a = A.groups[k - 1], b = A.groups[k]; if (a.str[a.l - 1] === b.str[0]) return { idx: [a.s + a.l - 1, b.s] }; }
+    return null;
+  });
+  add('nozeros', 'Zero Waste', 'Not a single 0 anywhere in the ID.', A => A.rawStr.includes('0') ? null : { idx: [] });
+  add('evensteven', 'Even Steven', 'Ends on an even digit (0, 2, 4, 6 or 8).', A => '02468'.includes(A.u[35]) ? { idx: [35] } : null);
+  add('oddcouple', 'Odd Couple', 'Starts with two odd digits.', A => '13579'.includes(A.u[0]) && '13579'.includes(A.u[1]) ? { idx: [0, 1] } : null);
+  add('letteropener', 'Letter Opener', 'Starts with two letters.', A => !isDigit(A.u[0]) && !isDigit(A.u[1]) ? { idx: [0, 1] } : null);
+  add('frontloaded', 'Front-Loaded', 'Seven of the first eight characters are digits.', A => A.groups[0].str.replace(/[a-f]/g, '').length === 7 ? { idx: rng(0, 8).filter(i => isDigit(A.u[i])) } : null, { family: 'front', rank: 1 });
+  add('balanced', 'Balanced Books', 'All 32 characters, read as hex values, add up to a multiple of 10.', A => [...A.rawStr].reduce((t, ch) => t + HEX.indexOf(ch), 0) % 10 === 0 ? { idx: [] } : null);
+  add('twinpeaks', 'Twin Peaks', 'Two separate doubled characters, like 55 and cc.', A => {
+    const idx = [];
+    for (const g of A.groups) { let st = 0; for (let i = 1; i <= g.l; i++) if (i === g.l || g.str[i] !== g.str[st]) { if (i - st === 2) idx.push(g.s + st, g.s + st + 1); st = i; } }
+    return idx.length >= 4 ? { idx: idx.slice(0, 4) } : null;
+  });
+  add('topheavy', 'Top Heavy', 'Every character in the first group is 8 or higher.', A => /^[89a-f]{8}$/.test(A.groups[0].str) ? { idx: rng(0, 8) } : null);
+  add('alleven', 'Even Keel', 'Every character in the first group is even (0, 2, 4 … e).', A => /^[02468ace]{8}$/.test(A.groups[0].str) ? { idx: rng(0, 8) } : null);
+  add('bottomheavy', 'Low Profile', 'Every character in the last group is 7 or lower.', A => /^[0-7]{12}$/.test(A.groups[4].str) ? { idx: rng(24, 12) } : null);
   add('bookends', 'Bookends', 'The first and last characters match.', A => A.u[0] === A.u[35] ? { idx: [0, 35] } : null);
   // Famous numbers
   add('answer', 'Deep Thought', 'Contains 42, the answer to everything.', contains('42'));
@@ -243,7 +265,15 @@
   add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'));
   add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'));
   // Consolation (awarded only when nothing else hits)
-  add('average', 'Perfectly Average', 'No patterns at all. Impressively ordinary.', () => null);
+  // Openers: exactly one per roll, so every roll earns at least one badge.
+  const OPENERS = { 0: 'Ground Zero', 1: 'Number One', 2: 'Two’s Company', 3: 'Third Time’s the Charm', 4: 'Four-Leaf Clover', 5: 'Take Five', 6: 'Sixth Sense', 7: 'Lucky Number Seven',
+    8: 'Figure Eight', 9: 'Cloud Nine', a: 'Straight A’s', b: 'Plan B', c: 'C-Suite', d: 'Vitamin D', e: 'E for Effort', f: 'F-Stop' };
+  for (const ch of HEX) {
+    add('open' + ch, OPENERS[ch], `Starts with ${ch}.`, A => A.u[0] === ch ? { idx: [0] } : null, { family: 'opener' });
+    EXACT['open' + ch] = 1 / 16;
+  }
+  // Consolation (awarded only when nothing besides an opener hits)
+  add('average', 'Perfectly Average', 'Nothing but an opener. Impressively ordinary.', () => null);
 
   const BY_ID = Object.fromEntries(BADGES.map(b => [b.id, b]));
   for (const b of BADGES) { if (b.id in EXACT) b.exact = EXACT[b.id]; if (b.id in EST) b.est = EST[b.id]; }
@@ -276,7 +306,7 @@
     const best = {};
     for (const h of hits) best[h.b.family] = Math.max(best[h.b.family] ?? -1, h.b.rank);
     let res = hits.filter(h => h.b.rank === best[h.b.family]);
-    if (!res.length) res = [{ b: BY_ID.average, idx: [] }];
+    if (res.every(h => h.b.family === 'opener')) res.push({ b: BY_ID.average, idx: [] });
     return res;
   }
 
@@ -285,7 +315,30 @@
     return { base, total: base };
   }
 
-  const api = { BADGES, BY_ID, TIERS, TIER_MAX_N, tierFor, bucket, applyOdds, evaluate, scoreOf, analyze };
+  // Builds score -> fraction of rolls scoring at least that much, from the simulated distribution
+  // (src/scores.json). Where the simulation has too few rolls that high, falls back to the summed
+  // odds of the badges that alone are worth that much.
+  function makeRanker(dist) {
+    const { rolls, dense, log } = dist, D = dense.length;
+    const logKeys = Object.keys(log).map(Number).sort((a, b) => a - b);
+    const logTotal = logKeys.reduce((t, k) => t + log[k], 0);
+    const denseSuffix = new Array(D + 1).fill(0);
+    for (let i = D - 1; i >= 0; i--) denseSuffix[i] = denseSuffix[i + 1] + dense[i];
+    const countAtLeast = s => {
+      if (s < D) return denseSuffix[Math.max(0, Math.ceil(s))] + logTotal;
+      const x = Math.log10(s) * 100, k = Math.floor(x);
+      let c = 0; for (const key of logKeys) if (key > k) c += log[key]; else if (key === k) c += log[key] * (1 - (x - k));
+      return c;
+    };
+    return score => {
+      const c = countAtLeast(score), sim = c / rolls;
+      if (c >= 100) return Math.min(1, sim);
+      const tail = BADGES.reduce((t, b) => t + (b.points >= score ? b.p : 0), 0);
+      return Math.min(1, Math.max(sim, tail, 1e-12));
+    };
+  }
+
+  const api = { BADGES, makeRanker, BY_ID, TIERS, TIER_MAX_N, tierFor, bucket, applyOdds, evaluate, scoreOf, analyze };
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
   else root.GUIDLE = api;
 })(typeof window !== 'undefined' ? window : globalThis);

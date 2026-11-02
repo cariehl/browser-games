@@ -47,6 +47,7 @@ button { font: inherit; color: inherit; }
 .stat { display: grid; gap: 0; }
 .stat b { font-family: var(--display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
 .stat small { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.stat b small { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; }
 .stat.pulse b { animation: statPulse .9s ease; color: var(--t-legendary); }
 @keyframes statPulse { 0% { transform: scale(1); } 30% { transform: scale(1.35); } 100% { transform: scale(1); } }
 .iconbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
@@ -91,6 +92,19 @@ button { font: inherit; color: inherit; }
   padding: 14px 46px 16px; border-radius: 16px; box-shadow: 0 6px 0 var(--accent-deep), 0 14px 24px -10px var(--accent); transition: transform .08s, box-shadow .08s; }
 .roll:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--accent-deep), 0 18px 28px -10px var(--accent); }
 .roll:active, .roll.pressed { transform: translateY(5px); box-shadow: 0 1px 0 var(--accent-deep), 0 6px 12px -8px var(--accent); }
+.roll.waiting { background: var(--surface-2); color: var(--ink); box-shadow: 0 6px 0 var(--line); cursor: default; font-size: 20px; font-variant-numeric: tabular-nums; }
+.roll.waiting:hover, .roll.waiting:active { transform: none; box-shadow: 0 6px 0 var(--line); }
+.rating { --tc: var(--t-common); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.rating[hidden] { display: none; }
+.rating .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 16%, var(--surface));
+  border: 2px solid var(--tc); color: var(--tc); font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: .04em; text-transform: uppercase; }
+.rating .pill .gem { width: 24px; height: 21px; }
+.rating .top { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rating .top small { font-family: var(--body); font-weight: 500; font-size: 13px; color: var(--muted); }
+.rating.in { animation: ratingIn .9s cubic-bezier(.2, 1.7, .4, 1) both; }
+@keyframes ratingIn { 0% { transform: scale(2.6) rotate(-8deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.rating.in .gem { animation-delay: .9s; }
+.hrow .rt { font-weight: 700; color: var(--tc); }
 .roll kbd { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; opacity: .75; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
 .ghost { border: 1.5px solid var(--line); background: transparent; border-radius: 12px; padding: 10px 14px; font-weight: 600; cursor: pointer; font-size: 14px; }
 .ghost:hover { border-color: var(--accent); color: var(--accent); }
@@ -180,6 +194,8 @@ footer a { color: inherit; }
 @media (max-width: 520px) {
   .brand .tag { display: none; }
   .roll { font-size: 22px; padding: 12px 34px 14px; }
+  .newbest { top: 6px; right: 6px; font-size: 13px; padding: 5px 9px 6px; }
+  .newbest small { font-size: 10px; }
 }
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
@@ -191,10 +207,11 @@ footer a { color: inherit; }
   <header class="top">
     <div class="brand">
       <h1>GUID<span>le</span></h1>
-      <div class="tag">Roll a random ID. Collect badges for the patterns hiding inside it.</div>
+      <div class="tag">One random ID a day. Collect badges for the patterns hiding inside it.</div>
     </div>
     <div class="stats">
-      <div class="stat" id="st-rolls"><b>0</b><small>Rolls</small></div>
+      <div class="stat" id="st-rolls"><b>0</b><small>Days played</small></div>
+      <div class="stat" id="st-streak"><b>0</b><small>Streak</small></div>
       <div class="stat" id="st-best"><b>–</b><small>High score</small></div>
       <div class="stat" id="st-found"><b>0</b><small>Badges found</small></div>
       <button class="iconbtn" id="mute" type="button" aria-pressed="false">Sound on</button>
@@ -209,9 +226,10 @@ footer a { color: inherit; }
     <div class="scorerow">
       <div class="score" id="score">0</div><div class="pts">pts</div>
     </div>
+    <div class="rating" id="rating" hidden><span class="pill"><span class="gem"></span><span id="rating-name"></span></span><span class="top" id="rating-top"></span></div>
     <div class="actions">
       <button class="roll" id="roll" type="button">Roll<kbd>Space</kbd></button>
-      <button class="ghost" id="copy" type="button">Copy result</button>
+      <button class="ghost" id="copy" type="button">Share result</button>
     </div>
     <div class="results" id="results"></div>
     <div class="hint" id="hint">Hover or tap a badge to light up the characters it matched.</div>
@@ -224,9 +242,6 @@ footer a { color: inherit; }
         <span class="sub" id="hist-sub"></span>
       </div>
       <ol class="history" id="history"></ol>
-      <div class="confirm" id="clear-area">
-        <button class="ghost" id="clear" type="button">Erase history</button>
-      </div>
     </section>
     <section class="panel">
       <div class="phead">
@@ -239,7 +254,7 @@ footer a { color: inherit; }
       <div class="collection" id="collection"></div>
     </section>
   </div>
-  <footer>Every roll is a random version 4 UUID from your browser. Badge odds are exact where the math allows and otherwise come from /*__ROLLS__*/ simulated rolls. Your history stays in this browser.</footer>
+  <footer>Every roll is a random version 4 UUID from your browser. Badge odds are exact where the math allows and otherwise come from /*__ROLLS__*/ simulated rolls. A new roll unlocks at midnight your time. Your history stays in this browser.</footer>
 </div>
 <div class="toast" id="toast" role="status"></div>
 
@@ -255,7 +270,15 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   const METHOD = { exact: 'exact odds', sim: 'simulated', estimate: 'estimated' };
   const tierIdx = t => G.TIERS.indexOf(t);
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const KEY = 'guidle:v1';
+  const KEY = 'guidle:daily';
+  const SITE = 'https://cariehl.github.io/guidle/';
+  const rank = G.makeRanker(/*__SCORES__*/);
+  // Day 1 is 2 November 2026; days follow the player's local calendar.
+  const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayNum = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(2026, 10, 2)) / 864e5) + 1;
+  const topText = f => { const pct = f * 100; return 'Top ' + (pct >= 10 ? Math.round(pct) : Number(pct.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 })) + '%'; };
+  const ratingOf = score => { const f = rank(score); return { f, tier: G.tierFor(f), top: topText(f) }; };
+  const whenFmt = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
   const EXAMPLE = 'b0a7f542-1234-4cab-a404-7e5ca1ab1e99';
   const HEXCH = '0123456789abcdef';
   const fmt = n => n.toLocaleString('en-US');
@@ -263,14 +286,15 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   const wait = ms => new Promise(r => setTimeout(r, ms));
 
   // ---------- state ----------
-  let S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: false };
+  // history: newest first, one entry per day: { u: uuid, s: score, t: timestamp, d: day key, n: day number }
+  let S = { v: 1, best: null, counts: {}, history: [], muted: false };
   try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
-  if ((S.v || 1) < 3) { // scoring changed (v2 dropped the combo, v3 scores by odds); rescore saved rolls
-    for (const r of S.history) r.s = G.scoreOf(G.evaluate(r.u)).total;
-    if (S.best) S.best.s = G.scoreOf(G.evaluate(S.best.u)).total;
-    for (const r of S.history) if (!S.best || r.s > S.best.s) S.best = { u: r.u, s: r.s, n: r.n, t: r.t };
-    S.v = 3; save();
+  const rolledToday = () => S.history.length > 0 && S.history[0].d === dayKey(new Date());
+  function streak() {
+    let n = 0; const d = new Date(); if (!rolledToday()) d.setDate(d.getDate() - 1);
+    for (const r of S.history) { if (r.d !== dayKey(d)) break; n++; d.setDate(d.getDate() - 1); }
+    return n;
   }
 
   // ---------- audio ----------
@@ -419,11 +443,33 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   function showStatic(u, captionText, n) {
     const res = G.evaluate(u), sc = G.scoreOf(res);
     current = { u, res, sc, n }; revealing = false; pinned = null;
-    buildUUID(u); highlight(res, false); setScore(sc.total, false);
+    buildUUID(u); highlight(res, false); setScore(sc.total, false); showRating(sc.total, false);
     resultsEl.textContent = ''; for (const h of sortByTier(res)) resultsEl.appendChild(badgeCard(h, false, false));
     $('#caption').textContent = captionText;
     const top = sortByTier(res).pop().b.tier; stage.style.setProperty('--glow', `var(--t-${top})`); stage.classList.toggle('glowing', tierIdx(top) >= 3);
   }
+
+  function showRating(score, animate) {
+    const el = $('#rating'), r = ratingOf(score);
+    el.style.setProperty('--tc', `var(--t-${r.tier})`); el.querySelector('.gem').className = `gem t-${r.tier}`;
+    $('#rating-name').textContent = `${r.tier} roll`;
+    $('#rating-top').textContent = `${r.top} of all rolls`;
+    el.hidden = false; el.classList.remove('in'); if (animate) { void el.offsetWidth; el.classList.add('in'); }
+    return r;
+  }
+
+  // ---------- daily gate ----------
+  function untilMidnight() { const now = new Date(), m = new Date(now); m.setHours(24, 0, 0, 0); return m - now; }
+  const hms = ms => { const t = Math.ceil(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
+  let wasRolled = null;
+  function updateRollBtn() {
+    const done = rolledToday();
+    if (done && !reeling) { rollBtn.classList.add('waiting'); rollBtn.innerHTML = `Next roll in ${hms(untilMidnight())}<kbd>Come back tomorrow</kbd>`; }
+    else if (!done) { rollBtn.classList.remove('waiting'); rollBtn.innerHTML = `Roll GUIDle #${dayNum(new Date())}<kbd>Space</kbd>`; }
+    if (wasRolled === true && !done) { showStatic(EXAMPLE, 'Example roll · a new roll is ready', 0); $('#rating').hidden = true; renderAll(); }
+    wasRolled = done;
+  }
+  setInterval(updateRollBtn, 1000);
 
   // ---------- rolling ----------
   const stage = $('#stage'), rollBtn = $('#roll');
@@ -460,31 +506,35 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   async function roll() {
     actx();
     if (reeling) { skipReel = true; return; }
+    if (rolledToday()) {
+      if (!revealing) toast(`You've rolled today. Next roll in ${hms(untilMidnight())}.`);
+      return;
+    }
     const token = ++rollToken;
     rollBtn.classList.add('pressed'); setTimeout(() => rollBtn.classList.remove('pressed'), 120);
     const u = newUUID(), res = G.evaluate(u), sc = G.scoreOf(res);
     const prevBest = S.best ? S.best.s : null;
     const newIds = new Set(res.map(h => h.b.id).filter(id => !S.counts[id]));
-    S.total++; const n = S.total;
+    const now = new Date(), n = dayNum(now);
     for (const h of res) S.counts[h.b.id] = (S.counts[h.b.id] || 0) + 1;
     const isBest = prevBest === null || sc.total > prevBest;
-    if (isBest) S.best = { u, s: sc.total, n, t: Date.now() };
-    S.history.unshift({ u, s: sc.total, n, t: Date.now() }); if (S.history.length > 250) S.history.length = 250;
+    if (isBest) S.best = { u, s: sc.total, n, t: now.getTime() };
+    S.history.unshift({ u, s: sc.total, t: now.getTime(), d: dayKey(now), n });
     save();
     current = { u, res, sc, n };
 
     // reset stage
-    resultsEl.textContent = ''; setScore(0, false); $('#newbest').classList.remove('show'); pinned = null; revealing = true;
+    resultsEl.textContent = ''; setScore(0, false); $('#newbest').classList.remove('show'); $('#rating').hidden = true; pinned = null; revealing = true;
     stage.classList.remove('glowing', 'shake'); focusChars(null);
-    $('#caption').textContent = `Roll #${fmt(n)}`;
+    $('#caption').textContent = `GUIDle #${n} · ${whenFmt(now)}`;
     renderHistory(true);
     const sorted = sortByTier(res), top = sorted[sorted.length - 1].b.tier, topI = tierIdx(top);
     stage.style.setProperty('--glow', `var(--t-${top})`);
     if (topI >= 3) { stage.classList.add('glowing'); sfx.whoosh(); }
 
-    reeling = true; skipReel = false;
+    reeling = true; skipReel = false; rollBtn.innerHTML = 'Rolling…<kbd>Press again to skip</kbd>';
     await reel(u, topI >= 3);
-    reeling = false;
+    reeling = false; updateRollBtn();
     if (token !== rollToken) return;
     await wait(reduced ? 30 : 650);
     if (token !== rollToken) return;
@@ -510,8 +560,13 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     if (token !== rollToken) return;
     if (prevCard) prevCard.classList.remove('current');
     revealing = false; focusChars(null); highlight(res, true); setScore(sc.total, true);
+    await wait(reduced ? 30 : 1100);
+    if (token !== rollToken) return;
+    const rt = showRating(sc.total, true); const rti = tierIdx(rt.tier);
+    sfx.badge(rt.tier, 4 + rti);
+    if (rti >= 3) { flash(); confetti(rti >= 4); }
 
-    await wait(reduced ? 30 : 900);
+    await wait(reduced ? 30 : 1400);
     if (token !== rollToken) return;
     if (isBest && prevBest !== null) {
       $('#newbest-sub').textContent = `+${fmt(sc.total - prevBest)} over ${fmt(prevBest)}`;
@@ -521,38 +576,39 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     } else if (isBest) {
       $('#newbest-sub').textContent = 'Your first roll sets the bar';
       $('#newbest').classList.add('show'); sfx.chime(); confetti(false);
-    } else if (topI >= 3) confetti(topI >= 4);
+    }
     renderStats(); renderHistory(false); renderCollection(newIds);
   }
   function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
 
   // ---------- side panels ----------
   function renderStats() {
-    $('#st-rolls b').textContent = fmt(S.total);
+    $('#st-rolls b').textContent = fmt(S.history.length);
+    const st = streak(); $('#st-streak b').innerHTML = `${st}<small> ${st === 1 ? 'day' : 'days'}</small>`;
     $('#st-best b').textContent = S.best ? fmt(S.best.s) : '–';
     const found = G.BADGES.filter(b => S.counts[b.id]).length;
     $('#st-found b').textContent = `${found}/${G.BADGES.length}`;
     $('#mute').textContent = S.muted ? 'Sound off' : 'Sound on'; $('#mute').setAttribute('aria-pressed', String(S.muted));
   }
-  const timeFmt = t => { const d = new Date(t), now = new Date();
-    return d.toDateString() === now.toDateString() ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
   function renderHistory(skipFirstReveal) {
     const ol = $('#history'); ol.textContent = '';
-    $('#hist-sub').textContent = S.history.length ? `Last ${S.history.length}${S.total > S.history.length ? ` of ${fmt(S.total)}` : ''}` : '';
-    $('#clear-area').hidden = !S.history.length;
-    if (!S.history.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No rolls yet. Your first roll will show up here.'; ol.appendChild(li); return; }
+    $('#hist-sub').textContent = S.history.length ? `${S.history.length} ${S.history.length === 1 ? 'day' : 'days'}` : '';
+    if (!S.history.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No rolls yet. Each day’s roll will show up here with its date and time.'; ol.appendChild(li); return; }
     S.history.forEach((r, i) => {
       const li = document.createElement('li'), btn = document.createElement('button');
       btn.type = 'button'; btn.className = 'hrow' + (current && current.n === r.n && current.u === r.u ? ' active' : '');
-      const res = G.evaluate(r.u), top = sortByTier(res).pop().b.tier;
+      const res = G.evaluate(r.u), rt = ratingOf(r.s), top = rt.tier;
       const masked = i === 0 && skipFirstReveal; // don't spoil the roll that's still revealing
-      btn.innerHTML = `<span class="gem t-${masked ? 'common' : top}"></span><span><div class="hid"></div><div class="hmeta"></div></span><span class="hs"></span>`;
+      btn.innerHTML = `<span class="gem t-${masked ? 'common' : top}"></span><span><div class="hmeta"></div><div class="hid"></div><div class="hmeta hrt"></div></span><span class="hs"></span>`;
       btn.querySelector('.hid').textContent = r.u;
-      btn.querySelector('.hmeta').textContent = `#${fmt(r.n)} · ${timeFmt(r.t)} · ${masked ? 'rolling…' : res.length + (res.length === 1 ? ' badge' : ' badges')}`;
+      btn.querySelector('.hmeta').textContent = `GUIDle #${r.n} · ${whenFmt(r.t)}`;
+      const hrt = btn.querySelector('.hrt');
+      if (masked) hrt.textContent = 'Rolling…';
+      else { const b = document.createElement('span'); b.className = `rt t-${top}`; b.textContent = top[0].toUpperCase() + top.slice(1); hrt.append(b, ` · ${rt.top} · ${res.length} ${res.length === 1 ? 'badge' : 'badges'}`); }
       const hs = btn.querySelector('.hs'); hs.textContent = masked ? '…' : fmt(r.s);
       if (!masked && S.best && S.best.u === r.u) { const b = document.createElement('span'); b.className = 'best'; b.textContent = 'BEST'; hs.appendChild(b); }
       if (!masked) btn.querySelector('.gem').style.setProperty('--tc', `var(--t-${top})`);
-      btn.addEventListener('click', () => { rollToken++; reeling = false; skipReel = true; showStatic(r.u, `Replaying roll #${fmt(r.n)} from ${timeFmt(r.t)}`, r.n); $('#newbest').classList.remove('show'); renderHistory(false); stage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); });
+      btn.addEventListener('click', () => { rollToken++; reeling = false; skipReel = true; showStatic(r.u, `GUIDle #${r.n} · ${whenFmt(r.t)}`, r.n); updateRollBtn(); $('#newbest').classList.remove('show'); renderHistory(false); stage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); });
       li.appendChild(btn); ol.appendChild(li);
     });
   }
@@ -602,25 +658,19 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
   $('#copy').addEventListener('click', () => {
     if (!current) return;
-    const names = sortByTier(current.res).reverse().map(h => h.b.name).join(', ');
-    const text = `GUIDle${current.n ? ' roll #' + current.n : ''}: ${current.u}\n${fmt(current.sc.total)} pts · ${names}`;
+    if (!current.n) { toast('Roll first, then share your result.'); return; }
+    const rt = ratingOf(current.sc.total), best = sortByTier(current.res).pop().b;
+    const tierName = rt.tier[0].toUpperCase() + rt.tier.slice(1);
+    const text = `GUIDle #${current.n} · ${tierName} roll · ${rt.top}\n${fmt(current.sc.total)} pts from ${current.res.length} ${current.res.length === 1 ? 'badge' : 'badges'}, best: ${best.name} (${oddsText(best)})\n${current.u}\n${SITE}`;
     const fallback = () => { const r = document.createRange(); r.selectNodeContents(uuidEl); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected. Press Ctrl+C to copy.'); };
     try { navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard'), fallback); } catch (e) { fallback(); }
   });
-  const clearArea = $('#clear-area');
-  function resetClear() { clearArea.innerHTML = '<button class="ghost" id="clear" type="button">Erase history</button>'; $('#clear').addEventListener('click', askClear); }
-  function askClear() {
-    clearArea.innerHTML = '<span>Erase every roll, your high score, and all badges?</span><button class="danger" type="button" id="clear-yes">Erase everything</button><button class="ghost" type="button" id="clear-no">Keep</button>';
-    $('#clear-yes').addEventListener('click', () => { const m = S.muted; S = { v: 3, total: 0, best: null, counts: {}, history: [], muted: m }; save(); resetClear(); showStatic(EXAMPLE, 'Example roll · press Roll to start', 0); renderAll(); toast('History erased'); });
-    $('#clear-no').addEventListener('click', resetClear);
-  }
-  $('#clear').addEventListener('click', askClear);
   function renderAll() { renderStats(); renderHistory(false); renderCollection(); }
 
   // ---------- boot ----------
   renderFilters();
-  if (S.history.length) { const r = S.history[0]; showStatic(r.u, `Last roll · #${fmt(r.n)}`, r.n); }
-  else showStatic(EXAMPLE, 'Example roll · press Roll to start', 0);
-  renderAll();
+  if (rolledToday()) { const r = S.history[0]; showStatic(r.u, `GUIDle #${r.n} · ${whenFmt(r.t)}`, r.n); }
+  else { showStatic(EXAMPLE, 'Example roll · your roll for today is ready', 0); $('#rating').hidden = true; }
+  renderAll(); updateRollBtn();
 })();
 </script>
