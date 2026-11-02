@@ -64,6 +64,8 @@ button { font: inherit; color: inherit; }
 .stage::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .4s;
   background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--glow, var(--accent)) 22%, transparent), transparent 70%); }
 .stage.glowing::before { opacity: 1; }
+.stage { transition: background-color 1.2s ease, box-shadow 1.2s ease; }
+.stage.rated { background-color: color-mix(in srgb, var(--rc) 16%, var(--surface)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 45%, transparent), 0 18px 40px -20px var(--shadow); }
 .stage.shake { animation: shake .5s cubic-bezier(.36,.07,.19,.97); }
 @keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px) rotate(-.3deg); } 40%, 60% { transform: translateX(7px) rotate(.3deg); } }
 .flash { position: absolute; inset: 0; background: var(--sun); opacity: 0; pointer-events: none; z-index: 3; }
@@ -820,6 +822,7 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
     $('#rating-name').textContent = `${r.tier} roll`;
     $('#rating-top').textContent = `${r.top} of rolls`;
     el.hidden = false; el.classList.remove('in'); if (animate) { void el.offsetWidth; el.classList.add('in'); }
+    stage.style.setProperty('--rc', `var(--t-${r.tier})`); stage.classList.add('rated');
     return r;
   }
 
@@ -829,7 +832,7 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
     buildUUID('????????-????-????-????-????????????'); uuidEl.classList.add('blank'); focusChars(null);
     setScore(0, false); scoreEl.textContent = '?';
     resultsEl.textContent = ''; $('#rating').hidden = true; $('#hint').hidden = true; $('#newbest').classList.remove('show');
-    stage.classList.remove('glowing');
+    stage.classList.remove('glowing', 'rated');
     $('#caption').textContent = `GUIDle #${dayNum(new Date())} · your roll for today is ready`;
   }
 
@@ -906,7 +909,7 @@ GUIDLE.applyOdds({"triple":{"p":0.07501354166666667,"m":"sim"},"quad":{"p":0.003
 
     // reset stage
     resultsEl.textContent = ''; setScore(0, false); uuidEl.classList.remove('blank'); $('#hint').hidden = false; $('#newbest').classList.remove('show'); $('#rating').hidden = true; pinned = null; revealing = true;
-    stage.classList.remove('glowing', 'shake'); focusChars(null);
+    stage.classList.remove('glowing', 'shake', 'rated'); focusChars(null);
     $('#caption').textContent = `GUIDle #${n} · ${whenFmt(now)}`;
     renderHistory(true);
     const sorted = sortByTier(res), top = sorted[sorted.length - 1].b.tier, topI = tierIdx(top);
