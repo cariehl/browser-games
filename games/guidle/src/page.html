@@ -1,0 +1,579 @@
+<title>GUIDle</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Roll a random UUID and collect badges for the patterns hiding inside it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&family=Martian+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: one roll "stage" up top (ID, score, roll lever), then history beside the badge collection. */
+:root {
+  --bg: #e9edfb; --surface: #ffffff; --surface-2: #f2f4fd; --ink: #121a44; --muted: #5a628f; --line: #d3d9f2;
+  --accent: #2443f0; --accent-ink: #ffffff; --accent-deep: #1529a8; --sun: #ffc23d;
+  --shadow: rgba(18, 26, 68, .12);
+  --t-common: #737ba3; --t-uncommon: #138a62; --t-rare: #1f74d8; --t-epic: #b02f96; --t-legendary: #c98200;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
+  --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
+  --shadow: rgba(0, 0, 0, .45);
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
+  --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
+  --shadow: rgba(0, 0, 0, .45);
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px;
+  padding-block: 18px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: -.03em; line-height: 1; }
+.brand h1 span { color: var(--accent); }
+.brand .tag { font-size: 13px; color: var(--muted); max-width: 26ch; line-height: 1.3; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+.stat { display: grid; gap: 0; }
+.stat b { font-family: var(--display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat small { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.stat.pulse b { animation: statPulse .9s ease; color: var(--t-legendary); }
+@keyframes statPulse { 0% { transform: scale(1); } 30% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.iconbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.iconbtn:hover { border-color: var(--accent); }
+
+/* Stage */
+.stage { position: relative; background: var(--surface); border-radius: 22px; box-shadow: 0 1px 0 var(--line), 0 18px 40px -20px var(--shadow);
+  padding: 22px clamp(14px, 3vw, 32px) 26px; display: grid; gap: 16px; justify-items: center; overflow: hidden; isolation: isolate; }
+.stage::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .4s;
+  background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--glow, var(--accent)) 22%, transparent), transparent 70%); }
+.stage.glowing::before { opacity: 1; }
+.stage.shake { animation: shake .5s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px) rotate(-.3deg); } 40%, 60% { transform: translateX(7px) rotate(.3deg); } }
+.flash { position: absolute; inset: 0; background: var(--sun); opacity: 0; pointer-events: none; z-index: 3; }
+.flash.go { animation: flash .6s ease-out; }
+@keyframes flash { 0% { opacity: .55; } 100% { opacity: 0; } }
+
+.caption { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; color: var(--muted); text-align: center; min-height: 1.4em; }
+.uuid { font-family: var(--mono); font-weight: 600; font-size: clamp(17px, 3.4vw, 36px); display: flex; flex-wrap: wrap; justify-content: center; gap: .1em 0; user-select: all; max-width: 100%; }
+.grp { display: inline-flex; white-space: nowrap; }
+.dash { color: var(--muted); opacity: .55; padding: 0 .08em; }
+.ch { display: inline-block; width: 1ch; text-align: center; border-radius: .18em; transition: background .3s, color .3s, box-shadow .3s; }
+.ch.spin { color: var(--muted); opacity: .6; filter: blur(.4px); }
+.ch.lock { animation: lock .28s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes lock { 0% { transform: translateY(-.35em) scale(1.3); } 100% { transform: none; } }
+.ch.hit { background: color-mix(in srgb, var(--hc) 20%, transparent); color: var(--hc); box-shadow: inset 0 -.12em 0 var(--hc); }
+.ch.hit.pop { animation: hitPop .5s ease; }
+@keyframes hitPop { 0% { transform: scale(1); } 40% { transform: scale(1.35) translateY(-.08em); } 100% { transform: scale(1); } }
+.uuid.dim .ch:not(.focus) { opacity: .28; }
+.ch.focus { background: color-mix(in srgb, var(--hc, var(--accent)) 30%, transparent); color: var(--hc, var(--accent)); }
+
+.scorerow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.score { font-family: var(--display); font-weight: 800; font-size: clamp(56px, 11vw, 104px); line-height: .9; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.score.bump { animation: bump .25s ease; }
+@keyframes bump { 50% { transform: scale(1.08); } }
+.pts { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--muted); }
+.combo { font-family: var(--display); font-weight: 800; font-size: 20px; color: var(--accent); opacity: 0; transform: scale(.5); transition: opacity .25s, transform .35s cubic-bezier(.2,1.8,.4,1); }
+.combo.show { opacity: 1; transform: none; }
+
+.actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.roll { position: relative; border: 0; cursor: pointer; background: var(--accent); color: var(--accent-ink); font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: .01em;
+  padding: 14px 46px 16px; border-radius: 16px; box-shadow: 0 6px 0 var(--accent-deep), 0 14px 24px -10px var(--accent); transition: transform .08s, box-shadow .08s; }
+.roll:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--accent-deep), 0 18px 28px -10px var(--accent); }
+.roll:active, .roll.pressed { transform: translateY(5px); box-shadow: 0 1px 0 var(--accent-deep), 0 6px 12px -8px var(--accent); }
+.roll kbd { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; opacity: .75; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+.ghost { border: 1.5px solid var(--line); background: transparent; border-radius: 12px; padding: 10px 14px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+.newbest { position: absolute; top: 14px; right: 14px; z-index: 4; pointer-events: none; background: var(--sun); color: #2a1d00; font-family: var(--display); font-weight: 800;
+  padding: 8px 14px 9px; border-radius: 10px; font-size: 18px; line-height: 1.05; text-align: center; transform: rotate(6deg) scale(0); box-shadow: 0 8px 20px -6px rgba(0,0,0,.35); }
+.newbest small { display: block; font-family: var(--body); font-size: 12px; font-weight: 700; }
+.newbest.show { animation: stamp .6s cubic-bezier(.2, 1.7, .4, 1) forwards; }
+@keyframes stamp { 0% { transform: rotate(-20deg) scale(3); opacity: 0; } 100% { transform: rotate(6deg) scale(1); opacity: 1; } }
+
+/* Badges */
+.results { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+.badge { --tc: var(--t-common); display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--tc) 11%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--tc) 45%, transparent); position: relative; min-width: 0; cursor: default; }
+.badge.in { animation: badgeIn .45s cubic-bezier(.2, 1.6, .4, 1) both; }
+@keyframes badgeIn { 0% { transform: translateY(14px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.badge .txt { min-width: 0; }
+.badge .nm { font-weight: 700; line-height: 1.2; }
+.badge .ds { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.badge .ds em { font-style: normal; font-family: var(--mono); font-size: 11.5px; color: var(--tc); font-weight: 600; }
+.badge .pt { font-family: var(--display); font-weight: 800; color: var(--tc); font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
+.badge .pt small { display: block; font-family: var(--body); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.badge .new { position: absolute; top: -8px; right: 10px; background: var(--sun); color: #2a1d00; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 2px 6px; border-radius: 6px; }
+.t-common { --tc: var(--t-common); } .t-uncommon { --tc: var(--t-uncommon); } .t-rare { --tc: var(--t-rare); } .t-epic { --tc: var(--t-epic); } .t-legendary { --tc: var(--t-legendary); }
+
+.gem { width: 30px; height: 27px; flex: none; clip-path: polygon(25% 2%, 75% 2%, 100% 50%, 75% 98%, 25% 98%, 0 50%); background: var(--tc);
+  display: grid; place-items: center; color: var(--surface); font-family: var(--mono); font-size: 10px; font-weight: 700; }
+.t-legendary .gem, .gem.t-legendary { background: linear-gradient(110deg, var(--t-legendary) 30%, #fff6d6 50%, var(--t-legendary) 70%); background-size: 250% 100%; animation: shimmer 2.2s linear infinite; }
+.t-epic .gem, .gem.t-epic { background: linear-gradient(110deg, var(--t-epic) 35%, color-mix(in srgb, var(--t-epic) 40%, #fff) 50%, var(--t-epic) 65%); background-size: 250% 100%; animation: shimmer 3s linear infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+
+/* Panels */
+.panels { display: grid; gap: 20px; align-items: start; }
+@media (min-width: 900px) { .panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); } }
+.panel { background: var(--surface); border-radius: 18px; padding: 18px; display: grid; gap: 12px; min-width: 0; box-shadow: 0 1px 0 var(--line); }
+.panel h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -.02em; text-wrap: balance; }
+.phead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.phead .sub { font-size: 13px; color: var(--muted); }
+
+.history { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; max-height: 520px; overflow-y: auto; overscroll-behavior: contain; }
+.hrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; cursor: pointer; border: 0; background: transparent; text-align: left; width: 100%; }
+.hrow:hover, .hrow.active { background: var(--surface-2); }
+.hrow .gem { width: 24px; height: 21px; font-size: 9px; }
+.hrow .hid { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; line-height: 1.35; }
+.hrow .hmeta { font-size: 11.5px; color: var(--muted); }
+.hrow .hs { font-family: var(--display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; text-align: right; }
+.hrow .best { display: inline-block; background: var(--sun); color: #2a1d00; font-size: 10px; font-weight: 800; letter-spacing: .08em; border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; }
+.empty { color: var(--muted); font-size: 14px; padding: 8px 2px; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.confirm button { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+.danger { border: 0; background: #c2362f; color: #fff; font-weight: 700; cursor: pointer; }
+
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1.5px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.progress { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .6s cubic-bezier(.2,1,.3,1); }
+.collection { max-height: 560px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 4px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 8px; }
+.tile { --tc: var(--t-common); display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; padding: 10px; border-radius: 12px; background: var(--surface-2); align-content: start; }
+.tile .gem { grid-row: span 2; width: 26px; height: 23px; }
+.tile .nm { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.tile .ds { grid-column: 1 / -1; font-size: 12px; color: var(--muted); line-height: 1.3; }
+.tile .od { font-size: 11px; color: var(--tc); font-weight: 700; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.tile.locked .gem { background: transparent; box-shadow: none; outline: 0; animation: none;
+  background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--tc) 35%, transparent) 0 3px, transparent 3px 6px); }
+.tile.locked .nm { color: var(--muted); letter-spacing: .1em; }
+.tile.fresh { animation: tileFresh 1.6s ease; }
+@keyframes tileFresh { 0%, 40% { box-shadow: 0 0 0 3px var(--sun); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .gem { width: 14px; height: 12px; }
+footer { font-size: 12.5px; color: var(--muted); text-align: center; }
+footer a { color: inherit; }
+
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 30px); opacity: 0; background: var(--ink); color: var(--surface);
+  padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; transition: .25s; z-index: 60; pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+@media (max-width: 520px) {
+  .brand .tag { display: none; }
+  .roll { font-size: 22px; padding: 12px 34px 14px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>GUID<span>le</span></h1>
+      <div class="tag">Roll a random ID. Collect badges for the patterns hiding inside it.</div>
+    </div>
+    <div class="stats">
+      <div class="stat" id="st-rolls"><b>0</b><small>Rolls</small></div>
+      <div class="stat" id="st-best"><b>–</b><small>High score</small></div>
+      <div class="stat" id="st-found"><b>0</b><small>Badges found</small></div>
+      <button class="iconbtn" id="mute" type="button" aria-pressed="false">Sound on</button>
+    </div>
+  </header>
+
+  <section class="stage" id="stage" aria-live="polite">
+    <div class="flash" id="flash"></div>
+    <div class="newbest" id="newbest">NEW HIGH SCORE<small id="newbest-sub"></small></div>
+    <div class="caption" id="caption">Example roll</div>
+    <div class="uuid" id="uuid" aria-label="Rolled ID"></div>
+    <div class="scorerow">
+      <div class="score" id="score">0</div><div class="pts">pts</div>
+      <div class="combo" id="combo"></div>
+    </div>
+    <div class="actions">
+      <button class="roll" id="roll" type="button">Roll<kbd>Space</kbd></button>
+      <button class="ghost" id="copy" type="button">Copy result</button>
+    </div>
+    <div class="results" id="results"></div>
+  </section>
+
+  <div class="panels">
+    <section class="panel">
+      <div class="phead">
+        <h2>Roll history</h2>
+        <span class="sub" id="hist-sub"></span>
+      </div>
+      <ol class="history" id="history"></ol>
+      <div class="confirm" id="clear-area">
+        <button class="ghost" id="clear" type="button">Erase history</button>
+      </div>
+    </section>
+    <section class="panel">
+      <div class="phead">
+        <h2>Badge collection</h2>
+        <span class="sub" id="coll-sub"></span>
+      </div>
+      <div class="progress" aria-hidden="true"><i id="coll-bar" style="width:0"></i></div>
+      <div class="legend" id="legend"></div>
+      <div class="filters" id="filters" role="group" aria-label="Filter badges"></div>
+      <div class="collection" id="collection"></div>
+    </section>
+  </div>
+  <footer>Every roll is a random version 4 UUID from your browser. Odds come from two million simulated rolls. Your history stays in this browser.</footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+/*__BADGES__*/
+</script>
+<script>
+GUIDLE.applyOdds(/*__ODDS__*/);
+(function () {
+  const G = GUIDLE;
+  const $ = s => document.querySelector(s);
+  const TIER_NAME = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary' };
+  const tierIdx = t => G.TIERS.indexOf(t);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const KEY = 'guidle:v1';
+  const EXAMPLE = 'b0a7f542-1234-4cab-a404-7e5ca1ab1e99';
+  const HEXCH = '0123456789abcdef';
+  const fmt = n => n.toLocaleString('en-US');
+  const oddsText = p => '1 in ' + fmt(Math.max(1, Math.round(1 / p)));
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+
+  // ---------- state ----------
+  let S = { total: 0, best: null, counts: {}, history: [], muted: false };
+  try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+
+  // ---------- audio ----------
+  let ac = null;
+  function actx() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+  function tone(freq, dur = .08, type = 'square', vol = .04, delay = 0, slide = 0) {
+    if (S.muted) return; const c = actx(); if (!c) return;
+    const t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .006); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .03);
+  }
+  const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568];
+  const sfx = {
+    tick: k => tone(260 + k * 16, .035, 'square', .018),
+    badge: (tier, i) => { const n = NOTES[Math.min(NOTES.length - 1, i)]; const ti = tierIdx(tier);
+      tone(n, .14, 'triangle', .07); tone(n * 1.5, .12, 'sine', .03, .03);
+      if (ti >= 2) { tone(n * 2, .2, 'triangle', .04, .07); }
+      if (ti >= 3) { tone(n * 2.5, .3, 'sine', .04, .12); tone(n * 3, .35, 'sine', .03, .18); } },
+    combo: () => { tone(392, .09, 'square', .03); tone(523, .09, 'square', .03, .07); tone(784, .18, 'square', .035, .14); },
+    fanfare: () => { [523.25, 659.25, 783.99, 1046.5].forEach((n, i) => tone(n, .22, 'square', .04, i * .11));
+      [1046.5, 1318.5, 1568].forEach(n => tone(n, .7, 'triangle', .035, .5)); tone(130.8, .8, 'sawtooth', .025, .5); },
+    whoosh: () => tone(180, .25, 'sawtooth', .02, 0, 3),
+  };
+
+  // ---------- particles ----------
+  const cv = $('#fx'), cx = cv.getContext('2d'); let parts = [], raf = 0;
+  function sizeCanvas() { const d = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+  sizeCanvas(); addEventListener('resize', sizeCanvas);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function burst(x, y, n, colors, opt = {}) {
+    if (reduced) n = Math.ceil(n / 5);
+    const sp = opt.speed || 7, up = opt.up ?? 0, spread = opt.spread ?? Math.PI * 2, dir = opt.dir ?? -Math.PI / 2;
+    for (let i = 0; i < n; i++) {
+      const a = dir + (Math.random() - .5) * spread, v = sp * (.4 + Math.random() * .8);
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - up, r: Math.random() * 6.28, vr: (Math.random() - .5) * .3,
+        s: opt.size ? opt.size * (.6 + Math.random() * .8) : 4 + Math.random() * 6, c: colors[i % colors.length], life: 1, decay: opt.decay || (.006 + Math.random() * .01),
+        shape: opt.shape || (Math.random() < .35 ? 'hex' : 'rect'), g: opt.gravity ?? .18 });
+    }
+    if (!raf) raf = requestAnimationFrame(tickFx);
+  }
+  function hexPath(s) { cx.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; cx.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); } cx.closePath(); }
+  function tickFx() {
+    cx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter(p => p.life > 0 && p.y < innerHeight + 40);
+    for (const p of parts) {
+      p.vy += p.g; p.vx *= .985; p.vy *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life -= p.decay;
+      cx.save(); cx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.6)); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c;
+      if (p.shape === 'hex') { hexPath(p.s); cx.fill(); } else if (p.shape === 'spark') { cx.fillRect(-p.s / 2, -1, p.s, 2); cx.fillRect(-1, -p.s / 2, 2, p.s); }
+      else cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      cx.restore();
+    }
+    raf = parts.length ? requestAnimationFrame(tickFx) : 0;
+  }
+  const rectOf = el => el.getBoundingClientRect();
+  const tierColors = () => ['--t-legendary', '--t-epic', '--t-rare', '--t-uncommon', '--accent', '--sun'].map(css);
+  function confetti(big) {
+    const cols = tierColors();
+    const waves = big ? 3 : 1;
+    for (let w = 0; w < waves; w++) setTimeout(() => {
+      burst(0, innerHeight * .7, big ? 90 : 40, cols, { dir: -Math.PI / 3, spread: .9, speed: 17, decay: .006 });
+      burst(innerWidth, innerHeight * .7, big ? 90 : 40, cols, { dir: -Math.PI * 2 / 3, spread: .9, speed: 17, decay: .006 });
+      if (big) burst(innerWidth / 2, innerHeight * .25, 70, cols, { speed: 11, decay: .007 });
+    }, w * 380);
+  }
+
+  // ---------- UUID rendering ----------
+  const uuidEl = $('#uuid'); let chEls = [];
+  function buildUUID(u) {
+    uuidEl.textContent = ''; chEls = new Array(36).fill(null);
+    let grp = document.createElement('span'); grp.className = 'grp';
+    for (let i = 0; i < 36; i++) {
+      if (u[i] === '-') { uuidEl.appendChild(grp); const d = document.createElement('span'); d.className = 'dash'; d.textContent = '-'; grp = document.createElement('span'); grp.className = 'grp'; grp.appendChild(d); continue; }
+      const s = document.createElement('span'); s.className = 'ch'; s.textContent = u[i]; grp.appendChild(s); chEls[i] = s;
+    }
+    uuidEl.appendChild(grp);
+  }
+  function highlight(res, animate) {
+    const tierAt = {};
+    for (const h of res) for (const i of h.idx) if (!(i in tierAt) || tierIdx(h.b.tier) > tierIdx(tierAt[i])) tierAt[i] = h.b.tier;
+    chEls.forEach((el, i) => { if (!el) return; el.classList.remove('hit', 'pop');
+      if (i in tierAt) { el.style.setProperty('--hc', `var(--t-${tierAt[i]})`); el.classList.add('hit'); if (animate) { void el.offsetWidth; el.style.animationDelay = (i * 12) + 'ms'; el.classList.add('pop'); } } });
+  }
+  function focusChars(idx, tier) {
+    if (!idx || !idx.length) { uuidEl.classList.remove('dim'); chEls.forEach(el => el && el.classList.remove('focus')); return; }
+    uuidEl.classList.add('dim'); const set = new Set(idx);
+    chEls.forEach((el, i) => { if (!el) return; el.classList.toggle('focus', set.has(i)); if (set.has(i)) el.style.setProperty('--hc', `var(--t-${tier})`); });
+  }
+
+  // ---------- badge cards ----------
+  const resultsEl = $('#results');
+  function badgeCard(h, isNew, animate) {
+    const b = h.b, d = document.createElement('div');
+    d.className = `badge t-${b.tier}` + (animate ? ' in' : ''); d.tabIndex = 0;
+    d.innerHTML = `<div class="gem"></div><div class="txt"><div class="nm"></div><div class="ds"></div></div><div class="pt">+${fmt(b.points)}<small>${TIER_NAME[b.tier]}</small></div>` + (isNew ? '<span class="new">NEW</span>' : '');
+    d.querySelector('.nm').textContent = b.name;
+    const ds = d.querySelector('.ds'); ds.textContent = b.desc + ' ';
+    if (h.detail) { const em = document.createElement('em'); em.textContent = h.detail; ds.prepend(em, ' '); }
+    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b.p)}`;
+    const on = () => focusChars(h.idx, b.tier), off = () => focusChars(null);
+    d.addEventListener('mouseenter', on); d.addEventListener('mouseleave', off); d.addEventListener('focus', on); d.addEventListener('blur', off);
+    return d;
+  }
+  const sortByTier = res => [...res].sort((a, b) => tierIdx(a.b.tier) - tierIdx(b.b.tier) || a.b.points - b.b.points);
+
+  // ---------- score ----------
+  const scoreEl = $('#score'), comboEl = $('#combo'); let shown = 0, tweenRaf = 0;
+  function setScore(n, animate) {
+    cancelAnimationFrame(tweenRaf);
+    if (!animate || reduced) { shown = n; scoreEl.textContent = fmt(n); return; }
+    const from = shown, t0 = performance.now(), dur = Math.min(900, 250 + Math.log10(Math.max(10, n - from)) * 150);
+    scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump');
+    const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); shown = Math.round(from + (n - from) * e); scoreEl.textContent = fmt(shown); if (k < 1) tweenRaf = requestAnimationFrame(step); };
+    tweenRaf = requestAnimationFrame(step);
+  }
+  function setCombo(sc) {
+    comboEl.classList.toggle('show', sc.mult > 1);
+    comboEl.textContent = sc.mult > 1 ? `×${sc.mult.toFixed(1)} combo` : '';
+  }
+
+  // ---------- static display (example / replay) ----------
+  let current = null; // { u, res, sc, n }
+  function showStatic(u, captionText, n) {
+    const res = G.evaluate(u), sc = G.scoreOf(res);
+    current = { u, res, sc, n };
+    buildUUID(u); highlight(res, false); setScore(sc.total, false); setCombo(sc);
+    resultsEl.textContent = ''; for (const h of sortByTier(res)) resultsEl.appendChild(badgeCard(h, false, false));
+    $('#caption').textContent = captionText;
+    const top = sortByTier(res).pop().b.tier; stage.style.setProperty('--glow', `var(--t-${top})`); stage.classList.toggle('glowing', tierIdx(top) >= 3);
+  }
+
+  // ---------- rolling ----------
+  const stage = $('#stage'), rollBtn = $('#roll');
+  let rollToken = 0, reeling = false, skipReel = false;
+
+  function newUUID() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+
+  function reel(u, tease) {
+    return new Promise(resolve => {
+      buildUUID(u.replace(/[0-9a-f]/g, () => HEXCH[Math.random() * 16 | 0]));
+      const order = []; for (let i = 0; i < 36; i++) if (chEls[i]) { order.push(i); chEls[i].classList.add('spin'); }
+      const base = reduced ? 80 : 240, step = reduced ? 5 : 26;
+      const lockAt = order.map((p, k) => { let t = base + k * step; if (tease && k >= 24 && !reduced) t += (k - 23) * (k - 23) * 22; return t; });
+      const done = new Array(order.length).fill(false); let left = order.length, last = 0; const t0 = performance.now();
+      function frame(now) {
+        const el = now - t0, scramble = now - last > 45; if (scramble) last = now;
+        let ticked = false;
+        order.forEach((p, k) => {
+          if (done[k]) return; const c = chEls[p];
+          if (skipReel || el >= lockAt[k]) { done[k] = true; left--; c.textContent = u[p]; c.classList.remove('spin'); c.classList.add('lock'); if (!ticked) { sfx.tick(k); ticked = true; } }
+          else if (scramble) c.textContent = HEXCH[Math.random() * 16 | 0];
+        });
+        if (left > 0) requestAnimationFrame(frame); else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  async function roll() {
+    actx();
+    if (reeling) { skipReel = true; return; }
+    const token = ++rollToken;
+    rollBtn.classList.add('pressed'); setTimeout(() => rollBtn.classList.remove('pressed'), 120);
+    const u = newUUID(), res = G.evaluate(u), sc = G.scoreOf(res);
+    const prevBest = S.best ? S.best.s : null;
+    const newIds = new Set(res.map(h => h.b.id).filter(id => !S.counts[id]));
+    S.total++; const n = S.total;
+    for (const h of res) S.counts[h.b.id] = (S.counts[h.b.id] || 0) + 1;
+    const isBest = prevBest === null || sc.total > prevBest;
+    if (isBest) S.best = { u, s: sc.total, n, t: Date.now() };
+    S.history.unshift({ u, s: sc.total, n, t: Date.now() }); if (S.history.length > 250) S.history.length = 250;
+    save();
+    current = { u, res, sc, n };
+
+    // reset stage
+    resultsEl.textContent = ''; setScore(0, false); setCombo({ mult: 1 }); $('#newbest').classList.remove('show');
+    stage.classList.remove('glowing', 'shake'); focusChars(null);
+    $('#caption').textContent = `Roll #${fmt(n)}`;
+    renderHistory(true);
+    const sorted = sortByTier(res), top = sorted[sorted.length - 1].b.tier, topI = tierIdx(top);
+    stage.style.setProperty('--glow', `var(--t-${top})`);
+    if (topI >= 3) { stage.classList.add('glowing'); sfx.whoosh(); }
+
+    reeling = true; skipReel = false;
+    await reel(u, topI >= 3);
+    reeling = false;
+    if (token !== rollToken) return;
+    highlight(res, true);
+
+    let running = 0;
+    for (let i = 0; i < sorted.length; i++) {
+      await wait(reduced ? 30 : (i ? 190 : 140));
+      if (token !== rollToken) return;
+      const h = sorted[i], card = badgeCard(h, newIds.has(h.b.id), true);
+      resultsEl.appendChild(card);
+      running += h.b.points; setScore(running, true); sfx.badge(h.b.tier, i);
+      const ti = tierIdx(h.b.tier);
+      requestAnimationFrame(() => { const r = rectOf(card); const col = css(`--t-${h.b.tier}`);
+        burst(r.left + 24, r.top + r.height / 2, 6 + ti * 10, [col, css('--sun')], { speed: 3 + ti * 1.5, size: 5, decay: .03, gravity: .05, shape: ti >= 2 ? 'spark' : 'hex' }); });
+      if (ti >= 3) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); flash(); }
+    }
+    if (sc.mult > 1) { await wait(reduced ? 30 : 320); if (token !== rollToken) return; setCombo(sc); setScore(sc.total, true); sfx.combo(); }
+    else setScore(sc.total, true);
+
+    await wait(reduced ? 30 : 380);
+    if (token !== rollToken) return;
+    if (isBest && prevBest !== null) {
+      $('#newbest-sub').textContent = `+${fmt(sc.total - prevBest)} over ${fmt(prevBest)}`;
+      $('#newbest').classList.add('show'); sfx.fanfare(); confetti(true); flash();
+      stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+      const b = $('#st-best'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse');
+    } else if (isBest) {
+      $('#newbest-sub').textContent = 'Your first roll sets the bar';
+      $('#newbest').classList.add('show'); sfx.combo(); confetti(false);
+    } else if (topI >= 3) confetti(topI === 4);
+    renderStats(); renderHistory(false); renderCollection(newIds);
+  }
+  function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+  // ---------- side panels ----------
+  function renderStats() {
+    $('#st-rolls b').textContent = fmt(S.total);
+    $('#st-best b').textContent = S.best ? fmt(S.best.s) : '–';
+    const found = G.BADGES.filter(b => S.counts[b.id]).length;
+    $('#st-found b').textContent = `${found}/${G.BADGES.length}`;
+    $('#mute').textContent = S.muted ? 'Sound off' : 'Sound on'; $('#mute').setAttribute('aria-pressed', String(S.muted));
+  }
+  const timeFmt = t => { const d = new Date(t), now = new Date();
+    return d.toDateString() === now.toDateString() ? d.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : d.toLocaleDateString([], { month: 'short', day: 'numeric' }); };
+  function renderHistory(skipFirstReveal) {
+    const ol = $('#history'); ol.textContent = '';
+    $('#hist-sub').textContent = S.history.length ? `Last ${S.history.length}${S.total > S.history.length ? ` of ${fmt(S.total)}` : ''}` : '';
+    $('#clear-area').hidden = !S.history.length;
+    if (!S.history.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No rolls yet. Your first roll will show up here.'; ol.appendChild(li); return; }
+    S.history.forEach((r, i) => {
+      const li = document.createElement('li'), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'hrow' + (current && current.n === r.n && current.u === r.u ? ' active' : '');
+      const res = G.evaluate(r.u), top = sortByTier(res).pop().b.tier;
+      const masked = i === 0 && skipFirstReveal; // don't spoil the roll that's still revealing
+      btn.innerHTML = `<span class="gem t-${masked ? 'common' : top}"></span><span><div class="hid"></div><div class="hmeta"></div></span><span class="hs"></span>`;
+      btn.querySelector('.hid').textContent = r.u;
+      btn.querySelector('.hmeta').textContent = `#${fmt(r.n)} · ${timeFmt(r.t)} · ${masked ? 'rolling…' : res.length + (res.length === 1 ? ' badge' : ' badges')}`;
+      const hs = btn.querySelector('.hs'); hs.textContent = masked ? '…' : fmt(r.s);
+      if (!masked && S.best && S.best.u === r.u) { const b = document.createElement('span'); b.className = 'best'; b.textContent = 'BEST'; hs.appendChild(b); }
+      if (!masked) btn.querySelector('.gem').style.setProperty('--tc', `var(--t-${top})`);
+      btn.addEventListener('click', () => { rollToken++; reeling = false; showStatic(r.u, `Replaying roll #${fmt(r.n)} from ${timeFmt(r.t)}`, r.n); $('#newbest').classList.remove('show'); renderHistory(false); stage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); });
+      li.appendChild(btn); ol.appendChild(li);
+    });
+  }
+
+  let filter = 'all';
+  function renderCollection(fresh) {
+    const found = G.BADGES.filter(b => S.counts[b.id]).length;
+    $('#coll-sub').textContent = `${found} of ${G.BADGES.length} found`;
+    $('#coll-bar').style.width = (100 * found / G.BADGES.length) + '%';
+    const box = $('#collection'); box.textContent = '';
+    const list = [...G.BADGES].sort((a, b) => b.p - a.p).filter(b => filter === 'all' || (filter === 'found' ? S.counts[b.id] : filter === 'missing' ? !S.counts[b.id] : b.tier === filter));
+    for (const b of list) {
+      const got = S.counts[b.id] || 0, d = document.createElement('div');
+      d.className = `tile t-${b.tier}` + (got ? '' : ' locked') + (fresh && fresh.has(b.id) ? ' fresh' : '');
+      d.innerHTML = `<div class="gem"></div><div class="nm"></div><div class="od"></div><div class="ds"></div>`;
+      d.querySelector('.nm').textContent = got ? b.name : '? ? ?';
+      d.querySelector('.od').textContent = `${TIER_NAME[b.tier]} · ${oddsText(b.p)}` + (got ? ` · ×${fmt(got)}` : '');
+      d.querySelector('.ds').textContent = b.desc;
+      box.appendChild(d);
+    }
+    if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = 'Nothing here yet.'; box.appendChild(e); }
+  }
+  function renderFilters() {
+    const f = $('#filters'); f.textContent = '';
+    for (const [k, label] of [['all', 'All'], ['found', 'Found'], ['missing', 'Missing'], ...G.TIERS.map(t => [t, TIER_NAME[t]])]) {
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = label; c.setAttribute('aria-pressed', String(filter === k));
+      c.addEventListener('click', () => { filter = k; renderFilters(); renderCollection(); }); f.appendChild(c);
+    }
+    const lg = $('#legend'); lg.textContent = '';
+    for (const t of G.TIERS) { const s = document.createElement('span'); s.innerHTML = `<i class="gem t-${t}" style="--tc:var(--t-${t})"></i>${TIER_NAME[t]} ${t === 'legendary' ? '1,000+' : G.POINTS[t]} pts`; lg.appendChild(s); }
+    const s = document.createElement('span'); s.textContent = 'Each extra badge adds ×0.2 to the combo.'; lg.appendChild(s);
+  }
+
+  // ---------- controls ----------
+  rollBtn.addEventListener('click', roll);
+  document.addEventListener('keydown', e => {
+    if ((e.code === 'Space' || e.key === 'Enter') && !e.repeat) {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if (tag === 'button' || tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      e.preventDefault(); roll();
+    }
+  });
+  $('#mute').addEventListener('click', () => { S.muted = !S.muted; save(); renderStats(); if (!S.muted) sfx.combo(); });
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
+  $('#copy').addEventListener('click', () => {
+    if (!current) return;
+    const names = sortByTier(current.res).reverse().map(h => h.b.name).join(', ');
+    const text = `GUIDle${current.n ? ' roll #' + current.n : ''}: ${current.u}\n${fmt(current.sc.total)} pts · ${names}`;
+    const fallback = () => { const r = document.createRange(); r.selectNodeContents(uuidEl); const s = getSelection(); s.removeAllRanges(); s.addRange(r); toast('Selected. Press Ctrl+C to copy.'); };
+    try { navigator.clipboard.writeText(text).then(() => toast('Copied to clipboard'), fallback); } catch (e) { fallback(); }
+  });
+  const clearArea = $('#clear-area');
+  function resetClear() { clearArea.innerHTML = '<button class="ghost" id="clear" type="button">Erase history</button>'; $('#clear').addEventListener('click', askClear); }
+  function askClear() {
+    clearArea.innerHTML = '<span>Erase every roll, your high score, and all badges?</span><button class="danger" type="button" id="clear-yes">Erase everything</button><button class="ghost" type="button" id="clear-no">Keep</button>';
+    $('#clear-yes').addEventListener('click', () => { const m = S.muted; S = { total: 0, best: null, counts: {}, history: [], muted: m }; save(); resetClear(); showStatic(EXAMPLE, 'Example roll · press Roll to start', 0); renderAll(); toast('History erased'); });
+    $('#clear-no').addEventListener('click', resetClear);
+  }
+  $('#clear').addEventListener('click', askClear);
+  function renderAll() { renderStats(); renderHistory(false); renderCollection(); }
+
+  // ---------- boot ----------
+  renderFilters();
+  if (S.history.length) { const r = S.history[0]; showStatic(r.u, `Last roll · #${fmt(r.n)}`, r.n); }
+  else showStatic(EXAMPLE, 'Example roll · press Roll to start', 0);
+  renderAll();
+})();
+</script>
