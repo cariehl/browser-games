@@ -5,7 +5,7 @@ A browser game where every roll is a random UUID. The game scans each ID for fun
 and awards badges for them. Rarer badges score more points, a roll scores the sum of its
 badges, and beating your high score sets off a celebration.
 
-Open `index.html` in any modern browser to play. Press **Space** or click **Roll**.
+Play it at https://cariehl.github.io/guidle/, or open `index.html` in any modern browser. Press **Space** or click **Roll**.
 Clicking Roll again while the ID is spinning skips the spin. As each badge is revealed, the
 characters it matched light up; hover or tap any badge afterwards to light them up again.
 
@@ -43,3 +43,5 @@ Roll history (last 250 rolls), lifetime badge counts, and your high score are sa
 | `scripts/build.js` | Inlines everything into the standalone `index.html`. |
 
 After changing a badge, run the simulator and then `node scripts/build.js`.
+
+To update the live site, copy the built `index.html` to `guidle/index.html` in [cariehl.github.io](https://github.com/cariehl/cariehl.github.io) and push to `master`.
