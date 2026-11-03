@@ -71,6 +71,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const B = {
       scen, round: 0, turnIdx: -1, order: [], units: [], tiles: new Map(), zones: [],
       log: [], fx: [], momentum: 0, over: null, stats: {}, telegraphs: [], flags: {}, quiet: !!opts.quiet,
+      lvAdj: opts.lvAdj || 0,
     };
     // map
     scen.map.forEach((rowStr, row) => {
@@ -84,7 +85,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     });
     const heroStarts = (B.spawns && B.spawns.hero) || [];
     party.forEach((build, i) => {
-      const u = G.Build.makeHero(build, scen.level);
+      // opts.level / opts.gear[i]: a campaign hero's own level and equipment
+      const u = G.Build.makeHero(build, opts.level || scen.level, opts.gear ? (opts.gear[i] || {}) : undefined);
       u.pos = heroStarts[i] || heroStarts[0];
       // the pack: opts.items[i] picks this hero's items (an id or a list); otherwise one at random
       const pick = opts.items && opts.items[i];
@@ -118,10 +120,21 @@ var G = (typeof G !== 'undefined') ? G : {};
   const isItem = (p) => p.kind === 'item';
 
   function addUnit(B, u) {
+    if (u.monster && !u.object && B.lvAdj && !u.lvScaled) { scaleMonster(u, B.lvAdj); u.lvScaled = true; }
     u.uid = ++uid; u.conds = u.conds || []; u.used = u.used || {}; u.uses = u.uses || {};
     u.tempHp = u.tempHp || 0; u.act = { std: 0, move: 0, minor: 0 };
     B.units.push(u);
     B.stats[u.uid] = { dmg: 0, kills: 0, crits: 0, healed: 0, hits: 0, misses: 0, taken: 0 };
+    return u;
+  }
+
+  // move a monster up or down a few levels (4e rule of thumb): +1 attack, defenses and damage per level, and
+  // HP by role. Campaign fights use it to meet the party at its level. Minions keep their 1 HP.
+  function scaleMonster(u, d) {
+    if (!d) return u;
+    u.level += d; u.lvAdj = (u.lvAdj || 0) + d;
+    for (const k in u.def) u.def[k] += d;
+    if (!u.minion) { const per = u.solo ? 32 : u.elite ? 16 : 8; u.maxHp = u.hp = Math.max(Math.ceil(u.maxHp / 2), u.maxHp + per * d); }
     return u;
   }
 
@@ -140,6 +153,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       barks: def.barks, title: def.title, desc: def.desc,
     };
     u.recharge = {};
+    if (sp.lvAdj && !u.object) scaleMonster(u, sp.lvAdj);
     return u;
   }
 
@@ -282,7 +296,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function attackBonus(B, u, p, tgt, ctx = {}) {
     let b = 0, parts = [];
-    if (u.monster) { b = p.atk.bonus || 0; parts.push(['base', b]); }
+    if (u.monster) { b = (p.atk.bonus || 0) + (u.lvAdj || 0); parts.push(['base', b]); }
     else if (isItem(p)) { b = (p.atk.bonus || 0) + u.level; parts.push(['item', b]); }
     else {
       const s = atkStat(u, p);
@@ -313,6 +327,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (s) spec.flat += mod(u.abil[s]);
     }
     if (!u.monster && u.enh && (p.weapon || p.implement || p.basic) && !p.improvised) spec.flat += u.enh;
+    if (u.monster && u.lvAdj) spec.flat += u.lvAdj;
     return spec;
   }
 
@@ -1292,7 +1307,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   G.Engine = {
     ABIL, mod, d, parseDice, rollDice, avgDice, makeRng, setRng: (r) => { rand = r; }, TERRAIN,
-    newBattle, addUnit, makeMonster, spawnMonster, tile, terr, unitAt, enemiesOf, alliesOf, hasCond, condsOf, condSum,
+    newBattle, addUnit, makeMonster, scaleMonster, spawnMonster, tile, terr, unitAt, enemiesOf, alliesOf, hasCond, condsOf, condSum,
     bloodied, isDying, helpless, canAct, canReact, passable, los, threatening, addCond, removeCond, log, fx,
     speedOf, defense, hasCA, caReason, flanking, traitSum, traitRun, powerRange, atkStat, attackBonus, damageSpec,
     validTarget, areaHexes, areaTargets, isArea, canSpend, spend, canUse, powerReady, reach, pathFrom, freeHexesWithin,

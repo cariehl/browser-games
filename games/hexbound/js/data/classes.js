@@ -425,22 +425,26 @@ var G = (typeof G !== 'undefined') ? G : {};
       return a;
     },
     // returns a concrete hero unit (without battle ids)
-    makeHero(build, level) {
+    // gear (campaign runs): { weapon, armor, neck, trinket, boons } item ids from js/data/gear.js. Without gear the
+    // hero gets the old flat +1 enhancement from level 3 (skirmish mode); with it, enhancement comes from the gear.
+    makeHero(build, level, gear) {
       const C = CLASSES[build.cls], S = C.subs[build.sub], anc = ANCESTRIES[build.ancestry];
       const abil = Build.finalAbil(build, level);
       const half = Math.floor(level / 2);
       const feats = (build.feats || []).slice(0, Build.featSlots(build, level)).filter(f => FEATS[f]);
-      const enh = level >= 3 ? 1 : 0;
+      const gearEnh = (slot) => (gear && G.Gear && G.Gear[gear[slot]] && G.Gear[gear[slot]].enh) || 0;
+      const auto = gear ? 0 : (level >= 3 ? 1 : 0);
+      const enh = auto + gearEnh('weapon'), aEnh = auto + gearEnh('armor'), nEnh = auto + gearEnh('neck');
       const armor = ARMOR[C.armor];
       const weapon = Object.assign({}, WEAPONS[S.weapon]);
       const m = (k) => mod(abil[k]);
       const shield = S.shield || 0;
       const nadAnc = build.ancestry === 'human' ? 1 : 0;
       const def = {
-        AC: 10 + half + armor.ac + (armor.light ? Math.max(m('DEX'), m('INT')) : 0) + shield + enh + (build.sub === 'evoker' ? 1 : 0),
-        Fort: 10 + half + Math.max(m('STR'), m('CON')) + (C.def.Fort || 0) + enh + nadAnc + (feats.includes('fortitude') ? 2 : 0),
-        Ref: 10 + half + Math.max(m('DEX'), m('INT')) + (C.def.Ref || 0) + shield + enh + nadAnc + (feats.includes('reflexes') ? 2 : 0),
-        Will: 10 + half + Math.max(m('WIS'), m('CHA')) + (C.def.Will || 0) + enh + nadAnc + (feats.includes('will') ? 2 : 0),
+        AC: 10 + half + armor.ac + (armor.light ? Math.max(m('DEX'), m('INT')) : 0) + shield + aEnh + (build.sub === 'evoker' ? 1 : 0),
+        Fort: 10 + half + Math.max(m('STR'), m('CON')) + (C.def.Fort || 0) + nEnh + nadAnc + (feats.includes('fortitude') ? 2 : 0),
+        Ref: 10 + half + Math.max(m('DEX'), m('INT')) + (C.def.Ref || 0) + shield + nEnh + nadAnc + (feats.includes('reflexes') ? 2 : 0),
+        Will: 10 + half + Math.max(m('WIS'), m('CHA')) + (C.def.Will || 0) + nEnh + nadAnc + (feats.includes('will') ? 2 : 0),
       };
       let maxHp = C.hp + abil.CON + (level - 1) * C.hpLvl + (feats.includes('toughness') ? (level >= 5 ? 10 : 5) : 0);
       const surges = C.surges + Math.max(0, m('CON')) + (feats.includes('durable') ? 2 : 0);
@@ -461,7 +465,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       const u = {
         name: build.name || (anc.name + ' ' + C.name), side: 'hero', cls: build.cls, sub: build.sub, ancestry: build.ancestry,
         role: C.role, level, abil, feats, maxHp, hp: maxHp, surges, surgeValue: Math.floor(maxHp / 4),
-        def, speed, weapon, enh, critDice: [enh ? '1d6' : '', weapon.highCrit || ''].filter(Boolean).join('+') || null,
+        def, speed, weapon, enh, critDice: [enh ? enh + 'd6' : '', weapon.highCrit || ''].filter(Boolean).join('+') || null,
         traits: [].concat(C.traits, S.traits, anc.traits, feats.filter(f => T[f])),
         color: C.color, portrait: build.portrait, saveBonus: feats.includes('secondChance') ? 2 : 0,
         initBonus: (feats.includes('initiative') ? 4 : 0) + (build.ancestry === 'orc' ? 1 : 0),
@@ -470,6 +474,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         resist: {}, vuln: {}, conds: [], used: {}, uses: {}, tempHp: 0, turnFlags: {}, reach: 1, look: { cls: build.cls, sub: build.sub, color: C.color, ancestry: build.ancestry },
       };
       if (build.cls === 'cleric' && build.sub === 'lightbringer') u.healBonus += Math.max(0, m('WIS'));
+      if (gear && G.applyGear) G.applyGear(u, gear);
       // lore: cleric heals +WIS already in power bonus
       // basic attacks are named for the weapon they're made with
       const basics = [Object.assign({}, P.basic_melee, { name: weapon.name }), Object.assign({}, P.basic_stone)];

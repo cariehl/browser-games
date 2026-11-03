@@ -32,7 +32,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         <div class="logo"><span class="hexmark">⬢</span> HEXBOUND <small>Tactics · Combat Prototype</small></div>
         <p class="tag">A party of four. A hex grid. A truly unreasonable amount of pastry.</p>
         <div class="menu-btns">
-          ${run ? `<button class="btn big on" data-go="continue">▶ Continue Campaign<small>${esc(run.partyName)} · Level ${run.level} · ${run.path.length} of ${G.Campaign.mapOf(run).nodes.length} fights won</small></button>` : ''}
+          ${run ? `<button class="btn big on" data-go="continue">▶ Continue Campaign<small>${esc(run.partyName)} · ${esc(G.Campaign.ACTS[run.act].sub)}: ${esc(G.Campaign.ACTS[run.act].name)} · Level ${run.level} · ${run.gold} gold</small></button>` : ''}
           <button class="btn big" data-go="campaign">🗺 Start a Campaign</button>
           <button class="btn big" data-go="select">⚔ Play a Scenario</button>
           <button class="btn big" data-go="builder">✎ Party Builder</button>
@@ -142,10 +142,10 @@ var G = (typeof G !== 'undefined') ? G : {};
     return Object.assign({}, scen, { events: (scen.events || []).map(e => Object.assign({}, e, { done: false })) });
   }
 
-  // opts (campaign fights): { campaign: { onEnd(B) }, difficulty, items, carry }
+  // opts (campaign fights): { campaign: { onEnd(B) }, difficulty, items, carry, gear, level, lvAdj }
   function startBattle(scen, party, opts = {}) {
     scenRef = scen; partyRef = party; campRef = opts.campaign || null;
-    B = E().newBattle(prepScenario(scen), party.heroes, { items: opts.items, carry: opts.carry });
+    B = E().newBattle(prepScenario(scen), party.heroes, { items: opts.items, carry: opts.carry, gear: opts.gear, level: opts.level, lvAdj: opts.lvAdj });
     const diff = opts.difficulty || G.Settings.difficulty;
     const d = DIFF[diff] || DIFF.normal;
     for (const u of B.units) if (u.side === 'enemy') {
@@ -961,7 +961,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (B.over === 'quit') return;
     G.Audio.play(win ? 'win' : 'lose');
     const camp = campRef ? campRef.onEnd(B) : null;
-    if (win) { try { const best = JSON.parse(localStorage.getItem('hexbound.best') || '{}'); const order = ['story', 'normal', 'hard']; const cur = best[scenRef.id]; const d = DIFF[B.difficulty].label; if (!cur || order.indexOf(B.difficulty) > order.indexOf(Object.keys(DIFF).find(k => DIFF[k].label === cur))) best[scenRef.id] = d; localStorage.setItem('hexbound.best', JSON.stringify(best)); } catch (e) { } }
+    if (win && !scenRef.gen) { try { const best = JSON.parse(localStorage.getItem('hexbound.best') || '{}'); const order = ['story', 'normal', 'hard']; const cur = best[scenRef.id]; const d = DIFF[B.difficulty].label; if (!cur || order.indexOf(B.difficulty) > order.indexOf(Object.keys(DIFF).find(k => DIFF[k].label === cur))) best[scenRef.id] = d; localStorage.setItem('hexbound.best', JSON.stringify(best)); } catch (e) { } }
     const heroes = B.units.filter(u => u.side === 'hero');
     const st = (u) => B.stats[u.uid];
     const score = (u) => st(u).dmg + st(u).healed * 1.2 + st(u).kills * 6 + st(u).crits * 3;

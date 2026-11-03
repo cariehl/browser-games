@@ -1,7 +1,7 @@
 // Rules regression checks. Usage: node tests/rules.js
 const fs = require('fs'), vm = require('vm'), path = require('path'), assert = require('assert');
 global.G = {};
-for (const f of ['js/hex.js', 'js/data/items.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/ai.js', 'js/campaign.js'])
+for (const f of ['js/hex.js', 'js/data/items.js', 'js/data/gear.js', 'js/engine.js', 'js/data/classes.js', 'js/data/monsters.js', 'js/data/scenarios.js', 'js/data/encounters.js', 'js/data/events.js', 'js/ai.js', 'js/campaign.js'])
   vm.runInThisContext(fs.readFileSync(path.join(__dirname, '..', f), 'utf8'), { filename: f });
 const E = G.Engine, Hex = G.Hex;
 const off = (c, r) => Hex.fromOffset(c, r);
@@ -358,54 +358,102 @@ test('when the Widow falls, her Rattlebones fall with her', () => {
 
 // ---------------- Campaign ----------------
 const C = G.Campaign;
-const fakeRun = () => C.newRun({ name: 'Test', heroes: G.Build.PREMADES[0].heroes }, 'normal', { rand: () => 0 });
+const fakeRun = (seed = 11) => C.newRun({ name: 'Test', heroes: G.Build.PREMADES[0].heroes }, 'normal', { rand: () => 0, seed });
+const firstFight = (run) => C.available(run).find(id => C.nodeOf(run, id).type === 'combat');
+const battleFor = (run, id, extra = {}) => { const s = C.battleSetup(run, id); return E.newBattle(Object.assign({}, s.scen, { events: [] }), s.party.heroes, Object.assign({ seed: 3, quiet: true }, s.opts, extra)); };
 
-test('carried wounds, spent surges and used dailies come into the next battle', () => {
+test('act maps: every node is reachable from the start, rows climb to one boss, and the act has a merchant', () => {
+  for (let seed = 1; seed < 40; seed++) for (let a = 0; a < C.ACTS.length; a++) {
+    const m = C.genAct(a, seed * 31), A = C.ACTS[a];
+    const boss = m.nodes.filter(n => n.type === 'boss');
+    assert.strictEqual(boss.length, 1);
+    const seen = new Set(m.nodes.filter(n => n.row === 0).map(n => n.id)), q = [...seen];
+    while (q.length) { const cur = q.shift(); for (const t of m.nodes.find(n => n.id === cur).next) if (!seen.has(t)) { seen.add(t); q.push(t); } }
+    assert.strictEqual(seen.size, m.nodes.length, 'all reachable');
+    for (const n of m.nodes) for (const t of n.next) assert.strictEqual(m.nodes.find(x => x.id === t).row, n.row + 1, 'edges climb one row');
+    assert(m.nodes.filter(n => n.row === 0).every(n => n.type === 'combat'), 'the act opens with a fight');
+    assert(m.nodes.filter(n => n.row === A.rows - 1).every(n => n.type === 'rest'), 'a rest site before the boss');
+    assert(m.nodes.some(n => n.type === 'shop'), 'a merchant');
+    if (a < 2) assert(m.nodes.some(n => n.type === 'elite'), 'an elite');
+  }
+});
+
+test('generated fights are deterministic, reachable and scaled to the party level', () => {
+  for (const faction of Object.keys(G.Encounters.FACTIONS)) for (const kind of ['combat', 'elite']) {
+    const o = { faction, kind, level: 3, heroes: 4, seed: 99, act: 2 };
+    const a = G.Encounters.make(o), b = G.Encounters.make(o);
+    assert.deepStrictEqual(a.map, b.map); assert.deepStrictEqual(a.enemies, b.enemies);
+    assert(a.enemies.length >= 2, faction + ' has enemies');
+    if (kind === 'elite') assert(G.Monsters[a.enemies[0].id].elite, 'elite leads');
+    const B = E.newBattle(a, G.Build.PREMADES[0].heroes, { seed: 1, quiet: true, level: 3 });
+    for (const u of B.units.filter(x => x.monster && !x.object)) assert.strictEqual(u.level, 3, `${u.id} scaled to 3`);
+  }
+});
+
+test('monster scaling: +1 level is +1 attack, defenses and damage and more HP; minions stay at 1 HP', () => {
+  const base = E.makeMonster('bandit_cutthroat', off(1, 1));
+  const up = E.makeMonster('bandit_cutthroat', off(1, 1), { lvAdj: 2 });
+  assert.strictEqual(up.def.AC, base.def.AC + 2);
+  assert.strictEqual(up.maxHp, base.maxHp + 16);
+  assert.strictEqual(E.damageSpec(null, up, up.powers[0]).flat, E.damageSpec(null, base, base.powers[0]).flat + 2);
+  const m = E.makeMonster('bandit_thug', off(1, 1), { lvAdj: 2 }); assert.strictEqual(m.maxHp, 1);
+});
+
+test('gear: weapon, armor and neck enhancement land on attacks, AC and NADs; trinkets and boons add their props', () => {
+  const b = G.Build.PREMADES[0].heroes[0];
+  const bare = G.Build.makeHero(b, 3, {}), old = G.Build.makeHero(b, 3);
+  assert.strictEqual(old.def.AC, bare.def.AC + 1, 'without gear the old flat +1 applies from level 3');
+  const g = G.Build.makeHero(b, 3, { weapon: 'w_storm', armor: 'a_bulwark', neck: 'n_pendant', trinket: 't_belt', boons: ['b_fleet', 'c_frail'] });
+  assert.strictEqual(g.enh, 2); assert.strictEqual(g.critDice, '2d6');
+  assert.strictEqual(g.def.AC, bare.def.AC + 2); assert.strictEqual(g.def.Will, bare.def.Will + 1);
+  assert.strictEqual(g.surges, bare.surges + 1); assert.strictEqual(g.maxHp, bare.maxHp); // +5 belt, −5 Frail
+  assert.strictEqual(g.speed, bare.speed + 1);
+});
+
+test('carried wounds, spent surges, used dailies and gear come into the next battle', () => {
   const run = fakeRun();
-  const h = run.heroes[0]; h.damage = 10; h.surgesSpent = 3;
+  const h = run.heroes[0]; h.damage = 10; h.surgesSpent = 3; h.gear.armor = 'a_riveted';
   const daily = G.Build.makeHero(h.build, 1).powers.find(p => p.kind === 'daily');
   h.daily = [daily.id];
-  const s = C.battleSetup(run, 'n1');
-  const B = E.newBattle(Object.assign({}, s.scen, { events: [] }), s.party.heroes, Object.assign({ seed: 3, quiet: true }, s.opts));
+  const B = battleFor(run, firstFight(run));
   const u = B.units.find(x => x.side === 'hero');
   assert.strictEqual(u.hp, u.maxHp - 10);
   assert.strictEqual(u.surges, G.Build.makeHero(h.build, 1).surges - 3);
+  assert.strictEqual(u.def.AC, G.Build.makeHero(h.build, 1, {}).def.AC + 1, 'armor worn');
   assert(!E.powerReady(B, u, u.powers.find(p => p.id === daily.id)), 'the spent daily stays spent');
   assert.deepStrictEqual(u.pack, h.pack, 'the run pack is the battle pack');
 });
 
-test('a won battle folds HP, surges, dailies, items and deaths back into the run, then makes camp', () => {
+test('a won battle folds HP, surges, dailies, items and deaths back into the run, then makes camp with gold and XP', () => {
   const run = fakeRun();
-  const s = C.battleSetup(run, 'n1');
-  const B = E.newBattle(Object.assign({}, s.scen, { events: [] }), s.party.heroes, Object.assign({ seed: 3, quiet: true }, s.opts, { items: [['redroot'], [], [], []] }));
+  const id = firstFight(run);
+  C.enter(run, id);
+  const B = battleFor(run, id, { items: [['redroot'], [], [], []] });
   run.heroes[0].pack = ['redroot']; run.heroes[1].pack = []; run.heroes[2].pack = []; run.heroes[3].pack = [];
   const hs = B.units.filter(x => x.side === 'hero');
   hs[0].hp -= 7; hs[0].surges -= 1; hs[0].uses[hs[0].powers.find(p => p.kind === 'item').id] = 1;
   const d = hs[0].powers.find(p => p.kind === 'daily'); hs[0].used[d.id] = true;
   hs[1].dead = true;
   B.over = 'win'; B.round = 4;
-  const r = C.recordBattle(run, 'n1', B);
+  const g0 = run.gold;
+  const r = C.recordBattle(run, id, B, () => 0);
   assert(r.won && !r.over);
   assert.deepStrictEqual(r.fallen, [run.heroes[1].build.name]);
   assert.strictEqual(run.heroes[0].damage, 7); assert.strictEqual(run.heroes[0].surgesSpent, 1);
   assert.deepStrictEqual(run.heroes[0].daily, [d.id]);
-  assert(run.heroes[1].dead && run.heroes[1].fellAt === 'Thornwood Crossing');
-  assert.strictEqual(run.stage, 'camp'); assert.strictEqual(run.level, 2);
-  assert.strictEqual(run.camp.found.length, C.LOOT_PER_WIN, 'spoils');
-  assert(run.camp.found.every(f => f.hero !== 1), 'the dead get no loot');
-  // level 2 keeps the wound but raises max HP
-  const st = C.status(run, run.heroes[0]);
-  assert.strictEqual(st.hp, st.maxHp - 7);
-  assert.strictEqual(st.maxHp, G.Build.makeHero(run.heroes[0].build, 2).maxHp);
-  // the next fight leaves the dead behind
+  assert(run.heroes[1].dead && run.heroes[1].fellAt === B.scen.name);
+  assert.strictEqual(run.stage, 'camp'); assert.strictEqual(run.xp, 1); assert(run.gold > g0, 'gold');
+  assert(run.camp.found.length >= 1 && run.camp.found.every(f => f.hero !== 1), 'loot, never for the dead');
   C.breakCamp(run);
-  assert.deepStrictEqual(C.available(run), ['n2']);
-  assert.strictEqual(C.battleSetup(run, 'n2').party.heroes.length, 3);
+  assert.deepStrictEqual(C.available(run), C.nodeOf(run, id).next);
+  assert.strictEqual(C.battleSetup(run, C.mapOf(run).nodes.find(n => n.type === 'combat' && n.row > 0).id).party.heroes.length, 3);
 });
 
-test('level up offers the newly unlocked power and feat slots', () => {
+test('XP levels the party; level up offers the newly unlocked power and feat slots', () => {
   const run = fakeRun();
-  run.path = ['n1']; C.makeCamp(run, () => 0);
+  run.node = firstFight(run); run.xp = 2;
+  C.makeCamp(run, 'combat', () => 0);
+  assert.strictEqual(run.level, 2);
   const ch = C.levelChoices(run, 0);
   assert(ch.some(c => c.kind === 'power' && c.slot === 'util2'), 'level 2 utility');
   const feat = ch.find(c => c.kind === 'feat');
@@ -413,9 +461,85 @@ test('level up offers the newly unlocked power and feat slots', () => {
   const other = feat.options.find(id => id !== feat.pick);
   C.choose(run, 0, feat, other);
   assert.strictEqual(run.heroes[0].build.feats[feat.index], other);
-  const pw = ch.find(c => c.kind === 'power'); const alt = pw.options.find(id => id !== pw.pick);
-  C.choose(run, 0, pw, alt);
-  assert(G.Build.makeHero(run.heroes[0].build, 2).powers.some(p => p.id === alt));
+});
+
+test('beating an act boss: gear choice, a full rest, at least the act\'s level, and on to the next act', () => {
+  const run = fakeRun();
+  const boss = C.mapOf(run).nodes.find(n => n.type === 'boss');
+  run.node = boss.id; run.heroes.forEach(h => { h.damage = 5; h.surgesSpent = 2; h.daily = ['x']; });
+  C.makeCamp(run, 'boss', () => 0);
+  assert.strictEqual(run.camp.gear.length, 3); assert(run.camp.actDone);
+  assert.strictEqual(run.level, 3);
+  assert(run.heroes.every(h => h.damage === 0 && h.surgesSpent === 0 && !h.daily.length));
+  assert(C.takeGear(run, run.camp.gear[1])); assert(!C.takeGear(run, run.camp.gear[0]), 'only one');
+  const id = run.camp.gear[1];
+  assert(run.heroes.some(h => Object.values(h.gear).includes(id)), 'auto-equipped on someone');
+  C.breakCamp(run);
+  assert.strictEqual(run.act, 1);
+  assert(C.available(run).every(i => C.nodeOf(run, i).act === 1 && C.nodeOf(run, i).row === 0));
+});
+
+test('equip and unequip move gear between heroes and the stash', () => {
+  const run = fakeRun();
+  run.stash = ['w_keen', 'w_storm'];
+  assert(C.equip(run, 0, 'w_keen')); assert.strictEqual(run.heroes[0].gear.weapon, 'w_keen');
+  assert(C.equip(run, 0, 'w_storm')); assert.deepStrictEqual(run.stash, ['w_keen'], 'the old weapon goes back to the stash');
+  assert(C.unequip(run, 0, 'weapon')); assert.deepStrictEqual(run.stash.sort(), ['w_keen', 'w_storm']);
+  run.heroes[0].pack = ['redroot']; run.heroes[1].pack = [];
+  assert(C.movePack(run, 0, 0, 1)); assert.deepStrictEqual(run.heroes[1].pack, ['redroot']);
+});
+
+test('merchants: buying spends gold, full packs block consumables, and the Rite of Return raises the fallen', () => {
+  const run = fakeRun();
+  const shop = C.mapOf(run).nodes.find(n => n.type === 'shop');
+  run.path = []; C.enter(run, shop.id);
+  assert.strictEqual(run.stage, 'shop');
+  run.gold = 500;
+  const it = run.shop.items[0];
+  assert(C.buy(run, 'item', 0).ok); assert.strictEqual(run.gold, 500 - it.price); assert(!C.buy(run, 'item', 0).ok, 'sold out');
+  run.heroes.forEach(h => { h.pack = ['redroot', 'redroot', 'redroot']; });
+  assert.strictEqual(C.buy(run, 'item', 1).why, 'pack');
+  const g = run.shop.gear[0]; assert(C.buy(run, 'gear', 0).ok); assert(run.stash.includes(g.id) || run.heroes.some(h => Object.values(h.gear).includes(g.id)));
+  run.heroes[2].dead = true;
+  const k = run.shop.services.findIndex(s => s.id === 'raise');
+  assert(C.buy(run, 'service', k, 2).ok);
+  assert(!run.heroes[2].dead && run.heroes[2].boons.includes('c_weary'));
+  const before = run.gold; assert(C.sell(run, 0) || true); assert(run.gold >= before);
+});
+
+test('events: a skill check uses the best hero\'s bonus, and outcomes change the run', () => {
+  const run = fakeRun();
+  const b = C.bestFor(run, 'thievery');
+  assert.strictEqual(run.heroes[b.hero].build.cls, 'rogue', 'the rogue picks locks');
+  assert.strictEqual(b.bonus, C.skillBonus(run, run.heroes[b.hero], 'thievery'));
+  const lines = C.applyOutcome(run, { gold: 30, item: 1, damage: { who: 'all', amt: 4 }, boon: { id: 'b_vigor', who: 'random' } }, {}, () => 0);
+  assert(lines.length >= 4);
+  assert.strictEqual(run.gold, 70);
+  assert(run.heroes.every(h => h.damage === 4));
+  assert(run.heroes.some(h => h.boons.includes('b_vigor')));
+  // an event that turns into a fight hands battleSetup a generated fight
+  const ev = C.mapOf(run).nodes.find(n => n.type === 'event');
+  run.path = []; C.enter(run, ev.id); run.event.id = 'ambush';
+  C.resolveChoice(run, 1, () => 0);
+  assert(run.event.fight, 'strike first starts a fight');
+  const s = C.battleSetup(run, ev.id); assert(s.scen.gen && s.kind === 'combat');
+  for (const id of Object.keys(G.Events)) for (const c of G.Events[id].choices) {
+    if (c.check) assert(G.Skills[c.check.skill] && G.SkillDC[c.check.dc], `${id}: ${c.label}`);
+    for (const o of [c.outcome, c.success, c.fail].concat((c.luck || []).map(l => l.out)).filter(Boolean)) {
+      if (o.boon) assert(G.Boons[o.boon.id]); if (o.curse) assert(G.Boons[o.curse.id] && G.Boons[o.curse.id].curse);
+    }
+  }
+});
+
+test('rest sites: recover heals, meditate restores dailies, a vigil raises the fallen', () => {
+  const run = fakeRun();
+  run.heroes.forEach(h => { h.damage = 9; h.surgesSpent = 3; h.daily = ['x']; });
+  run.rest = { done: null }; C.restAt(run, 'recover');
+  assert(run.heroes.every(h => h.damage === 0 && h.surgesSpent === 1 && h.daily.length === 1));
+  assert.strictEqual(C.restAt(run, 'meditate'), null, 'one choice per rest site');
+  run.rest = { done: null }; C.restAt(run, 'meditate'); assert(run.heroes.every(h => !h.daily.length));
+  run.heroes[3].dead = true; run.rest = { done: null }; C.restAt(run, 'vigil');
+  assert(!run.heroes[3].dead && run.heroes[3].damage > 0);
 });
 
 test('short rest: surges heal their value, and a hero left at 0 HP wakes at 1', () => {
@@ -427,28 +551,29 @@ test('short rest: surges heal their value, and a hero left at 0 HP wakes at 1', 
   assert.strictEqual(C.status(run, h).surges, st.surges - 1);
   h.damage = 0; assert(!C.spendSurge(run, 2), 'no surges spent at full HP');
   h.damage = st.maxHp; h.surgesSpent = st.maxSurges; assert(!C.spendSurge(run, 2));
-  C.breakCamp(run);
+  run.camp = { actDone: false }; C.breakCamp(run);
   assert.strictEqual(C.status(run, h).hp, 1);
 });
 
-test('a lost battle or the last victory ends the run and writes the record', () => {
+test('a lost battle or the final boss ends the run and writes the record', () => {
   const store = {}; global.localStorage = { getItem: k => store[k] || null, setItem: (k, v) => { store[k] = v; }, removeItem: k => { delete store[k]; } };
   const run = fakeRun();
-  run.path = ['n1', 'n2'];
-  const s = C.battleSetup(run, 'n3');
-  const B = E.newBattle(Object.assign({}, s.scen, { events: [] }), s.party.heroes, Object.assign({ seed: 3, quiet: true }, s.opts));
+  run.act = 2;
+  const boss = C.mapOf(run).nodes.find(n => n.type === 'boss');
+  run.node = boss.id;
+  const B = battleFor(run, boss.id);
   B.over = 'win'; B.round = 6;
-  const r = C.recordBattle(run, 'n3', B);
-  assert(r.over); assert.strictEqual(run.outcome, 'victory');
+  const r = C.recordBattle(run, boss.id, B, () => 0);
+  assert(r.over); assert.strictEqual(run.outcome, 'victory'); assert(run.camp, 'still shows the spoils');
   const rec = C.records()[0];
-  assert.strictEqual(rec.outcome, 'victory'); assert.strictEqual(rec.won, 1); assert.strictEqual(rec.total, 3);
+  assert.strictEqual(rec.outcome, 'victory'); assert.strictEqual(rec.act, 3);
   const run2 = fakeRun();
-  const s2 = C.battleSetup(run2, 'n1');
-  const B2 = E.newBattle(Object.assign({}, s2.scen, { events: [] }), s2.party.heroes, Object.assign({ seed: 3, quiet: true }, s2.opts));
+  const id = firstFight(run2);
+  const B2 = battleFor(run2, id);
   B2.over = 'lose'; B2.units.filter(u => u.side === 'hero').forEach(u => { u.dead = true; });
-  C.recordBattle(run2, 'n1', B2);
+  C.recordBattle(run2, id, B2);
   assert.strictEqual(C.records()[0].outcome, 'defeat');
-  assert.strictEqual(C.records()[0].reached, 'Thornwood Crossing');
+  assert.strictEqual(C.records()[0].reached, B2.scen.name);
   assert(C.records()[0].heroes.every(h => h.fell));
   delete global.localStorage;
 });

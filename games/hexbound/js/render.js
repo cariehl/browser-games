@@ -490,6 +490,42 @@ var G = (typeof G !== 'undefined') ? G : {};
         add(Sph(0.04, 5), 0xff3300, 0.1, 0.82, 0.8, { emissive: 0xff0000 }); add(Sph(0.04, 5), 0xff3300, -0.1, 0.82, 0.8, { emissive: 0xff0000 });
         height = 1.2; break;
       }
+      case 'spider': {
+        const c = L.color, s = L.scale || 1;
+        add(Sph(0.32, 10), c, 0, 0.42, -0.25).scale.set(1, 0.8, 1.2);
+        add(Sph(0.2, 8), c, 0, 0.4, 0.18);
+        for (const sx of [1, -1]) for (let i = 0; i < 4; i++) {
+          const z = 0.28 - i * 0.16;
+          const up = add(Cyl(0.03, 0.03, 0.42, 4), c, sx * 0.3, 0.5, z); up.rotation.z = sx * 1.0; up.rotation.x = (i - 1.5) * 0.25;
+          const dn = add(Cyl(0.025, 0.02, 0.45, 4), c, sx * 0.52, 0.22, z); dn.rotation.z = -sx * 0.35;
+        }
+        for (const sx of [1, -1]) add(Sph(0.04, 5), 0xff2a2a, sx * 0.07, 0.48, 0.34, { emissive: 0xff0000 });
+        add(Sph(0.035, 5), 0xff2a2a, 0, 0.53, 0.34, { emissive: 0xff0000 });
+        if (s > 0.7) for (let i = 0; i < 5; i++) add(new THREE.ConeGeometry(0.04, 0.18, 4), 0x7a9a3a, (i - 2) * 0.1, 0.72, -0.25 - Math.abs(i - 2) * 0.05);
+        g.scale.setScalar(s); height = 0.9 * s + 0.3; break;
+      }
+      case 'boar': {
+        const c = L.color;
+        add(new THREE.BoxGeometry(0.55, 0.5, 1.0), c, 0, 0.55, 0);
+        add(new THREE.BoxGeometry(0.42, 0.4, 0.4), c, 0, 0.6, 0.62);
+        add(new THREE.BoxGeometry(0.24, 0.18, 0.12), 0xc08070, 0, 0.55, 0.86);
+        for (const sx of [1, -1]) { const t = add(new THREE.ConeGeometry(0.035, 0.22, 5), 0xfff4e0, sx * 0.16, 0.5, 0.86); t.rotation.x = -0.9; }
+        for (let i = 0; i < 5; i++) add(new THREE.ConeGeometry(0.05, 0.16, 4), 0x2a1a10, 0, 0.86, 0.35 - i * 0.18);
+        for (const [x, z] of [[0.18, 0.35], [-0.18, 0.35], [0.18, -0.35], [-0.18, -0.35]]) add(Cyl(0.07, 0.06, 0.34, 5), c, x, 0.17, z);
+        for (const sx of [1, -1]) add(Sph(0.035, 5), 0xff5a00, sx * 0.12, 0.72, 0.83, { emissive: 0xff2a00 });
+        height = 1.2; break;
+      }
+      case 'brute': {
+        const c = L.color, s = L.scale || 1.3;
+        add(Cyl(0.36, 0.42, 0.7), 0x5a4030, 0, 0.42, 0);
+        add(Sph(0.48, 10), c, 0, 1.0, 0).scale.set(1, 0.85, 0.85);
+        add(Sph(0.2, 8), c, 0, 1.42, 0.12);
+        for (const sx of [1, -1]) { const arm = add(Cyl(0.12, 0.1, 0.75, 6), c, sx * 0.52, 0.85, 0.05); arm.rotation.z = sx * 0.2; }
+        for (const sx of [1, -1]) add(Sph(0.035, 5), 0xffd23a, sx * 0.07, 1.45, 0.3, { emissive: 0xaa8800 });
+        for (let i = 0; i < 4; i++) add(Sph(0.12, 6), 0x3a6a2a, (i - 1.5) * 0.18, 1.28, -0.22);
+        const club = add(Cyl(0.06, 0.13, 1.1, 6), 0x6b4a2b, 0.62, 0.9, 0.3); club.rotation.x = 0.5;
+        g.scale.setScalar(s); height = 1.6 * s; break;
+      }
       case 'human': {
         const c = L.color; const s = L.scale || 1;
         add(Cyl(0.27, 0.34, 0.75), c, 0, 0.45, 0); add(Cyl(0.22, 0.27, 0.25), c, 0, 0.92, 0);
