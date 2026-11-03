@@ -68,17 +68,19 @@ var G = (typeof G !== 'undefined') ? G : {};
   function menu() {
     show('menu');
     const run = G.Campaign.loadRun();
-    $('#menu').innerHTML = `${siteCorner()}
+    const mb = (go, ico, label, sub, cls = '') => `<button class="btn big mbtn ${cls}" data-go="${go}"><span class="mb-ico">${ico}</span><span class="mb-txt">${label}<small>${sub}</small></span></button>`;
+    const act = run && G.Campaign.ACTS[run.act];
+    $('#menu').innerHTML = `<div class="menu-bg"></div><div class="menu-shade"></div>${siteCorner()}
       <div class="menu-inner">
-        <div class="logo"><span class="hexmark">⬢</span> HEXBOUND <small>Tactics · Combat Prototype</small></div>
+        <div class="logo"><span class="hexmark">⬢</span>HEXBOUND<small>Tactics</small></div>
         <p class="tag">A party of four. A hex grid. A truly unreasonable amount of pastry.</p>
         <div class="menu-btns">
-          ${run ? `<button class="btn big on" data-go="continue">▶ Continue Campaign<small>${esc(run.partyName)} · ${esc(G.Campaign.ACTS[run.act].sub)}: ${esc(G.Campaign.ACTS[run.act].name)} · Level ${run.level} · ${run.gold} gold</small></button>` : ''}
-          <button class="btn big" data-go="campaign">🗺 Start a Campaign</button>
-          <button class="btn big" data-go="select">⚔ Play a Scenario</button>
-          <button class="btn big" data-go="builder">✎ Party Builder</button>
-          <button class="btn big" data-go="record">📜 Record of Heroes</button>
-          <button class="btn big ghost" data-go="help">? How to Play</button>
+          ${run ? mb('continue', '▶', 'Continue Campaign', `${esc(run.partyName)} · ${esc(act.sub)}: ${esc(act.name)} · Level ${run.level} · ${run.gold} gold`, 'on cont') : ''}
+          ${mb('campaign', '🗺', run ? 'New Campaign' : 'Start a Campaign', 'Three acts of branching roads, events, merchants and bosses')}
+          ${mb('select', '⚔', 'Play a Scenario', 'Four hand-built battles, from goblins to the Pastry Golem')}
+          ${mb('builder', '✎', 'Party Builder', 'Classes, ancestries, feats and powers for your four heroes')}
+          ${mb('record', '📜', 'Record of Heroes', 'Every finished run, its heroes and its fallen')}
+          ${mb('help', '?', 'How to Play', 'Actions, powers, defenses and staying alive', 'ghost')}
         </div>
         <div class="menu-opts">
           <label>Animation speed <select id="opt-speed">${SPEEDS.map(s => `<option value="${s}" ${+G.Settings.speed === s ? 'selected' : ''}>${s}×</option>`).join('')}</select></label>
@@ -86,6 +88,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         </div>
         <p class="fine">Mechanics inspired by classic tabletop tactics (at-will / encounter / daily powers, four defenses, healing surges, marks). All names, classes and monsters are original to this prototype.</p>
       </div>`;
+    if (G.MenuBG) G.MenuBG.mount($('#menu .menu-bg'));
     $('#menu').querySelectorAll('[data-go]').forEach(b => b.onclick = () => { G.Audio.unlock(); G.Audio.play('click'); go(b.dataset.go); });
     $('#opt-speed').onchange = (e) => { G.Settings.speed = +e.target.value; saveSettings(); };
     $('#opt-sound').onchange = () => G.Audio.toggle();
@@ -164,7 +167,9 @@ var G = (typeof G !== 'undefined') ? G : {};
       <h4>Enemies</h4>
       <p><b>Minions</b> die to any hit but ignore damage on a miss. <b>Marked</b> creatures take −2 attacking anyone but whoever marked them, and Fighters punish them. Watch for hazards — fire, frosting, exploding barrels — and push enemies into them!</p>
       <h4>Controls</h4>
-      <p>Left-click: select / act · Right-click or Esc: cancel · Drag: pan · Right-drag or Q/E: rotate · Wheel: zoom · Home or ⌂: reset camera · WASD: pan · 1–9: powers · X: shift · C: charge · Z: undo move step · Space: end turn</p>
+      <p>Left-click: select / act · Right-click or Esc: cancel · Drag: pan · Right-drag or Q/E: rotate · Wheel: zoom · Home or ⌂: reset camera · WASD: pan · 1–9: powers · X: shift · C: charge · Z: undo move step · T: enemy threat zones · Space: end turn</p>
+      <h4>Reading the board</h4>
+      <p>Pick an attack and point at a target for a <b>forecast</b>: your chance to hit, the damage range, and how the hit would leave the target, shown on its health bar too (☠ means the hit is sure to drop it). Point at an enemy (or its portrait in the turn order) to shade everywhere it could reach next turn, or press <b>T</b> to shade the melee reach of every enemy at once. Reachable hexes that an enemy threatens turn purple.</p>
       </div></div>
       <div class="modal-btns"><button class="btn" data-close>Got it</button></div>`);
     return m;
@@ -328,7 +333,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   // ---- modes & highlights ----
   // drop every planning overlay (reach, range, targets) so none of it lingers into other units' turns;
   // hovering re-applies baseHL, so that has to go too
-  function clearHL() { ui.baseHL = null; ui.chargeLegs = null; reachCache = null; R().setTargetable(null); R().setHighlights({}); }
+  function clearHL() { ui.baseHL = null; ui.chargeLegs = null; reachCache = null; R().setTargetable(null); R().setHighlights({}); R().previewDamage({}); }
   let reachCache = null;
   // hexes left in the current move/shift: what's left of an open plan, or a fresh action's worth
   function moveBudget(u, kind) {
@@ -414,10 +419,55 @@ var G = (typeof G !== 'undefined') ? G : {};
     return Hex.within(u.pos, range).filter(h => !Hex.eq(h, u.pos) && B.tiles.has(Hex.hk(h)) && (!needLos || E().los(B, u.pos, h)));
   }
 
+  // ---- enemy threat zones: everywhere an enemy could move to and strike next turn ----
+  let threatOn = false, threatCache = new Map(), threatHotUnit = null;
+  // meleeOnly: just what it can hit up close (ranged enemies would shade the whole map)
+  function attackReach(e, meleeOnly) {
+    let best = e.reach || 1;
+    for (const p of e.powers || []) {
+      if (!p.atk || (meleeOnly && (p.tgt === 'ranged' || p.tgt === 'areaBurst'))) continue;
+      const v = p.tgt === 'areaBurst' ? (p.range || 0) + (p.size || 0) : (p.tgt === 'closeBurst' || p.tgt === 'closeBlast') ? (p.size || 1) : (E().powerRange(e, p).range || 1);
+      best = Math.max(best, v);
+    }
+    return best;
+  }
+  function threatOf(e, meleeOnly) {
+    const key = e.uid + (meleeOnly ? 'm' : '') + '|' + B.units.map(x => x.dead ? 'x' : Hex.hk(x.pos)).join(',') + '|' + E().speedOf(e);
+    if (threatCache.has(key)) return threatCache.get(key);
+    const ends = [e.pos];
+    if (E().speedOf(e) > 0) for (const n of E().reach(B, e, E().speedOf(e), 'move').values()) if (!n.noEnd) ends.push(n.h);
+    const rng = attackReach(e, meleeOnly), out = new Map();
+    for (const h of ends) for (const f of E().footprint(e, h)) for (const x of Hex.within(f, rng)) { const k = Hex.hk(x); if (!out.has(k) && B.tiles.has(k)) out.set(k, x); }
+    if (threatCache.size > 60) threatCache.clear();
+    threatCache.set(key, out);
+    return out;
+  }
+  function threatZone(hot) {
+    const list = hot ? [hot] : threatOn ? B.units.filter(e => e.side === 'enemy' && !e.dead && !e.object && e.pos) : [];
+    if (!list.length) return null;
+    const out = new Map(); for (const e of list) for (const [k, h] of threatOf(e, !hot)) out.set(k, h);
+    return out;
+  }
+  // red wash over threatened hexes; reachable hexes that are threatened turn purple
+  function withThreat(hl, hot) {
+    const zone = threatZone(hot); if (!zone) return hl;
+    const out = Object.assign({}, hl);
+    const taken = new Set(Object.entries(hl).filter(([k]) => k !== 'reach' && k !== 'zone').flatMap(([, l]) => (l || []).map(Hex.hk)));
+    if (hl.reach) { out.reach = hl.reach.filter(h => !zone.has(Hex.hk(h))); out.reach_danger = hl.reach.filter(h => zone.has(Hex.hk(h))); hl.reach.forEach(h => taken.add(Hex.hk(h))); }
+    out.threat = [...zone.entries()].filter(([k]) => !taken.has(k)).map(([, h]) => h);
+    return out;
+  }
+  function toggleThreat() {
+    threatOn = !threatOn; G.Audio.play('click');
+    const b = $('[data-cam=t]'); if (b) b.classList.toggle('on', threatOn);
+    hoverAt(ui.hover);
+  }
+
   function hoverAt(h) {
     ui.hover = h;
     if (ui.mode === 'deploy') return;
     const tip = $('#hud-tip');
+    pvMap = {};
     const hl = Object.assign({}, ui.baseHL || {});
     let tipHtml = '';
     const u = ui.hero;
@@ -481,8 +531,13 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (h && !tipHtml) { const t = E().terr(B, h); if (t && (t.hazard || t.difficult || t.block)) tipHtml = `<b>${t.name}</b><br><small>${t.block ? 'Blocks movement' + (t.los ? ' and line of sight' : '') : ''}${t.difficult ? 'Difficult terrain (2 movement)' : ''}${t.hazard ? (t.hazard.dmg ? ` · ${t.hazard.dmg} ${t.hazard.dtype} when entered or starting a turn here` : ` · ${t.hazard.cond} when entered`) : ''}</small>`; }
     if (h) { const tg = B.telegraphs.find(t => Hex.dist(t.center, h) <= t.size); if (tg) tipHtml += `<br><b class="warn">⚠ ${tg.name} lands here next Golem turn!</b>`; }
     if (h) for (const z of B.zones.filter(z => z.hexes.some(x => Hex.eq(x, h)))) tipHtml += (tipHtml ? '<br>' : '') + zoneTip(z, u);
-    R().setHighlights(hl);
+    // pointing at an enemy (outside of aiming) shows where it can reach next turn
+    let hot = null;
+    if (h && !ui.choice && ui.mode !== 'power' && ui.mode !== 'charge') { const o = E().unitAt(B, h); if (o && o.side === 'enemy' && !o.object && !o.dead) hot = o; }
+    R().setHighlights(withThreat(hl, hot || threatHotUnit));
+    R().previewDamage(pvMap);
     tip.innerHTML = tipHtml; tip.classList.toggle('on', !!tipHtml);
+    tip.classList.toggle('wide', tipHtml.startsWith('<div class="fc'));
     keywordsFor(tip, 'left');
   }
   // side popups explaining the statuses, rules and terrain words a tooltip mentions
@@ -501,9 +556,33 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (u.traits.includes('quarry') && t.conds.some(c => c.c === 'quarry' && c.src === u.uid) && u.quarryTurn !== B.turnNo) extras.push('+Quarry');
     return { mn, mx, extras };
   }
+  // Damage previews for the overhead health bars, filled in by the forecast while hovering a target.
+  let pvMap = {};
+  const unitIcon = (t) => t.side === 'hero' ? G.ICON[t.cls] : monIcon(t);
+  // How a hit would leave the target: hp left after the least and the most damage, and whether it kills.
+  function koOf(t, mn, mx) {
+    const pool = Math.max(0, t.hp) + (t.tempHp || 0);
+    if (t.object) return { tag: '', lo: pool, hi: pool };
+    if (t.minion) return { tag: 'kill', lo: 0, hi: 0 };
+    return { tag: mn >= pool ? 'kill' : mx >= pool ? 'maybe' : '', lo: Math.max(0, pool - mx), hi: Math.max(0, pool - mn) };
+  }
+  const KO_TXT = { kill: '<b class="fc-ko kill">☠ Lethal</b>', maybe: '<b class="fc-ko maybe">May defeat</b>' };
+  // HP bar with the hit's damage range shown as a ghost segment
+  function fcBar(t, mn, mx) {
+    const tot = Math.max(t.maxHp, Math.max(0, t.hp) + (t.tempHp || 0)) || 1;
+    const hp = Math.max(0, t.hp), pct = (n) => Math.max(0, Math.min(100, n / tot * 100));
+    if (mx == null) return `<div class="bar sm"><i style="width:${pct(hp)}%" class="${hp <= t.maxHp / 2 ? 'bl' : ''} ${hp <= t.maxHp / 4 ? 'cr' : ''}"></i><span>${hp}/${t.maxHp}${t.tempHp ? ' +' + t.tempHp : ''}</span></div>`;
+    const temp = t.tempHp || 0;
+    // temp HP soaks first
+    const aMin = Math.max(0, mn - temp), aMax = Math.max(0, mx - temp);
+    const after = Math.max(0, hp - aMax), mid = Math.max(0, hp - aMin);
+    return `<div class="bar sm pvbar"><i style="width:${pct(after)}%" class="${after <= t.maxHp / 2 ? 'bl' : ''} ${after <= t.maxHp / 4 ? 'cr' : ''}"></i><u class="pv-max" style="left:${pct(after)}%;width:${pct(mid - after)}%"></u><u class="pv-min" style="left:${pct(mid)}%;width:${pct(hp - mid)}%"></u><span>${hp} → ${after === mid ? after : `${after}–${mid}`}</span></div>`;
+  }
   function targetPreview(u, p, t, extra = {}) {
+    const head = `<div class="fc-h"><span class="fc-pow">${esc(p.name)}</span><span class="fc-kind k-${p.kind}">${KIND_LABEL[p.kind] || ''}</span></div>`;
+    const side = (x, bar) => `<div class="fc-u ${x.side === 'hero' ? 'hero' : 'enemy'}"><div class="fc-n"><span class="fc-ico">${unitIcon(x)}</span><b>${esc(x.name)}</b>${x.minion ? '<i>minion</i>' : ''}</div>${bar}</div>`;
     if (!p.atk) {
-      return `<b>${esc(p.name)}</b> → ${esc(t.name)}<br><small>${G.Build.describe(p, u).slice(1).map(esc).join('<br>')}</small>`;
+      return `<div class="fc">${head}<div class="fc-grid one">${side(t, fcBar(t))}</div><div class="fc-math">${G.Build.describe(p, u).slice(1).map(esc).join('<br>')}</div></div>`;
     }
     const pr = E().powerRange(u, p);
     const ctx = Object.assign({ melee: pr.kind === 'melee', ranged: pr.kind === 'ranged' }, extra);
@@ -513,24 +592,42 @@ var G = (typeof G !== 'undefined') ? G : {};
     const need = Math.max(2, Math.min(20, dv - ab.total));
     const chance = Math.round(G.AI.hitChance(B, u, p, t, ctx) * 100);
     const dr = p.dmg ? dmgRange(u, p, t, ctx.ca) : null;
+    const hits = p.hits > 1 ? p.hits : 1;
+    // a minion falls to any hit, whatever the damage roll
+    const dmn = t.minion ? Math.max(1, t.hp) : dr && dr.mn * hits, dmx = t.minion ? Math.max(1, t.hp) : dr && dr.mx * hits;
+    const ko = dr ? koOf(t, dmn, dmx) : null;
+    if (dr) pvMap[t.uid] = { mn: dmn, mx: dmx, kill: ko.tag === 'kill' };
     const provoke = (pr.kind === 'ranged' || pr.kind === 'areaBurst') && !p.noProvoke && E().threatening(B, u).some(e => !e.oaUsed);
-    return `<b>${esc(p.name)}</b> → ${esc(t.name)}${t.minion ? ' <i>(minion)</i>' : ''}
-      <div class="tp-big ${chance >= 60 ? 'good' : chance >= 40 ? 'ok' : 'bad'}">${chance}% <small>to hit</small></div>
-      <small>d20 ${sgn(ab.total)} vs ${p.atk.vs} ${dv} — need ${need}+<br>${ab.parts.map(([k, v]) => `${k} ${sgn(v)}`).join(' · ')}</small>
-      ${ctx.ca ? `<div class="good">✔ Combat advantage (${esc(caWhy)})</div>` : ''}
-      ${dr ? `<div>Damage ${dr.mn}–${dr.mx}${p.hits > 1 ? ` ×${p.hits}` : ''} ${dr.extras.join(' ')}${t.minion ? ' <i>(kills)</i>' : ''}</div>` : ''}
-      ${provoke ? '<div class="warn">⚠ Provokes opportunity attacks (enemy adjacent)</div>' : ''}
-      ${t.object ? `<div class="warn">${esc(G.Monsters[t.id].desc)}</div>` : ''}`;
+    const grade = chance >= 70 ? 'good' : chance >= 45 ? 'ok' : 'bad';
+    return `<div class="fc">${head}
+      <div class="fc-grid">${side(u, fcBar(u))}<div class="fc-vs ${grade}"><b>${chance}<small>%</small></b><span>to hit</span></div>${side(t, dr ? fcBar(t, dmn, dmx) : fcBar(t))}</div>
+      <div class="fc-stats">
+        <span><small>Roll</small><b>d20${sgn(ab.total)}</b></span>
+        <span><small>vs ${p.atk.vs}</small><b>${dv}</b></span>
+        <span><small>Need</small><b>${need}+</b></span>
+        ${dr ? `<span><small>Damage</small><b>${dr.mn}–${dr.mx}${hits > 1 ? ` ×${hits}` : ''}</b></span>` : ''}
+      </div>
+      ${ko && KO_TXT[ko.tag] ? `<div class="fc-tags">${KO_TXT[ko.tag]}${t.minion ? ' <small>Minions fall to any hit</small>' : ''}</div>` : ''}
+      ${dr && dr.extras.length ? `<div class="good fc-line">✚ ${dr.extras.map(x => esc(x.replace(/^\+/, ''))).join(', ')} on top</div>` : ''}
+      ${ctx.ca ? `<div class="good fc-line">✔ Combat advantage: ${esc(caWhy)}</div>` : ''}
+      ${provoke ? '<div class="warn fc-line">⚠ Provokes opportunity attacks (enemy adjacent)</div>' : ''}
+      ${t.object ? `<div class="warn fc-line">${esc(G.Monsters[t.id].desc)}</div>` : ''}
+      <div class="fc-math">${ab.parts.map(([k, v]) => `${esc(k)} ${sgn(v)}`).join(' · ')}</div></div>`;
   }
   function areaPreview(u, p, ts) {
     const foes = ts.filter(t => t.side !== u.side);
-    const lines = foes.slice(0, 6).map(t => {
-      if (!p.atk) return `${esc(t.name)}`;
-      const ctx = { ranged: p.tgt === 'areaBurst', area: true }; ctx.ca = E().hasCA(B, u, t, ctx);
-      return `${esc(t.name)}: <b>${Math.round(G.AI.hitChance(B, u, p, t, ctx) * 100)}%</b>${t.minion ? ' (minion)' : ''}${t.object ? ' 💥' : ''}`;
-    });
     const allies = ts.filter(t => t.side === u.side);
-    return `<b>${esc(p.name)}</b> — ${foes.length ? foes.length + ' target' + (foes.length > 1 ? 's' : '') : (allies.length ? allies.length + ' all' + (allies.length > 1 ? 'ies' : 'y') : 'no targets')}<br><small>${lines.join('<br>')}</small>${p.dmg ? `<div>Damage ${dmgRange(u, p, ts[0] || u).mn}–${dmgRange(u, p, ts[0] || u).mx} each</div>` : ''}`;
+    const head = `<div class="fc-h"><span class="fc-pow">${esc(p.name)}</span><span class="fc-kind k-${p.kind}">${KIND_LABEL[p.kind] || ''}</span></div>`;
+    const dr = p.dmg && ts.length ? dmgRange(u, p, foes[0] || ts[0]) : null;
+    const rows = foes.slice(0, 7).map(t => {
+      let pc = '';
+      if (p.atk) { const ctx = { ranged: p.tgt === 'areaBurst', area: true }; ctx.ca = E().hasCA(B, u, t, ctx); pc = Math.round(G.AI.hitChance(B, u, p, t, ctx) * 100); }
+      const ko = dr ? koOf(t, dr.mn, dr.mx) : null;
+      if (dr) pvMap[t.uid] = t.minion ? { mn: 1, mx: 1, kill: true } : { mn: dr.mn, mx: dr.mx, kill: ko.tag === 'kill' };
+      return `<div class="fc-row"><span class="fc-ico">${unitIcon(t)}</span><b>${esc(t.name)}</b>${ko && ko.tag === 'kill' ? '<i class="fc-ko kill">☠</i>' : ko && ko.tag === 'maybe' ? '<i class="fc-ko maybe">KO?</i>' : ''}${t.object ? ' 💥' : ''}<span class="fc-pc ${pc >= 70 ? 'good' : pc >= 45 ? 'ok' : 'bad'}">${pc !== '' ? pc + '%' : ''}</span></div>`;
+    });
+    const n = foes.length ? `${foes.length} target${foes.length > 1 ? 's' : ''}` : allies.length ? `${allies.length} all${allies.length > 1 ? 'ies' : 'y'}` : 'No targets here';
+    return `<div class="fc area">${head}<div class="fc-sum">${n}${dr ? ` · <b>${dr.mn}–${dr.mx}</b> damage each` : ''}</div>${rows.join('')}${foes.length > 7 ? `<div class="fc-math">…and ${foes.length - 7} more</div>` : ''}${allies.length && foes.length ? `<div class="fc-math">${allies.length} all${allies.length > 1 ? 'ies' : 'y'} inside too</div>` : ''}</div>`;
   }
   // a lingering area (Acrid Fog etc.): who it hurts, how much, and how long it lasts
   function zoneTip(z, viewer) {
@@ -656,7 +753,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       <div id="hud-banner"></div>
       <div id="hud-turn"></div>
       <div id="hud-story"></div>
-      <div id="hud-cam"><button class="btn sm ghost" data-cam="l" title="Rotate (Q)">⟲</button><button class="btn sm ghost" data-cam="r" title="Rotate (E)">⟳</button><button class="btn sm ghost" data-cam="i" title="Zoom in">＋</button><button class="btn sm ghost" data-cam="o" title="Zoom out">－</button><button class="btn sm ghost" data-cam="f" title="Focus active">◎</button><button class="btn sm ghost" data-cam="h" title="Reset camera (Home)">⌂</button></div>`;
+      <div id="hud-cam"><button class="btn sm ghost" data-cam="l" title="Rotate (Q)">⟲</button><button class="btn sm ghost" data-cam="r" title="Rotate (E)">⟳</button><button class="btn sm ghost" data-cam="i" title="Zoom in">＋</button><button class="btn sm ghost" data-cam="o" title="Zoom out">－</button><button class="btn sm ghost" data-cam="f" title="Focus active">◎</button><button class="btn sm ghost" data-cam="h" title="Reset camera (Home)">⌂</button><button class="btn sm ghost cam-threat ${threatOn ? 'on' : ''}" data-cam="t" title="Enemy threat (T): shade every hex an enemy could walk up to and hit in melee next turn. Point at any enemy to see its full reach, ranged attacks included.">⚠ Threat <kbd>T</kbd></button></div>`;
     $('#hud-menu').onclick = battleMenu;
     $('#log-toggle').onclick = () => $('#hud-log').classList.toggle('min');
     document.querySelectorAll('[data-cam]').forEach(b => b.onclick = () => {
@@ -665,6 +762,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (k === 'i') R().zoom(0.85); if (k === 'o') R().zoom(1.18);
       if (k === 'f' && (ui.hero || B.active)) R().focus((ui.hero || B.active).pos, true);
       if (k === 'h') R().resetCamera();
+      if (k === 't') toggleThreat();
     });
   }
   function battleMenu() {
@@ -713,7 +811,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const box = $('#hud-init'); if (!box) return;
     const n = B.order.length, cur = B.order[B.turnIdx];
     const start = Math.max(0, B.turnIdx);
-    const chip = (e) => `<span class="ichip ${e.u.side} ${cur === e ? 'cur' : ''} ${E().isDying(e.u) ? 'dying' : ''}" data-uid="${e.u.uid}" data-key="${chipKey(e)}" title="${esc(e.u.name)}${e.u.side === 'hero' ? ' · ' + esc(heroLine(e.u)) : ''} · initiative ${Math.round(e.init)}${e.second ? ' (second turn)' : ''}">${e.u.side === 'hero' ? G.ICON[e.u.cls] : monIcon(e.u)}<i>${esc(shortName(e.u.name))}</i><em class="ic-init">${Math.floor(e.init)}</em>${E().isDying(e.u) ? `<b class="ic-dying">☠${e.u.deathFails || 0}</b>` : ''}</span>`;
+    const chip = (e) => `<span class="ichip ${e.u.side} ${cur === e ? 'cur' : ''} ${E().isDying(e.u) ? 'dying' : ''}" data-uid="${e.u.uid}" data-key="${chipKey(e)}" title="${esc(e.u.name)}${e.u.side === 'hero' ? ' · ' + esc(heroLine(e.u)) : ''} · initiative ${Math.round(e.init)}${e.second ? ' (second turn)' : ''}">${e.u.side === 'hero' ? G.ICON[e.u.cls] : monIcon(e.u)}<i>${esc(shortName(e.u.name))}</i><em class="ic-init">${Math.floor(e.init)}</em>${E().isDying(e.u) ? `<b class="ic-dying">☠${e.u.deathFails || 0}</b>` : ''}${e.u.object ? '' : `<s class="ic-hp"><u style="width:${Math.max(0, Math.min(100, e.u.hp / e.u.maxHp * 100))}%" class="${e.u.hp <= e.u.maxHp / 2 ? 'bl' : ''} ${e.u.hp <= e.u.maxHp / 4 ? 'cr' : ''}"></u></s>`}</span>`;
     // the rest of this round, then next round up to the current slot. Units that joined this
     // round (reinforcements, summons) sit out until next round, so they only show after the marker.
     const waiting = (e) => e.joinRound > B.round;
@@ -729,6 +827,15 @@ var G = (typeof G !== 'undefined') ? G : {};
     box.querySelectorAll('.ichip').forEach(c => {
       if (hiddenChips.has(c.dataset.key)) c.style.opacity = 0;
       c.onclick = () => { const u = B.units.find(x => x.uid === +c.dataset.uid); if (u) R().focus(u.pos, true); };
+      // point the unit out on the board and show its details
+      c.onmouseenter = () => {
+        const u = B.units.find(x => x.uid === +c.dataset.uid); if (!u) return;
+        R().setHot(u.uid);
+        if (u.side === 'enemy' && !u.object && ui.mode !== 'deploy') { threatHotUnit = u; hoverAt(ui.hover); }
+        const tip = $('#hud-tip'); tip.innerHTML = unitTip(u); tip.classList.add('on'); tip.classList.remove('wide');
+        keywordsFor(tip, 'left');
+      };
+      c.onmouseleave = () => { R().setHot(null); threatHotUnit = null; hoverAt(ui.hover); };
       const was = before.get(c.dataset.key); if (was == null || !c.animate) return;
       const dx = was - c.getBoundingClientRect().left;
       if (Math.abs(dx) < 2) return;
@@ -856,17 +963,43 @@ var G = (typeof G !== 'undefined') ? G : {};
         for (const x of u.conds) { const id = K.COND[x.c] || K.find(x.label || '')[0]; if (id && !list.includes(id)) list.push(id); }
         if (E().bloodied(u) && u.hp > 0) list.push('bloodied');
         K.show(K.expand(list), c.getBoundingClientRect(), 'right');
+        if (u && !u.dead) R().setHot(u.uid);
       };
-      c.onmouseleave = () => G.Keywords.hide();
+      c.onmouseleave = () => { G.Keywords.hide(); R().setHot(null); };
     });
   }
+  // Short rules summary for a power card: reach/area and damage dice.
+  function rangeText(u, p) {
+    const pr = E().powerRange(u, p);
+    switch (p.tgt) {
+      case 'melee': return { ico: '⚔', txt: `Melee ${pr.range}` };
+      case 'ranged': return { ico: '➶', txt: `Ranged ${pr.range}` };
+      case 'closeBurst': return { ico: '✺', txt: `Burst ${p.size}` };
+      case 'closeBlast': return { ico: '◭', txt: `Blast ${p.size}` };
+      case 'areaBurst': return { ico: '◎', txt: `Area ${p.size} · ${p.range}` };
+      case 'self': return { ico: '◉', txt: 'Self' };
+      default: return pr.kind === 'melee' ? { ico: '⚔', txt: `Melee ${pr.range}` } : pr.range ? { ico: '➶', txt: `Range ${pr.range}` } : { ico: '◉', txt: 'Self' };
+    }
+  }
+  function diceText(u, p) {
+    if (!p.dmg) return '';
+    try {
+      const s = E().damageSpec(B, u, p, { uid: -1, conds: [] });
+      const by = new Map(); for (const [n, d] of s.dice) by.set(d, (by.get(d) || 0) + n);
+      const parts = [...by].sort((a, b) => b[0] - a[0]).map(([d, n]) => `${n}d${d}`);
+      if (s.flat) parts.push(String(s.flat));
+      return parts.join('+').replace('+-', '−') + (p.hits > 1 ? ` ×${p.hits}` : '');
+    } catch (e) { return ''; }
+  }
+  const ACT_ICON = { standard: '◆', move: '➤', minor: '•', free: '⚡' };
+  const KIND_LABEL = { atwill: 'At-Will', encounter: 'Encounter', daily: 'Daily', basic: 'Basic', item: 'Item' };
   function updateBottom() {
     const bot = $('#hud-bottom');
     const u = ui.hero;
-    if (!u || B.over) { bot.classList.remove('on'); bot.innerHTML = ''; return; }
+    if (!u || B.over) { bot.classList.remove('on'); bot.innerHTML = ''; dockHeight(); return; }
     bot.classList.add('on');
     const A = u.act;
-    const pip = (k, n, l) => `<span class="pip ${n > 0 && !(A.single && A.spent) ? '' : 'off'}" title="${esc(l)}">${k}</span>`;
+    const pip = (k, ico, n, l) => `<span class="pip ${n > 0 && !(A.single && A.spent) ? '' : 'off'}" title="${esc(l)}"><i>${ico}</i>${k}</span>`;
     // An action is "trading up" when its own pool is empty and it would eat a bigger action instead.
     const pool = { standard: 'std', move: 'move', minor: 'minor' };
     const upcost = (a) => { a = a || 'standard'; return !A.single && pool[a] && !(A[pool[a]] > 0) && E().canSpend(u, a) ? (A.move > 0 && a === 'minor' ? 'Move' : 'Standard') : null; };
@@ -877,43 +1010,58 @@ var G = (typeof G !== 'undefined') ? G : {};
     const moveTip = (base, kind) => u.moving && u.moving.kind === kind ? esc(base) : tip(base, 'move');
     const moveAct = E().canSpend(u, 'move') && !ui.busy;
     const moveOn = (kind) => canMove(u, kind) || (u.moving && u.moving.kind !== kind && E().canSpend(u, 'move') && E().speedOf(u) > 0);
-    const left = (kind) => { const n = E().moveLeft(u, kind); return n != null ? ` (${n} left)` : ''; };
+    const left = (kind) => { const n = E().moveLeft(u, kind); return n != null ? ` <span class="mv-left">${n}</span>` : ''; };
     const prone = E().hasCond(u, 'prone');
     const powers = u.powers.filter(p => !p.passive && p.kind !== 'item');
     const keyOf = (i) => i < 9 ? String(i + 1) : '';
     const items = packItems(u);
+    const hp = Math.max(0, u.hp), pct = hp / u.maxHp * 100;
+    // nothing left worth doing: make End Turn the obvious next click
+    const spent = !powers.some(p => E().canUse(B, u, p)) && !canMove(u, 'move') && !canMove(u, 'shift');
     bot.innerHTML = `
-      <div class="hb-left">
-        <div class="hb-name cls-${u.cls}" title="${esc(`Level ${u.level} ${heroLine(u)}`)}">${G.ICON[u.cls]} ${esc(u.name)}</div>
-        <div class="hb-acts">${pip('Standard', A.std, 'Standard action: attack powers, Charge, Second Wind. Can be used in place of a Move or Minor action.')}${pip('Move', A.move, 'Move action: Move, Shift or Stand Up. Can be used in place of a Minor action.')}${pip('Minor', A.minor, 'Minor action: quick powers like heals, marks and buffs.')}${A.single ? '<span class="pip warn" title="Dazed: you get only one action this turn (standard, move or minor).">Dazed: 1 action</span>' : ''}</div>
-        <div class="hb-btns">
-          ${prone ? `<button class="btn act ${upCls('move')}" id="b-stand" ${moveAct ? '' : 'disabled'} title="${tip('Stand up from prone (move action). Prone: -2 to attacks, and adjacent enemies have combat advantage against you.', 'move')}">Stand Up</button>` : `<button class="btn act ${ui.mode === 'move' ? 'on' : ''} ${moveUp('move')}" id="b-move" ${!ui.busy && moveOn('move') ? '' : 'disabled'} title="${moveTip(`Move up to ${E().speedOf(u)} hexes (move action), a few at a time. Stepping out of an enemy's reach provokes an opportunity attack.`, 'move')}">Move${left('move')} <kbd>M</kbd></button>
-          <button class="btn act ${ui.mode === 'shift' ? 'on' : ''} ${moveUp('shift')}" id="b-shift" ${!ui.busy && moveOn('shift') ? '' : 'disabled'} title="${moveTip(`Step ${1 + (u.shiftBonus || 0)} hex${u.shiftBonus ? 'es' : ''} without provoking opportunity attacks (move action).`, 'shift')}">Shift${left('shift')} <kbd>X</kbd></button>`}
-          ${u.moving || (ui.mode === 'charge' && ui.chargeLegs && ui.chargeLegs.length) ? `<button class="btn act" id="b-undo" ${!ui.busy && (E().canUndoMove(u) || ui.mode === 'charge') ? '' : 'disabled'} title="Take back your last step or movement power (like Tumble). Steps that provoked an attack or hit a hazard are locked in.">↶ Undo <kbd>Z</kbd></button>` : ''}
-          ${u.moving ? `<button class="btn act" id="b-done" ${ui.busy ? 'disabled' : ''} title="Finish this move; any leftover movement is lost.">✔ Done moving</button>` : ''}
-          <button class="btn act ${ui.mode === 'charge' ? 'on' : ''}" id="b-charge" ${!ui.busy && !prone && E().chargeOptions(B, u).length ? '' : 'disabled'} title="Move up to your speed along a path you pick, then make a melee basic attack at +1 (standard action). You must move at least 2 hexes first.">Charge <kbd>C</kbd></button>
-          <button class="btn act ${upCls(u.secondWindAction)}" id="b-sw" ${!ui.busy && !u.used.__sw && u.surges > 0 && E().canSpend(u, u.secondWindAction) ? '' : 'disabled'} title="${tip(`Spend a surge to heal ${u.surgeValue}, +2 defenses until your next turn (${u.secondWindAction} action, once per fight).`, u.secondWindAction)}">Second Wind</button>
-          <button class="btn act ap" id="b-ap" ${!ui.busy && !u.used.__ap ? '' : 'disabled'} title="Gain an extra standard action this turn (free action, once per fight).">Action Point</button>
-          <button class="btn act end" id="b-end" ${ui.busy ? 'disabled' : ''} title="End your turn. Unused actions are lost.">End Turn <kbd>␣</kbd></button>
+      <div class="hb-hero cls-${u.cls}">
+        <div class="hb-por"><span>${G.ICON[u.cls]}</span><em>${u.level}</em></div>
+        <div class="hb-id">
+          <div class="hb-name" title="${esc(`Level ${u.level} ${heroLine(u)}`)}">${esc(u.name)}</div>
+          <div class="hb-sub">${esc(heroLine(u))}</div>
+          <div class="bar sm"><i style="width:${pct}%" class="${pct <= 50 ? 'bl' : ''} ${pct <= 25 ? 'cr' : ''}"></i>${u.tempHp ? `<em style="width:${Math.min(100, u.tempHp / u.maxHp * 100)}%"></em>` : ''}<span>${u.hp}/${u.maxHp}${u.tempHp ? ' +' + u.tempHp : ''}</span></div>
+          <div class="hb-acts">${pip('Standard', ACT_ICON.standard, A.std, 'Standard action: attack powers, Charge, Second Wind. Can be used in place of a Move or Minor action.')}${pip('Move', ACT_ICON.move, A.move, 'Move action: Move, Shift or Stand Up. Can be used in place of a Minor action.')}${pip('Minor', ACT_ICON.minor, A.minor, 'Minor action: quick powers like heals, marks and buffs.')}${A.single ? '<span class="pip warn" title="Dazed: you get only one action this turn (standard, move or minor).">Dazed: 1 action</span>' : ''}</div>
         </div>
-        <div class="hb-pack"><span class="hb-pack-l">Pack</span>${items.length ? items.map((p, i) => {
-          const left = itemLeft(u, p), ok = left && E().canUse(B, u, p) && !ui.busy, up = ok && upcost(p.action);
-          return `<button class="pack-it k-item ${ok ? '' : 'dis'} ${left ? '' : 'used'} ${ui.power === p ? 'on' : ''} ${up ? 'up' : ''}" data-ii="${i}"><span class="pi-ico">${p.icon}</span><b>${esc(p.name)}</b><small>${left ? (p.action || 'standard') : 'used'}</small>
-            <div class="ptip">${powerTip(p, u)}${p.flavor ? `<div class="ptip-flv">${esc(p.flavor)}</div>` : ''}${up ? `<div class="ptip-up">Uses your ${up} action (your ${p.action} action is spent).</div>` : ''}</div></button>`;
-        }).join('') : '<span class="muted">empty</span>'}</div>
       </div>
-      <div class="hb-powers">${powers.map((p, i) => {
-        const ok = E().canUse(B, u, p) && !ui.busy;
-        const used = (p.kind === 'encounter' || p.kind === 'daily') && u.used[p.id];
-        const usesLeft = p.uses ? p.uses - (u.uses[p.id] || 0) : null;
-        const ab = p.atk ? E().attackBonus(B, u, p, { uid: -1, conds: [] }, {}) : null;
-        const up = ok && upcost(p.action);
-        return `<button class="pow k-${p.kind} ${ok ? '' : 'dis'} ${used ? 'used' : ''} ${ui.power === p ? 'on' : ''} ${up ? 'up' : ''}" data-pi="${i}">
-          <span class="pk">${keyOf(i)}</span><b>${esc(p.name)}</b>
-          <small>${{ atwill: 'At-Will', encounter: 'Encounter', daily: 'Daily', basic: 'Basic' }[p.kind]} · ${p.action || 'standard'}${usesLeft != null ? ` · ${usesLeft} left` : ''}</small>
-          ${ab ? `<em>${sgn(ab.total)} vs ${p.atk.vs}</em>` : ''}
-          <div class="ptip">${powerTip(p, u)}${up ? `<div class="ptip-up">Uses your ${up} action (your ${p.action} action is spent).</div>` : ''}</div></button>`;
-      }).join('')}</div>`;
+      <div class="hb-main">
+        <div class="hb-btns">
+          ${prone ? `<button class="btn act ${upCls('move')}" id="b-stand" ${moveAct ? '' : 'disabled'} title="${tip('Stand up from prone (move action). Prone: -2 to attacks, and adjacent enemies have combat advantage against you.', 'move')}">⤒ Stand Up</button>` : `<button class="btn act ${ui.mode === 'move' ? 'on' : ''} ${moveUp('move')}" id="b-move" ${!ui.busy && moveOn('move') ? '' : 'disabled'} title="${moveTip(`Move up to ${E().speedOf(u)} hexes (move action), a few at a time. Stepping out of an enemy's reach provokes an opportunity attack.`, 'move')}">➤ Move${left('move')}<kbd>M</kbd></button>
+          <button class="btn act ${ui.mode === 'shift' ? 'on' : ''} ${moveUp('shift')}" id="b-shift" ${!ui.busy && moveOn('shift') ? '' : 'disabled'} title="${moveTip(`Step ${1 + (u.shiftBonus || 0)} hex${u.shiftBonus ? 'es' : ''} without provoking opportunity attacks (move action).`, 'shift')}">↷ Shift${left('shift')}<kbd>X</kbd></button>`}
+          ${u.moving || (ui.mode === 'charge' && ui.chargeLegs && ui.chargeLegs.length) ? `<button class="btn act" id="b-undo" ${!ui.busy && (E().canUndoMove(u) || ui.mode === 'charge') ? '' : 'disabled'} title="Take back your last step or movement power (like Tumble). Steps that provoked an attack or hit a hazard are locked in.">↶ Undo<kbd>Z</kbd></button>` : ''}
+          ${u.moving ? `<button class="btn act" id="b-done" ${ui.busy ? 'disabled' : ''} title="Finish this move; any leftover movement is lost.">✔ Done moving</button>` : ''}
+          <button class="btn act ${ui.mode === 'charge' ? 'on' : ''}" id="b-charge" ${!ui.busy && !prone && E().chargeOptions(B, u).length ? '' : 'disabled'} title="Move up to your speed along a path you pick, then make a melee basic attack at +1 (standard action). You must move at least 2 hexes first.">⇶ Charge<kbd>C</kbd></button>
+          <span class="hb-sep"></span>
+          <button class="btn act ${upCls(u.secondWindAction)}" id="b-sw" ${!ui.busy && !u.used.__sw && u.surges > 0 && E().canSpend(u, u.secondWindAction) ? '' : 'disabled'} title="${tip(`Spend a surge to heal ${u.surgeValue}, +2 defenses until your next turn (${u.secondWindAction} action, once per fight).`, u.secondWindAction)}">✚ Second Wind</button>
+          <button class="btn act ap" id="b-ap" ${!ui.busy && !u.used.__ap ? '' : 'disabled'} title="Gain an extra standard action this turn (free action, once per fight).">✪ Action Point</button>
+          ${items.length ? `<span class="hb-sep"></span>${items.map((p, i) => {
+            const lft = itemLeft(u, p), ok = lft && E().canUse(B, u, p) && !ui.busy, up = ok && upcost(p.action);
+            return `<button class="pack-it k-item ${ok ? '' : 'dis'} ${lft ? '' : 'used'} ${ui.power === p ? 'on' : ''} ${up ? 'up' : ''}" data-ii="${i}"><span class="pi-ico">${p.icon}</span><b>${esc(p.name)}</b><small>${lft ? (p.action || 'standard') : 'used'}</small>
+              <div class="ptip">${powerTip(p, u)}${p.flavor ? `<div class="ptip-flv">${esc(p.flavor)}</div>` : ''}${up ? `<div class="ptip-up">Uses your ${up} action (your ${p.action} action is spent).</div>` : ''}</div></button>`;
+          }).join('')}` : ''}
+        </div>
+        <div class="hb-powers">${powers.map((p, i) => {
+          const ok = E().canUse(B, u, p) && !ui.busy;
+          const used = (p.kind === 'encounter' || p.kind === 'daily') && u.used[p.id];
+          const usesLeft = p.uses ? p.uses - (u.uses[p.id] || 0) : null;
+          const ab = p.atk ? E().attackBonus(B, u, p, { uid: -1, conds: [] }, {}) : null;
+          const up = ok && upcost(p.action);
+          const rt = rangeText(u, p), dt = diceText(u, p), act = p.action || 'standard';
+          return `<button class="pow k-${p.kind} ${ok ? '' : 'dis'} ${used ? 'used' : ''} ${ui.power === p ? 'on' : ''} ${up ? 'up' : ''}" data-pi="${i}">
+            <span class="pk">${keyOf(i)}</span>
+            <span class="pw-kind">${KIND_LABEL[p.kind] || p.kind}${usesLeft != null ? ` · ${usesLeft} left` : ''}</span>
+            <b>${esc(p.name)}</b>
+            <span class="pw-rng"><i>${rt.ico}</i>${esc(rt.txt)}<span class="pw-act a-${act}" title="${esc(act[0].toUpperCase() + act.slice(1))} action">${{ standard: 'Std', move: 'Move', minor: 'Minor', free: 'Free' }[act] || act}</span></span>
+            <span class="pw-foot">${ab ? `<em>${sgn(ab.total)} <small>vs</small> ${p.atk.vs}</em>` : `<em class="util">${p.targets === 'ally' || p.targets === 'allyOrSelf' ? 'Ally' : 'Utility'}</em>`}${dt ? `<span class="pw-dmg">${dt}</span>` : ''}</span>
+            ${used ? '<span class="pw-stamp">Spent</span>' : ''}
+            <div class="ptip">${powerTip(p, u)}${up ? `<div class="ptip-up">Uses your ${up} action (your ${p.action} action is spent).</div>` : ''}</div></button>`;
+        }).join('')}</div>
+      </div>
+      <button class="btn act end ${spent ? 'ready' : ''}" id="b-end" ${ui.busy ? 'disabled' : ''} title="End your turn. Unused actions are lost.">End Turn<kbd>Space</kbd></button>`;
     const on = (id, f) => { const b = $(id); if (b) b.onclick = f; };
     on('#b-move', () => setMode('move'));
     on('#b-shift', () => setMode(ui.mode === 'shift' ? 'move' : 'shift'));
@@ -937,6 +1085,12 @@ var G = (typeof G !== 'undefined') ? G : {};
     // the bar re-renders under the cursor; keep the hovered power's tooltip up
     const hov = bot.querySelector('.pow:hover, .pack-it:hover');
     if (hov) showPowerTip(hov); else hidePowerTip();
+    dockHeight();
+  }
+  // panels that sit above the dock (forecast, camera buttons) follow its height
+  function dockHeight() {
+    const bot = $('#hud-bottom'), hud = $('#battle-hud'); if (!bot || !hud) return;
+    hud.style.setProperty('--dock-h', (bot.classList.contains('on') ? bot.offsetHeight + 16 : 8) + 'px');
   }
   const packItems = (u) => u.powers.filter(p => p.kind === 'item');
   const itemLeft = (u, p) => (u.uses[p.id] || 0) < (p.uses || 1);
@@ -1015,17 +1169,27 @@ var G = (typeof G !== 'undefined') ? G : {};
     const myB = B;
     setTimeout(() => {
       if (B !== myB || !$('#battle').classList.contains('on')) return;
+      const most = Math.max(1, ...heroes.map(u => st(u).dmg));
+      const stat = (k, v, ico) => `<span class="rs-s" title="${k}"><i>${ico}</i><b data-count="${v}">0</b><small>${k}</small></span>`;
       const m = modal(`
+        <div class="res-head"><div class="res-crest">${win ? '⚔' : '☠'}</div>
         <h2 class="${win ? 'win' : 'lose'}">${win ? 'Victory!' : 'Defeat'}</h2>
         <p>${esc(win ? scenRef.winText : scenRef.loseText || 'The party has fallen. The ' + (scenRef.id === 'golem' ? 'bakery remains a confectionery horror.' : 'road remains closed.'))}</p>
         ${camp && camp.fallen.length ? `<p class="bad">Fallen for good: ${camp.fallen.map(esc).join(', ')}.</p>` : ''}
-        <p class="muted">${B.round} rounds · ${DIFF[B.difficulty].label} difficulty</p>
-        <table class="stats"><tr><th></th><th>Damage</th><th>Kills</th><th>Crits</th><th>Healed</th><th>Taken</th></tr>
-        ${heroes.map(u => `<tr class="${u === mvp ? 'mvp' : ''}"><td>${G.ICON[u.cls]} ${esc(u.name)}${u === mvp ? ' <b>★ MVP</b>' : ''}${u.dead ? ' ☠' : ''}</td><td>${st(u).dmg}</td><td>${st(u).kills}</td><td>${st(u).crits}</td><td>${st(u).healed}</td><td>${st(u).taken}</td></tr>`).join('')}</table>
+        <div class="res-meta"><span>${esc(scenRef.name)}</span><span>${B.round} round${B.round === 1 ? '' : 's'}</span><span>${DIFF[B.difficulty].label}</span></div></div>
+        <div class="res-heroes">${heroes.map((u, i) => `<div class="res-h cls-${u.cls} ${u === mvp ? 'mvp' : ''} ${u.dead ? 'dead' : ''}" style="animation-delay:${0.15 + i * 0.09}s">
+          <div class="res-top"><span class="res-ico">${G.ICON[u.cls]}</span><b>${esc(u.name)}</b>${u === mvp ? '<em>★ MVP</em>' : ''}${u.dead ? '<em class="bad">☠ Fallen</em>' : ''}</div>
+          <div class="res-dmg"><i style="--w:${st(u).dmg / most * 100}%"></i></div>
+          <div class="res-stats">${stat('Damage', st(u).dmg, '⚔')}${stat('Kills', st(u).kills, '☠')}${stat('Crits', st(u).crits, '✦')}${stat('Healed', st(u).healed, '✚')}${stat('Taken', st(u).taken, '🛡')}</div>
+        </div>`).join('')}</div>
         <div class="modal-btns">${camp
           ? `<button class="btn" data-a="camp">${!win ? 'See how it ended' : camp.over ? 'Claim victory ▶' : 'Make camp ▶'}</button>`
           : `<button class="btn" data-a="retry">${win ? 'Fight again' : 'Try again'}</button><button class="btn" data-a="select">Scenarios</button><button class="btn ghost" data-a="builder">Party Builder</button>`}</div>`, win ? 'result win' : 'result lose');
       m.dataset.sticky = 1;
+      // count the numbers up
+      const t0 = performance.now();
+      const tick = (t) => { const k = Math.min(1, (t - t0) / 900); m.querySelectorAll('[data-count]').forEach(el => { el.textContent = Math.round(+el.dataset.count * (1 - Math.pow(1 - k, 3))); }); if (k < 1 && m.isConnected) requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
       m.querySelectorAll('[data-a]').forEach(b => b.onclick = () => { m.remove(); const a = b.dataset.a; if (a === 'camp') camp.next(); else if (a === 'retry') startBattle(scenRef, partyRef); else if (a === 'select') selectScreen(); else go('builder'); });
     }, 900);
   }
@@ -1037,6 +1201,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (document.querySelector('.modal-bg')) { if (e.key === 'Escape') { const m = document.querySelector('.modal-bg'); if (!m.dataset.sticky) m.remove(); } return; }
     if (storyDone && $('#hud-story.sticky') && (e.key === ' ' || e.key === 'Enter' || e.key === 'Escape')) { e.preventDefault(); dismissStory(); return; }
     const u = ui.hero;
+    if (e.key.toLowerCase() === 't' && !e.ctrlKey && !e.metaKey && ui.mode !== 'deploy') { toggleThreat(); return; }
     if (e.key === 'Escape') { if (ui.choice) { const s = $('#btn-skip'); if (s) s.click(); } else if (u) setMode('move'); else battleMenu(); return; }
     if (!u || ui.busy) return;
     const k = e.key.toLowerCase();

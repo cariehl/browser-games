@@ -380,7 +380,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     scene.add(g);
     const label = document.createElement('div');
     label.className = 'ulabel ' + (u.side === 'hero' ? 'hero' : u.object ? 'obj' : 'enemy') + (u.solo ? ' solo' : '') + (u.minion ? ' minion' : '');
-    label.innerHTML = `<div class="ul-name">${u.name}</div><div class="ul-bar"><i class="hp"></i><i class="tmp"></i></div><div class="ul-conds"></div><div class="ul-dying"></div>`;
+    label.innerHTML = `<div class="ul-name">${u.name}</div><div class="ul-bar"><i class="hp"></i><i class="tmp"></i><b class="pv1"></b><b class="pv2"></b></div><div class="ul-conds"></div><div class="ul-dying"></div>`;
     overlay.appendChild(label);
     const v = { u, g, body: body.group, bs: US, height, sel, dyingRing, label, hp: u.hp, temp: u.tempHp, pos: Object.assign({}, u.pos), mats: [], dead: false, bob: Math.random() * 6 };
     g.traverse(o => { if (o.isMesh && o.material && o.material.emissive) v.mats.push(o.material); });
@@ -642,13 +642,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     ally: [0x4aff8a, 0.4],
     // power range / area tints: helpful (green), harmful (red), mixed (orange); kept pale so they read differently from blue move range
     range_help: [0x8affa8, 0.32], range_harm: [0xff7a70, 0.32], range_mixed: [0xffb860, 0.34],
+    threat: [0xd02040, 0.26], reach_danger: [0xb070ff, 0.3],
     area_help: [0x4aff8a, 0.45], area_harm: [0xff5a4a, 0.45], flank: [0xffc83a, 0.4], deploy: [0x7affb0, 0.35], choice: [0xd07aff, 0.45], telegraph: [0xff1a1a, 0.5], zone: [0x8bd448, 0.3], hover: [0xffee66, 0.55], danger: [0xff7a3a, 0.3],
   };
   let hlState = {};
   function setHighlights(state) { hlState = state || {}; applyHL(); }
   function applyHL() {
     for (const m of hlMeshes.values()) { m.visible = false; m.userData.kind = null; }
-    const order = ['zone', 'deploy', 'dash', 'reach', 'range_help', 'range_harm', 'range_mixed', 'flank', 'shift', 'danger', 'ally', 'target', 'choice', 'area', 'area_help', 'area_harm', 'telegraph', 'path', 'hover'];
+    const order = ['zone', 'threat', 'deploy', 'dash', 'reach', 'reach_danger', 'range_help', 'range_harm', 'range_mixed', 'flank', 'shift', 'danger', 'ally', 'target', 'choice', 'area', 'area_help', 'area_harm', 'telegraph', 'path', 'hover'];
     for (const kind of order) {
       const list = hlState[kind]; if (!list) continue;
       for (const h of list) {
@@ -664,12 +665,16 @@ var G = (typeof G !== 'undefined') ? G : {};
       for (const z of B.zones) for (const h of z.hexes) {
         const m = hlMeshes.get(Hex.hk(h)); if (!m) continue;
         if (!m.visible) { m.visible = true; m.userData.kind = 'zone'; m.material.color.setHex(z.color || 0x8bd448); m.material.opacity = 0.32; m.userData.edge.material.color.setHex(z.color || 0x8bd448); m.userData.edge.material.opacity = 0.3; }
-        else if (['reach', 'dash', 'range_help', 'range_harm', 'range_mixed'].includes(m.userData.kind)) { m.userData.edge.material.color.setHex(z.color || 0x8bd448); m.userData.edge.material.opacity = 0.95; }
+        else if (['reach', 'reach_danger', 'threat', 'dash', 'range_help', 'range_harm', 'range_mixed'].includes(m.userData.kind)) { m.userData.edge.material.color.setHex(z.color || 0x8bd448); m.userData.edge.material.opacity = 0.95; }
       }
       // a telegraphed slam outranks every planning overlay except the hovered path, hovered hex and area preview
       for (const tg of B.telegraphs) for (const h of tg.hexes) { const m = hlMeshes.get(Hex.hk(h)); if (m && !['path', 'hover', 'area', 'area_help', 'area_harm', 'choice'].includes(m.userData.kind)) { m.visible = true; m.userData.kind = 'telegraph'; m.material.color.setHex(0xff1a1a); m.material.opacity = 0.45; m.userData.edge.material.color.setHex(0xff1a1a); m.userData.edge.material.opacity = 0.9; } }
     }
   }
+  let pvState = {}, hotUid = null;
+  function previewDamage(map) { pvState = map || {}; }
+  // a unit pointed at from the HUD (turn tracker): pulse its ring and label
+  function setHot(uid) { hotUid = uid; }
   function setActive(uid) { for (const v of unitViews.values()) v.active = v.u.uid === uid; }
   function setTargetable(uids) { for (const v of unitViews.values()) v.targetable = uids && uids.includes(v.u.uid); }
 
@@ -678,6 +683,8 @@ var G = (typeof G !== 'undefined') ? G : {};
   function loop(t) {
     requestAnimationFrame(loop);
     const dt = Math.min(0.05, (t - last) / 1000 || 0.016); last = t;
+    // nothing to draw while the battle screen is hidden (menus, map, camp)
+    if (root && !root.offsetParent) return;
     if (!B) { renderer && renderer.render(scene, camera); return; }
     for (let i = tweens.length - 1; i >= 0; i--) {
       const tw = tweens[i]; tw.t += dt; const k = Math.min(1, tw.t / tw.dur);
@@ -702,8 +709,9 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const m of hlMeshes.values()) if (m.visible && m.userData.kind === 'telegraph') m.material.opacity = 0.3 + Math.abs(Math.sin(time * 4)) * 0.35;
     for (const v of unitViews.values()) {
       if (v.dead) continue;
-      v.sel.material.opacity = v.active ? 0.7 + Math.sin(time * 5) * 0.25 : v.targetable ? 0.45 + Math.sin(time * 8) * 0.3 : 0;
-      v.sel.material.color.setHex(v.active ? 0xffe066 : 0xff4a4a);
+      const hot = hotUid === v.u.uid;
+      v.sel.material.opacity = v.active ? 0.7 + Math.sin(time * 5) * 0.25 : hot ? 0.75 + Math.sin(time * 9) * 0.25 : v.targetable ? 0.45 + Math.sin(time * 8) * 0.3 : 0;
+      v.sel.material.color.setHex(v.active ? 0xffe066 : hot ? 0xffffff : 0xff4a4a);
       v.dyingRing.material.opacity = E().isDying(v.u) ? 0.35 + Math.abs(Math.sin(time * 3)) * 0.45 : 0;
       if (v.down) continue;
       if (!v.anim) v.body.position.y = (v.u.look && ['puff', 'macaron', 'golem'].includes(v.u.look.kind)) ? Math.abs(Math.sin(time * 2.2 + v.bob)) * 0.06 : Math.sin(time * 2 + v.bob) * 0.015;
@@ -732,6 +740,18 @@ var G = (typeof G !== 'undefined') ? G : {};
       hpEl.style.width = (hp / tot * 100) + '%';
       hpEl.className = 'hp' + (hp <= mx / 2 ? ' bl' : '') + (hp <= mx / 4 ? ' cr' : '');
       tEl.style.width = (v.temp / tot * 100) + '%';
+      // forecast: the hovered attack's damage range as a flashing ghost on the bar
+      const pv = pvState[u.uid], p1 = v.label.querySelector('.pv1'), p2 = v.label.querySelector('.pv2');
+      if (pv && !u.object) {
+        const aMin = Math.max(0, pv.mn - v.temp), aMax = Math.max(0, pv.mx - v.temp);
+        const after = Math.max(0, hp - aMax), mid = Math.max(0, hp - aMin);
+        p1.style.cssText = `left:${after / tot * 100}%;width:${(mid - after) / tot * 100}%`;
+        p2.style.cssText = `left:${mid / tot * 100}%;width:${(hp - mid) / tot * 100}%`;
+        hpEl.style.width = (after / tot * 100) + '%';
+      } else if (p1.style.cssText) { p1.style.cssText = ''; p2.style.cssText = ''; }
+      v.label.classList.toggle('pv', !!pv);
+      v.label.classList.toggle('pvk', !!(pv && pv.kill));
+      v.label.classList.toggle('hot', hotUid === u.uid);
       const ck = u.conds.map(c => c.c).join(',') + (E().isDying(u) ? 'dying' + (u.deathFails || 0) : '');
       if (v.ck !== ck) {
         v.ck = ck;
@@ -1033,7 +1053,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   G.Render = {
     hexScreen: (h) => { const s = screenOf(h, 0); const r = renderer.domElement.getBoundingClientRect(); return { x: s.x + r.left, y: s.y + r.top }; },
-    init, loadBattle, setHighlights, playFx, syncAll, focus, frame, restoreView, resetCamera, rotate, zoom, pick, setActive, setTargetable, unitScreen, unitPage, floatText, snapshot,
+    init, loadBattle, setHighlights, previewDamage, setHot, playFx, syncAll, focus, frame, restoreView, resetCamera, rotate, zoom, pick, setActive, setTargetable, unitScreen, unitPage, floatText, snapshot,
     onHover: (f) => hoverCb = f, onClick: (f) => clickCb = f, onRight: (f) => rightCb = f, resize,
     get camera() { return cam; },
   };
