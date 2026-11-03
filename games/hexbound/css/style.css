@@ -823,3 +823,11 @@ table.stats tr.mvp td { color: #ffd76a; }
 @media (max-width: 1280px) {
   .pow { width: 108px; } .hb-hero { width: 212px; } .hb-sub { display: none; } #b-end { width: 84px; }
 }
+.l.l-init { cursor: help; text-decoration: underline dotted rgba(232, 194, 106, .5); text-underline-offset: 3px; }
+#logpop { position: fixed; z-index: 45; width: 230px; display: none; pointer-events: none; background: linear-gradient(180deg, #1d1828, #100d16); border: 1px solid var(--gold2); border-radius: 8px; padding: 8px 10px; font-size: 12px; box-shadow: 0 10px 30px rgba(0, 0, 0, .7); }
+#logpop.on { display: block; }
+#logpop > b { display: block; font: 700 13px Cinzel, serif; color: var(--gold); margin-bottom: 4px; }
+.lp-r { display: flex; align-items: center; gap: 6px; padding: 1px 0; }
+.lp-r i { font-style: normal; width: 16px; color: var(--muted); font-size: 10px; text-align: right; }
+.lp-r span { flex: 1; } .lp-r em { font-style: normal; font-weight: 800; font-variant-numeric: tabular-nums; }
+.lp-r.hero span { color: #bfe0ff; } .lp-r.enemy span { color: #ffc8c0; }

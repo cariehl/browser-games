@@ -73,7 +73,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     $('#menu').innerHTML = `<div class="menu-bg"></div><div class="menu-shade"></div>${siteCorner()}
       <div class="menu-inner">
         <div class="logo"><span class="hexmark">⬢</span>HEXBOUND<small>Tactics</small></div>
-        <p class="tag">A party of four. A hex grid. A truly unreasonable amount of pastry.</p>
+        <p class="tag">Four heroes. One party.<br>No time to waste.</p>
         <div class="menu-btns">
           ${run ? mb('continue', '▶', 'Continue Campaign', `${esc(run.partyName)} · ${esc(act.sub)}: ${esc(act.name)} · Level ${run.level} · ${run.gold} gold`, 'on cont') : ''}
           ${mb('campaign', '🗺', run ? 'New Campaign' : 'Start a Campaign', 'Three acts of branching roads, events, merchants and bosses')}
@@ -792,10 +792,25 @@ var G = (typeof G !== 'undefined') ? G : {};
     while (logIdx < B.log.length) {
       const l = B.log[logIdx++];
       const d = document.createElement('div'); d.className = 'l ' + (l.cls || ''); d.textContent = l.msg; box.appendChild(d); added = true;
+      // the opening roll keeps its numbers in a hover panel
+      const ini = /^Roll for initiative! (.*)$/.exec(l.msg);
+      if (ini) { d.textContent = 'Roll for Initiative!'; d.classList.add('l-init'); d.dataset.rolls = ini[1]; d.onmouseenter = () => initPop(d); d.onmouseleave = () => { const f = $('#logpop'); if (f) f.classList.remove('on'); }; }
     }
     if (added) { while (box.children.length > 300) box.removeChild(box.firstChild); box.scrollTop = box.scrollHeight; }
   }
 
+  // hover panel for the initiative line: every roll in turn order, heroes and enemies coloured
+  function initPop(row) {
+    let f = $('#logpop');
+    if (!f) { f = document.createElement('div'); f.id = 'logpop'; document.body.appendChild(f); }
+    const rolls = row.dataset.rolls.split(', ').map(x => { const m = /^(.*) (-?\d+)$/.exec(x); return m ? { n: m[1], v: m[2] } : { n: x, v: '' }; });
+    const side = (n) => { const u = B && B.units.find(x => x.name === n); return u ? (u.side === 'hero' ? 'hero' : 'enemy') : ''; };
+    f.innerHTML = `<b>Initiative</b>${rolls.map((r, i) => `<div class="lp-r ${side(r.n)}"><i>${i + 1}</i><span>${esc(r.n)}</span><em>${esc(r.v)}</em></div>`).join('')}`;
+    f.classList.add('on');
+    const r = row.getBoundingClientRect();
+    f.style.left = Math.max(4, r.left - f.offsetWidth - 8) + 'px';
+    f.style.top = Math.max(4, Math.min(window.innerHeight - f.offsetHeight - 4, r.top)) + 'px';
+  }
   function updateHudLight() { updateParty(); updateTop(); }
   function updateHud() { if (!B) return; updateTop(); updateParty(); updateBottom(); }
   function updateTop() {
