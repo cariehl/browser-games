@@ -337,7 +337,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     return kind === 'shift' ? 1 + (u.shiftBonus || 0) : E().speedOf(u);
   }
   function canMove(u, kind) {
-    if (E().speedOf(u) <= 0) return false;
+    if (E().speedOf(u) <= 0 || (kind === 'shift' && !E().canShift(u))) return false;
     const left = E().moveLeft(u, kind);
     return left != null ? left > 0 : E().canSpend(u, 'move');
   }

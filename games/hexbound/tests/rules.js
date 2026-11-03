@@ -172,14 +172,15 @@ test('a killing blow still triggers the power\'s follow-up effects', () => {
     E.runAuto(E.usePower(B, hero, hero.powers.find(p => p.id === 'f_cleave'), { unit: g1 }));
     assert(g1.dead); assert(g2.hp < hp2 || g2.dead, 'cleave hits the other adjacent enemy');
   }
-  // Lance of Dawn: the wounded ally still gets temp HP
+  // Lance of Dawn: the wounded ally is still mended
   {
     const { B, cleric, ally, gob } = arena('goblins', { cleric: u => u.cls === 'cleric', ally: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
     cleric.pos = off(4, 10); ally.pos = Hex.add(cleric.pos, { q: 2, r: 0 }); gob.pos = Hex.add(cleric.pos, { q: -3, r: 0 });
     ally.hp = Math.floor(ally.maxHp / 2); gob.hp = 1; B.active = cleric;
+    const was = ally.hp, surges = ally.surges;
     fixDice(15);
     E.runAuto(E.usePower(B, cleric, cleric.powers.find(p => p.id === 'c_lance'), { unit: gob }));
-    assert(gob.dead); assert(ally.tempHp > 0, 'ally gains temp HP');
+    assert(gob.dead); assert(ally.hp > was, 'ally regains HP'); assert.strictEqual(ally.surges, surges, 'no surge spent');
   }
 });
 
@@ -576,6 +577,196 @@ test('a lost battle or the final boss ends the run and writes the record', () =>
   assert.strictEqual(C.records()[0].reached, B2.scen.name);
   assert(C.records()[0].heroes.every(h => h.fell));
   delete global.localStorage;
+});
+
+// ---------- Ability polish: edge cases ----------
+const P = G.Build.POWERS;
+const give = (u, id) => { const p = G.Build.concrete(u, P[id], u.feats); u.powers.push(p); return p; };
+const openNear = (B, h, pred) => Hex.neighbors(h).filter(n => E.terr(B, n) && !E.terr(B, n).block && !E.unitAt(B, n) && (!pred || pred(n)));
+
+test('a creature stopped while passing through an ally steps back to a hex of its own', () => {
+  const { B, ftr, warg, gob } = arena('goblins', { ftr: u => u.cls === 'fighter', warg: u => u.id === 'warg', gob: u => u.id === 'goblin_skulker' });
+  ftr.pos = off(4, 9);
+  // A and Bh are both next to the fighter; C is out of his reach
+  let A, Bh, C;
+  for (let d = 0; d < 6 && !C; d++) {
+    A = Hex.neighbor(ftr.pos, d); Bh = Hex.neighbor(ftr.pos, (d + 1) % 6);
+    if (!openNear(B, ftr.pos).some(h => Hex.eq(h, A)) || !openNear(B, ftr.pos).some(h => Hex.eq(h, Bh))) continue;
+    C = openNear(B, Bh, h => Hex.dist(h, ftr.pos) === 2)[0];
+  }
+  assert(C, 'found a lane');
+  warg.pos = A; gob.pos = Bh; warg.hp = warg.maxHp = 500; B.active = warg;
+  fixDice(19);
+  E.runAuto(E.moveAlong(B, warg, [A, Bh, C], 'move'));
+  E.setRng(Math.random);
+  assert(B.log.some(l => /stopped in their tracks/.test(l.msg)), 'the fighter\'s opportunity attack stops it');
+  assert(Hex.eq(warg.pos, A), 'it steps back off its ally'); assert(Hex.eq(gob.pos, Bh));
+  // the same when a hero gets stuck in Sticky Jam under a friend
+  {
+    const { B, a, b } = arena('goblins', { a: u => u.cls === 'fighter', b: u => u.cls === 'rogue' });
+    const s0 = off(4, 9), m = Hex.neighbor(s0, 0), e = Hex.neighbor(m, 0);
+    a.pos = s0; b.pos = m; E.tile(B, m).terrain = 'jam'; B.active = a;
+    E.runAuto(E.doMove(B, a, e));
+    assert(Hex.eq(a.pos, s0) && Hex.eq(b.pos, m), 'stuck under a friend, so back to the start');
+  }
+  // and a Large creature can never end its move on top of a smaller ally listed after it
+  {
+    const { B, golem, puff } = arena('golem', { golem: u => u.id === 'pastry_golem', puff: u => u.id === 'gingerbread' || u.id === 'cream_puff' || (u.monster && !u.object && !u.solo) });
+    golem.pos = off(8, 5); puff.pos = Hex.add(golem.pos, { q: 3, r: 0 });
+    const r = E.reach(B, golem, 5, 'move');
+    for (const v of r.values()) if (!v.noEnd) assert(!E.footprint(golem, v.h).some(f => Hex.eq(f, puff.pos)), 'no end on the ally');
+  }
+});
+
+test('Combat Challenge punishes a marked foe that shifts away from the Fighter', () => {
+  const { B, ftr, gob } = arena('goblins', { ftr: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+  ftr.pos = off(4, 9);
+  gob.pos = openNear(B, ftr.pos)[0];
+  const away = openNear(B, gob.pos, h => Hex.dist(h, ftr.pos) === 2)[0]; assert(away);
+  E.addCond(B, gob, 'marked', { src: ftr.uid, dur: 'eont' });
+  B.active = gob; B.turnNo = 99; gob.act = { std: 1, move: 1, minor: 1 };
+  fixDice(15);
+  assert(E.runAuto(E.doMove(B, gob, away, 'shift')));
+  E.setRng(Math.random);
+  assert(B.log.some(l => /Combat Challenge punishes/.test(l.msg)));
+});
+
+test('Hold the Line pins: a pinned (or immobilized) creature can\'t shift, by any means', () => {
+  const { B, ftr, gob } = arena('goblins', { ftr: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+  ftr.pos = off(4, 9); gob.pos = openNear(B, ftr.pos)[0]; gob.hp = gob.maxHp = 200; B.active = ftr;
+  const hold = give(ftr, 'f_pin');
+  fixDice(19);
+  E.runAuto(E.usePower(B, ftr, hold, { unit: gob }));
+  E.setRng(Math.random);
+  assert(E.hasCond(gob, 'pinned') && !E.canShift(gob));
+  B.active = gob; gob.act = { std: 1, move: 1, minor: 1 };
+  assert(!E.runAuto(E.doMove(B, gob, openNear(B, gob.pos)[0], 'shift')), 'no shift action');
+  const before = gob.pos;
+  E.runAuto(E.applyEffect(B, gob, gob, { t: 'shift', n: 2 }, {}));
+  assert(Hex.eq(gob.pos, before), 'no shift from a power either');
+  assert(E.speedOf(gob) > 0, 'walking is still allowed');
+  E.removeCond(gob, c => c.c === 'pinned'); E.addCond(B, gob, 'immobilized', { dur: 'save' });
+  assert(!E.canShift(gob));
+});
+
+test('Relentless and a Phoenix Feather each save you once, one at a time, and never while dying', () => {
+  const { B, orc, gob } = arena('goblins', { orc: u => u.ancestry === 'orc', gob: u => u.id === 'goblin_skulker' }, 7, 1);
+  orc.traits.push('g_phoenix'); B.active = gob;
+  E.runAuto(E.dealDamage(B, gob, orc, orc.hp + 5));
+  assert.strictEqual(orc.hp, 1); assert(!!orc.used.__relentless !== !!orc.used.__phoenix, 'only one of them fires');
+  E.runAuto(E.dealDamage(B, gob, orc, 10));
+  assert.strictEqual(orc.hp, 1); assert(orc.used.__relentless && orc.used.__phoenix, 'then the other');
+  E.runAuto(E.dealDamage(B, gob, orc, 10));
+  assert(E.isDying(orc));
+  E.runAuto(E.dealDamage(B, gob, orc, 3));
+  assert(orc.hp <= 0 && E.isDying(orc) && orc.deathFails === 1);
+});
+
+test('healing never burns a surge on someone at full health', () => {
+  const { B, cleric, ally, gob } = arena('goblins', { cleric: u => u.cls === 'cleric', ally: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+  cleric.pos = off(4, 9); ally.pos = Hex.add(cleric.pos, { q: 2, r: 0 }); gob.pos = openNear(B, cleric.pos)[0]; gob.hp = gob.maxHp = 300;
+  B.active = cleric;
+  const s0 = ally.surges, c0 = cleric.surges;
+  E.runAuto(E.usePower(B, cleric, cleric.powers.find(p => p.id === 'c_word'), { unit: ally }));
+  assert.strictEqual(ally.surges, s0);
+  cleric.act = { std: 1, move: 1, minor: 1 };
+  fixDice(15);
+  E.runAuto(E.usePower(B, cleric, cleric.powers.find(p => p.id === 'c_mend'), { unit: gob }));
+  E.setRng(Math.random);
+  assert.strictEqual(ally.surges, s0, 'Mending Strike finds nobody hurt'); assert.strictEqual(cleric.surges, c0);
+});
+
+test('powers that don\'t attack can\'t be aimed at objects, and a bad aim spends nothing', () => {
+  const { B, ranger, barrel } = arena('bandits', { ranger: u => u.cls === 'ranger', barrel: u => u.id === 'oil_barrel' }, 7, 1);
+  const q = ranger.powers.find(p => p.id === 'g_quarry');
+  ranger.pos = off(4, 9); barrel.pos = Hex.add(ranger.pos, { q: 3, r: 0 }); B.active = ranger;
+  assert(!E.validTarget(B, ranger, q, barrel), 'no hunting barrels');
+  assert.strictEqual(E.runAuto(E.usePower(B, ranger, q, { unit: barrel })), false);
+  assert.strictEqual(ranger.act.minor, 1); assert(!ranger.uses.g_quarry);
+  const shot = ranger.powers.find(p => p.basicRanged);
+  assert(E.validTarget(B, ranger, shot, barrel), 'but you can still shoot one');
+});
+
+test('Bait and Switch: no swapping with a Large creature; a foe swapped onto a fire burns', () => {
+  {
+    const { B, rog, golem } = arena('golem', { rog: u => u.cls === 'rogue', golem: u => u.id === 'pastry_golem' });
+    rog.pos = off(8, 9); golem.pos = Hex.add(rog.pos, { q: 0, r: -2 }); B.active = rog;
+    const p0 = rog.pos, g0 = golem.pos;
+    fixDice(19);
+    E.runAuto(E.usePower(B, rog, rog.powers.find(p => p.id === 'r_bait'), { unit: golem }));
+    E.setRng(Math.random);
+    assert(Hex.eq(rog.pos, p0) && Hex.eq(golem.pos, g0));
+  }
+  {
+    const { B, rog, bandit } = arena('bandits', { rog: u => u.cls === 'rogue', bandit: u => u.monster && !u.object && !u.minion });
+    const fire = [...B.tiles.values()].find(t => t.terrain === 'fire');
+    rog.pos = { q: fire.q, r: fire.r }; bandit.pos = openNear(B, rog.pos)[0]; bandit.hp = bandit.maxHp = 300; B.active = rog;
+    fixDice(19);
+    E.runAuto(E.usePower(B, rog, rog.powers.find(p => p.id === 'r_bait'), { unit: bandit }));
+    E.setRng(Math.random);
+    assert(Hex.eq(bandit.pos, { q: fire.q, r: fire.r }));
+    assert(B.log.some(l => l.msg.startsWith(bandit.name + ' is shoved into the Campfire')));
+  }
+});
+
+test('a single saving throw goes against the worst effect first', () => {
+  const { B, hero } = arena('goblins', { hero: u => u.side === 'hero' });
+  E.addCond(B, hero, 'slowed', { dur: 'save', src: -1 }); E.addCond(B, hero, 'stunned', { dur: 'save', src: -1 });
+  fixDice(15);
+  E.runAuto(E.savingThrows(B, hero, 0, true));
+  E.setRng(Math.random);
+  assert(!E.hasCond(hero, 'stunned') && E.hasCond(hero, 'slowed'));
+});
+
+test('re-marking a foe never shortens a lasting mark', () => {
+  const { B, ftr, gob } = arena('goblins', { ftr: u => u.cls === 'fighter', gob: u => u.id === 'goblin_skulker' });
+  E.addCond(B, gob, 'marked', { src: ftr.uid, dur: 'save' });
+  E.addCond(B, gob, 'marked', { src: ftr.uid, dur: 'eont' });
+  assert.strictEqual(E.condsOf(gob, 'marked')[0].dur, 'save');
+});
+
+test('signature tricks: Twisting Knife, Careful Aim, Crushing Blow, Deadly Gambit', () => {
+  const { B, rog, ranger, ftr, gob } = arena('goblins', { rog: u => u.cls === 'rogue', ftr: u => u.cls === 'fighter', ranger: u => u.side === 'hero' && u.cls === 'cleric', gob: u => u.id === 'goblin_skulker' });
+  gob.hp = gob.maxHp = 300; gob.actedThisFight = true;
+  rog.pos = off(4, 9); gob.pos = openNear(B, rog.pos)[0]; ftr.pos = off(12, 9); B.active = rog; B.turnNo = 40;
+  assert(!E.hasCA(B, rog, gob, { melee: true }));
+  fixDice(15);
+  E.runAuto(E.usePower(B, rog, rog.powers.find(p => p.id === 'r_twist'), { unit: gob }));
+  assert(B.fx.some(f => f.text === 'Sneak Attack!'), 'Sneak Attack without combat advantage');
+  // Deadly Gambit: a 17 crits with combat advantage
+  rog.sneakTurn = null; B.turnNo = 50; E.addCond(B, gob, 'cagrant', { src: rog.uid });
+  const gam = give(rog, 'r_gambit'); rog.act = { std: 1, move: 1, minor: 1 };
+  fixDice(17); B.fx.length = 0;
+  E.runAuto(E.usePower(B, rog, gam, { unit: gob }));
+  assert(B.fx.some(f => f.t === 'roll' && f.crit), 'crit on 17 with advantage');
+  E.setRng(Math.random);
+  // Careful Aim: full damage only against the quarry (any hero will do for the spec)
+  const ca = give(ranger, 'g_careful'); ranger.pos = off(6, 9);
+  const flat0 = E.damageSpec(B, ranger, ca, gob).flat;
+  E.addCond(B, gob, 'quarry', { src: ranger.uid, dur: 'enc' });
+  assert(E.damageSpec(B, ranger, ca, gob).flat > flat0 || E.mod(ranger.abil.STR) <= 0);
+  // Crushing Blow: +1W against your own mark
+  const cb = give(ftr, 'f_crush');
+  assert(!cb.bonusDmg(B, ftr, gob));
+  E.addCond(B, gob, 'marked', { src: ftr.uid });
+  assert.strictEqual(cb.bonusDmg(B, ftr, gob), '1W');
+});
+
+test('class identity: no two classes share a power with the same mechanics', () => {
+  const sig = (p) => JSON.stringify({ tgt: p.tgt, size: p.size, vs: p.atk && p.atk.vs, bonus: p.atk && p.atk.bonus, dmg: p.dmg, hits: p.hits, noMod: !!p.noMod,
+    hit: (p.hit || []).map(e => [e.t, e.c, e.dur, e.on, e.n, e.vs].join()), miss: Array.isArray(p.miss) ? p.miss.map(e => [e.t, e.c].join()) : p.miss,
+    eff: (p.eff || []).map(e => [e.t, e.c, e.on].join()), shift: p.shiftAfter, action: p.action, extra: [p.bonusDmg, p.critCA, p.sneakAlways, p.modVsQuarry, p.after, p.zone].map(Boolean) });
+  const seen = {};
+  const dups = [];
+  for (const p of Object.values(P)) {
+    if (!p.cls) continue;
+    const k = sig(p);
+    if (seen[k] && seen[k].cls !== p.cls) dups.push(`${seen[k].name} (${seen[k].cls}) = ${p.name} (${p.cls})`);
+    seen[k] = seen[k] || p;
+  }
+  assert.deepStrictEqual(dups, []);
+  // and every power explains itself in the builder
+  for (const p of Object.values(P)) if (p.cls) assert(G.Build.describe(p).length >= 2, p.id);
 });
 
 console.log(`${n} rules checks passed`);

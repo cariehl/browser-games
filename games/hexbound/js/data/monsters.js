@@ -280,7 +280,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     },
     goblinTactics: {
       onMissedBy: function* (B, u, att, p, ctx) {
-        if (!ctx.melee || u.dead || !E().canReact(u)) return;
+        if (!ctx.melee || u.dead || !E().canReact(u) || !E().canShift(u)) return;
         const r = E().reach(B, u, 1, 'shift');
         const hexes = [...r.values()].filter(v => !v.noEnd && v.cost > 0).map(v => v.h);
         if (!hexes.length) return;

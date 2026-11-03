@@ -714,7 +714,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     updateLabels();
     updateFloats(dt);
   }
-  const COND_ICON = { marked: '◎', slowed: '🐌', immobilized: '⛓', dazed: '💫', stunned: '✸', prone: '⤓', weakened: '↓', blinded: '◌', ongoing: '🔥', quarry: '⌖', cagrant: '⚠', atkBonus: '⚔', defBonus: '🛡', hidden: '👁', vuln: '✚', asleep: 'Z', dying: '☠' };
+  const COND_ICON = { marked: '◎', slowed: '🐌', immobilized: '⛓', dazed: '💫', stunned: '✸', prone: '⤓', weakened: '↓', blinded: '◌', ongoing: '🔥', quarry: '⌖', cagrant: '⚠', atkBonus: '⚔', defBonus: '🛡', hidden: '👁', vuln: '✚', asleep: 'Z', dying: '☠', pinned: '📌' };
   function updateLabels() {
     const w = renderer.domElement.clientWidth, h = renderer.domElement.clientHeight;
     const v3 = new THREE.Vector3();

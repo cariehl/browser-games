@@ -107,19 +107,21 @@ var G = (typeof G !== 'undefined') ? G : {};
   add('fighter', 'atwill', [
     melee({ id: 'f_cleave', name: 'Cleaving Strike', hit: [{ t: 'fn', fn: function* (B, u, t) { const o = E().enemiesOf(B, u).find(e => e !== t && E().udist(e, u) === 1); if (o) yield* E().dealDamage(B, u, o, Math.max(1, M(u, 'STR')), { label: 'cleave' }); } }], text: 'An adjacent enemy other than the target also takes STR damage.' }),
     melee({ id: 'f_drive', name: 'Driving Strike', hit: [{ t: 'push', n: 1 }, { t: 'shift', n: 1, on: 'self' }], text: 'Push 1, then you may shift 1 to follow.' }),
-    melee({ id: 'f_measured', name: 'Measured Strike', atk: { stat: 'STR', vs: 'AC', bonus: 2 }, noMod: true, text: 'Accurate (+2) but only weapon dice for damage.' }),
-    melee({ id: 'f_pin', name: 'Pinning Strike', hit: [{ t: 'cond', c: 'slowed' }] }),
+    // Fighters are the reliable ones: this one lands something even on a miss
+    melee({ id: 'f_measured', name: 'Grinding Blow', miss: [{ t: 'dmg', amt: (B, u) => Math.max(1, M(u, 'STR')), label: 'grinding', miss: true, desc: 'STR damage' }], text: 'Even on a miss, the target takes STR damage (minions shrug it off).' }),
+    // ...and the sticky ones: a pinned foe can't shift away from its mark, so it has to walk and eat the opportunity attack
+    melee({ id: 'f_pin', name: 'Hold the Line', hit: [{ t: 'cond', c: 'pinned', label: 'pinned (can\'t shift)' }], text: 'The target can\'t shift until the end of your next turn: to get away from you it has to walk, and provoke.' }),
   ]);
   add('fighter', 'enc1', [
     melee({ id: 'f_sweep', name: 'Sweeping Fall', hit: [{ t: 'cond', c: 'prone', dur: 'enc', label: 'knocked prone' }] }),
-    melee({ id: 'f_crush', name: 'Crushing Blow', dmg: '2W' }),
+    melee({ id: 'f_crush', name: 'Crushing Blow', dmg: '2W', bonusDmg: (B, u, t) => t.conds.some(c => c.c === 'marked' && c.src === u.uid) ? '1W' : null, text: '+1W damage if the target is already marked by you.' }),
   ]);
   add('fighter', 'enc3', [
-    melee({ id: 'f_whirl', name: 'Whirling Guard', tgt: 'closeBurst', size: 1, weapon: true }),
+    melee({ id: 'f_whirl', name: 'Whirling Guard', tgt: 'closeBurst', size: 1, weapon: true, eff: [{ on: 'self', t: 'cond', c: 'defBonus', amt: 2, label: '+2 defenses' }], text: 'Strike every adjacent enemy (each one is marked), then hold your guard: +2 to all defenses until the end of your next turn.' }),
     melee({ id: 'f_hamstring', name: 'Hamstring Cut', dmg: '2W', hit: [{ t: 'cond', c: 'slowed', dur: 'save' }] }),
   ]);
   add('fighter', 'daily1', [
-    melee({ id: 'f_ruin', name: 'Ruinous Strike', dmg: '3W', miss: 'half' }),
+    melee({ id: 'f_ruin', name: 'Ruinous Strike', dmg: '3W', miss: 'half', eff: [{ t: 'mark', dur: 'save' }], text: 'Hit or miss, the target stays marked by you until it saves.' }),
     melee({ id: 'f_bastion', name: 'Iron Bastion', dmg: '2W', miss: 'half', eff: [{ on: 'self', t: 'temp', amt: (B, u) => 5 + M(u, 'CON') + u.level }, { on: 'self', t: 'cond', c: 'defBonus', amt: 1, dur: 'enc', label: '+1 defenses' }] }),
   ]);
   add('fighter', 'daily5', [
@@ -139,7 +141,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     { id: 'r_toss', name: 'Knife Toss', tgt: 'ranged', range: 10, weapon: true, atk: { stat: 'DEX', vs: 'AC' }, dmg: '1W' },
   ]);
   add('rogue', 'enc1', [
-    melee({ id: 'r_twist', name: 'Twisting Knife', atk: { stat: 'DEX', vs: 'AC' }, dmg: '2W' }),
+    melee({ id: 'r_twist', name: 'Twisting Knife', atk: { stat: 'DEX', vs: 'AC' }, dmg: '2W', sneakAlways: true, text: 'Sneak Attack applies even without combat advantage.' }),
     melee({ id: 'r_daze', name: 'Dazing Jab', atk: { stat: 'DEX', vs: 'AC' }, hit: [{ t: 'cond', c: 'dazed' }] }),
   ]);
   add('rogue', 'enc3', [
@@ -147,7 +149,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     melee({ id: 'r_crimson', name: 'Crimson Flourish', atk: { stat: 'DEX', vs: 'AC' }, dmg: '2W', hit: [{ t: 'ongoing', amt: 5 }] }),
   ]);
   add('rogue', 'daily1', [
-    melee({ id: 'r_gambit', name: 'Deadly Gambit', atk: { stat: 'DEX', vs: 'AC' }, dmg: '3W', miss: 'half' }),
+    melee({ id: 'r_gambit', name: 'Deadly Gambit', atk: { stat: 'DEX', vs: 'AC' }, dmg: '3W', miss: 'half', critCA: 3, text: 'With combat advantage, this attack is a critical hit on a 17–20.' }),
     melee({ id: 'r_easy', name: 'Easy Target', atk: { stat: 'DEX', vs: 'AC' }, dmg: '2W', miss: 'half', hit: [{ t: 'cond', c: 'slowed', dur: 'save' }, { t: 'cond', c: 'cagrant', dur: 'save', label: 'exposed' }] }),
   ]);
   add('rogue', 'daily5', [
@@ -156,7 +158,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   ]);
   add('rogue', 'util2', [
     { id: 'r_tumble', name: 'Tumble', action: 'move', tgt: 'self', eff: [{ on: 'self', t: 'shift', n: 3 }] },
-    { id: 'r_smoke', name: 'Smoke Bomb', action: 'minor', tgt: 'self', eff: [{ on: 'self', t: 'cond', c: 'defBonus', amt: 2, dur: 'eont', label: '+2 defenses' }, { on: 'self', t: 'cond', c: 'hidden', dur: 'eont' }], text: '+2 defenses and you become hidden: your next attack has combat advantage.' },
+    { id: 'r_smoke', name: 'Smoke Bomb', action: 'minor', tgt: 'self', eff: [{ on: 'self', t: 'cond', c: 'defBonus', amt: 2, dur: 'eont', label: '+2 defenses' }, { on: 'self', t: 'cond', c: 'hidden', dur: 'eont', sticky: true }], text: '+2 defenses and you vanish into the smoke: your next attack before the end of your next turn has combat advantage, even after you move.' },
   ]);
 
   // Ranger
@@ -167,7 +169,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     wpn({ id: 'g_twin', name: 'Paired Strike', hits: 2, noMod: true, text: 'Two attacks against the target.' }),
     wpn({ id: 'g_nimble', name: 'Nimble Shot', shiftAfter: 1 }),
     wpn({ id: 'g_pin', name: 'Pinning Shot', hit: [{ t: 'cond', c: 'slowed' }] }),
-    wpn({ id: 'g_careful', name: 'Careful Aim', atk: { stat: 'WPN', vs: 'AC', bonus: 2 }, noMod: true }),
+    wpn({ id: 'g_careful', name: 'Careful Aim', atk: { stat: 'WPN', vs: 'AC', bonus: 2 }, noMod: true, modVsQuarry: true, text: 'Accurate (+2). Weapon dice only, unless the target is your quarry: then full damage.' }),
   ]);
   add('ranger', 'enc1', [
     wpn({ id: 'g_fangs', name: 'Twin Fangs', hits: 2 }),
@@ -194,16 +196,16 @@ var G = (typeof G !== 'undefined') ? G : {};
   const healWord = (id, name, bonusFn) => ({ id, name, kind: 'atwill', uses: 2, action: 'minor', tgt: 'ranged', range: 5, targets: 'allyOrSelf', noProvoke: true, hit: [{ t: 'heal', surge: true, bonus: bonusFn }], text: 'Twice per fight. Target spends a healing surge and regains extra HP. Revives the dying.' });
   add('cleric', 'class', [healWord('c_word', 'Healing Word', (B, u) => E().rollDice(E().parseDice('1d6')).total + M(u, 'WIS'))]);
   add('cleric', 'atwill', [
-    impl({ id: 'c_lance', name: 'Lance of Dawn', range: 5, atk: { stat: 'WIS', vs: 'Ref' }, dmg: '1d6', dtype: 'radiant', hit: [{ on: 'allyNear', prefer: 'hurt', t: 'temp', amt: (B, u) => M(u, 'WIS') + 2 }], text: 'A wounded ally within 5 gains temporary HP.' }),
-    impl({ id: 'c_lantern', name: 'Lantern Bolt', intent: 'mixed', atk: { stat: 'WIS', vs: 'Will' }, dmg: '1d8', dtype: 'radiant', hit: [buffAlliesVs(2)], text: 'Allies gain +2 to attack the target until the end of your next turn.' }),
+    impl({ id: 'c_lance', name: 'Lance of Dawn', range: 5, atk: { stat: 'WIS', vs: 'Ref' }, dmg: '1d6', dtype: 'radiant', hit: [{ on: 'allyNear', prefer: 'hurt', hurtOnly: true, incSelf: true, t: 'heal', amt: (B, u) => Math.max(2, M(u, 'WIS')) }], text: 'The most wounded of you and your allies within 5 regains WIS HP (no surge).' }),
+    impl({ id: 'c_lantern', name: 'Lantern Bolt', atk: { stat: 'WIS', vs: 'Will' }, dmg: '1d8', dtype: 'radiant', hit: [{ t: 'cond', c: 'atkBonus', amt: -2, label: 'dazzled (-2 to attacks)' }], text: 'The target is dazzled: -2 to attack rolls until the end of your next turn.' }),
     melee({ id: 'c_ward', name: 'Warding Strike', hit: [{ on: 'allyNear', t: 'cond', c: 'defBonus', amt: 2, label: '+2 defenses' }], text: 'An ally near the target gains +2 to all defenses.' }),
   ]);
   add('cleric', 'enc1', [
-    melee({ id: 'c_mend', name: 'Mending Strike', dmg: '2W', dtype: 'radiant', hit: [{ t: 'mark' }], eff: [{ on: 'allyNear', prefer: 'hurt', within: 5, t: 'heal', surge: true }], text: 'Win or lose, a hurt ally within 5 spends a healing surge.' }),
+    melee({ id: 'c_mend', name: 'Mending Strike', dmg: '2W', dtype: 'radiant', eff: [{ on: 'allyNear', prefer: 'hurt', hurtOnly: true, within: 5, t: 'heal', surge: true }], text: 'Win or lose, a hurt ally within 5 spends a healing surge.' }),
     impl({ id: 'c_dawnflare', name: 'Dawnflare', atk: { stat: 'WIS', vs: 'Fort' }, dmg: '2d8', dtype: 'radiant', hit: [{ t: 'cond', c: 'dazed' }] }),
   ]);
   add('cleric', 'enc3', [
-    impl({ id: 'c_halo', name: 'Searing Halo', tgt: 'closeBurst', size: 2, atk: { stat: 'WIS', vs: 'Will' }, dmg: '1d10', dtype: 'radiant', eff: [{ on: 'alliesNear', within: 2, incSelf: true, t: 'temp', amt: 5 }] }),
+    impl({ id: 'c_halo', name: 'Searing Halo', tgt: 'closeBurst', size: 2, atk: { stat: 'WIS', vs: 'Will' }, dmg: '1d10', dtype: 'radiant', eff: [{ on: 'alliesNear', within: 2, incSelf: true, t: 'cond', c: 'defBonus', amt: 2, label: '+2 defenses' }], text: 'You and allies within 2 gain +2 to all defenses until the end of your next turn.' }),
     melee({ id: 'c_hammer', name: 'Hammer of Judgment', atk: { stat: 'STR', vs: 'Fort' }, dmg: '2W', hit: [{ t: 'push', n: 2 }, { t: 'cond', c: 'prone', dur: 'enc', label: 'knocked prone' }] }),
   ]);
   add('cleric', 'daily1', [
@@ -211,11 +213,11 @@ var G = (typeof G !== 'undefined') ? G : {};
     impl({ id: 'c_beacon', name: 'Beacon of Hope', tgt: 'closeBurst', size: 3, atk: { stat: 'WIS', vs: 'Will' }, hit: [{ t: 'cond', c: 'weakened', dur: 'save' }], eff: [{ on: 'alliesNear', within: 3, incSelf: true, t: 'heal', amt: (B, u) => 5 + M(u, 'WIS') }], text: 'Enemies are weakened; allies in range heal.' }),
   ]);
   add('cleric', 'daily5', [
-    impl({ id: 'c_sunfall', name: 'Sunfall', tgt: 'areaBurst', size: 2, atk: { stat: 'WIS', vs: 'Ref' }, dmg: '2d8', dtype: 'radiant', miss: 'half', after: (B, u, ts, rs, ctx) => { for (const a of E().alliesOf(B, u, true)) if (!a.object && G.Hex.dist(a.pos, ctx.aim) <= 2) E().heal(B, u, a, 5 + M(u, 'WIS')); }, text: 'Allies caught in the burst heal instead of burning.' }),
-    impl({ id: 'c_chains', name: 'Spirit Chains', atk: { stat: 'WIS', vs: 'Will' }, dmg: '2d10', hit: [{ t: 'cond', c: 'immobilized', dur: 'save' }], miss: [{ t: 'cond', c: 'slowed' }] }),
+    impl({ id: 'c_sunfall', name: 'Sunfall', tgt: 'areaBurst', size: 2, atk: { stat: 'WIS', vs: 'Ref' }, dmg: '2d8', dtype: 'radiant', miss: 'half', after: (B, u, ts, rs, ctx) => { for (const a of E().alliesOf(B, u, true)) if (!a.object && ctx.aim && G.Hex.dist(a.pos, ctx.aim) <= 2) E().heal(B, u, a, 5 + M(u, 'WIS') + (u.healBonus || 0)); }, text: 'Allies caught in the burst heal instead of burning.' }),
+    impl({ id: 'c_chains', name: 'Blinding Radiance', atk: { stat: 'WIS', vs: 'Will' }, dmg: '2d10', dtype: 'radiant', miss: 'half', hit: [{ t: 'cond', c: 'blinded', dur: 'save' }], text: 'The target is blinded (save ends): -5 to attacks, and everyone has combat advantage against it.' }),
   ]);
   add('cleric', 'util2', [
-    { id: 'c_bless', name: 'Benediction', action: 'minor', tgt: 'closeBurst', size: 5, targets: 'allyOrSelf', includeSelf: true, hit: [{ t: 'cond', c: 'atkBonus', amt: 1, dur: 'enc', label: '+1 to attacks' }], text: 'You and allies within 5 gain +1 to attacks for the fight.' },
+    { id: 'c_bless', name: 'Benediction', action: 'minor', tgt: 'closeBurst', size: 5, targets: 'allyOrSelf', includeSelf: true, hit: [{ t: 'cond', c: 'defBonus', amt: 1, dur: 'enc', label: '+1 defenses' }], text: 'You and allies within 5 gain +1 to all defenses for the fight.' },
     { id: 'c_restore', name: 'Restoring Touch', tgt: 'ranged', range: 1, targets: 'allyOrSelf', noProvoke: true, hit: [{ t: 'heal', surge: true, bonus: '2d6' }, { t: 'save', bonus: 5 }] },
   ]);
 
@@ -223,7 +225,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   // Warlords don't heal: they rally. Temp HP instead of surges (that's the Cleric's job), and a dying
   // ally is pulled back up to 1 HP first so the word still saves lives.
   add('warlord', 'class', [{ id: 'w_word', name: 'Inspiring Word', kind: 'atwill', uses: 3, action: 'minor', tgt: 'ranged', range: 5, targets: 'allyOrSelf', noProvoke: true,
-    hit: [{ t: 'temp', revive: true, amt: (B, u) => E().rollDice(E().parseDice('1d6')).total + M(u, 'CHA') + u.level + (u.traits.includes('inspiring') ? M(u, 'CHA') : 0) }],
+    hit: [{ t: 'temp', revive: true, rally: true, amt: (B, u) => E().rollDice(E().parseDice('1d6')).total + M(u, 'CHA') + u.level + (u.traits.includes('inspiring') ? M(u, 'CHA') : 0) }],
     text: 'Three times per fight. Target gains 1d6 + CHA + level temporary HP (no surge spent). A dying target first rises at 1 HP.' }]);
   add('warlord', 'atwill', [
     { id: 'w_rally', name: 'Rally the Blade', tgt: 'ranged', range: 10, targets: 'enemy', intent: 'mixed', noProvoke: true, hit: [{ t: 'fn', fn: function* (B, u, t) { const a = allyCanAttack(B, u, t); if (!a) { E().log(B, 'No ally can reach!', 'miss'); return; } yield* E().grantAttack(B, u, a, t, { dmg: Math.max(1, M(u, 'INT')) }); } }], text: 'No attack of your own: the best-placed ally makes a basic attack on the target, +INT damage.', grant: true },
@@ -235,20 +237,20 @@ var G = (typeof G !== 'undefined') ? G : {};
     melee({ id: 'w_lion', name: "Lion's Command", dmg: '2W', hit: [buffAlliesVs(2)] }),
   ]);
   add('warlord', 'enc3', [
-    melee({ id: 'w_shock', name: 'Shock Assault', dmg: '2W', hit: [{ t: 'cond', c: 'dazed' }] }),
-    melee({ id: 'w_inspblow', name: 'Inspiring Blow', dmg: '2W', hit: [{ on: 'alliesNear', incSelf: true, t: 'temp', revive: true, amt: (B, u) => M(u, 'CHA') + 3 + u.level }], text: 'On a hit, you and allies within 5 gain CHA + 3 + level temp HP; dying allies rise at 1 HP.' }),
+    melee({ id: 'w_shock', name: 'Shock Assault', dmg: '2W', hit: [{ t: 'cond', c: 'dazed' }, { t: 'fn', fn: function* (B, u, t) { for (const a of E().alliesOf(B, u).filter(a => !a.object && E().udist(a, t) === 1 && E().canShift(a))) yield* E().applyEffect(B, u, a, { t: 'shift', n: 1 }); } }], text: 'The target is dazed, and every ally next to it may shift 1.' }),
+    melee({ id: 'w_inspblow', name: 'Inspiring Blow', dmg: '2W', hit: [{ on: 'alliesNear', incSelf: true, t: 'temp', revive: true, rally: true, amt: (B, u) => M(u, 'CHA') + 3 + u.level }], text: 'On a hit, you and allies within 5 gain CHA + 3 + level temp HP; dying allies rise at 1 HP.' }),
   ]);
   add('warlord', 'daily1', [
-    melee({ id: 'w_bastion', name: 'Bastion Formation', dmg: '2W', miss: 'half', eff: [{ on: 'alliesNear', incSelf: true, t: 'cond', c: 'defBonus', amt: 1, dur: 'enc', label: '+1 defenses' }, { on: 'alliesNear', incSelf: true, t: 'temp', amt: 5 }] }),
+    melee({ id: 'w_bastion', name: 'Shieldwall Formation', dmg: '2W', miss: 'half', eff: [{ on: 'alliesNear', incSelf: true, t: 'cond', c: 'defBonus', amt: 1, dur: 'enc', label: '+1 defenses' }, { on: 'alliesNear', incSelf: true, t: 'temp', amt: 5 }] }),
     // the offensive twin of Bastion Formation: same shape (party-wide buff win or lose), but attack instead of defense
     melee({ id: 'w_lead', name: 'Lead the Charge', intent: 'mixed', dmg: '3W', miss: 'half', hit: [buffAlliesVs(2, 'enc')], eff: [{ on: 'alliesNear', incSelf: true, t: 'cond', c: 'atkBonus', amt: 1, dur: 'enc', label: '+1 to attacks' }], text: 'Win or lose, you and allies within 5 gain +1 to attacks for the fight. On a hit, allies gain +2 more against the target.' }),
   ]);
   add('warlord', 'daily5', [
     { id: 'w_grand', name: 'Grand Command', tgt: 'closeBurst', size: 5, targets: 'ally', noProvoke: true, text: 'Up to three allies within 5 each make a basic attack (+2) against an enemy they can reach.', after: function* (B, u, ts) { let n = 0; for (const a of ts) { if (n >= 3) break; const e = E().enemiesOf(B, a).filter(e => a.powers.some(p => (p.basicMelee || p.basicRanged) && E().validTarget(B, a, p, e))).sort((x, y) => x.hp - y.hp)[0]; if (e) { n++; yield* E().grantAttack(B, u, a, e, { atk: 2 }); } } } },
-    melee({ id: 'w_victory', name: 'Rallying Triumph', dmg: '2W', eff: [{ on: 'alliesNear', incSelf: true, t: 'temp', revive: true, amt: 'surgeValue' }], text: 'Win or lose, you and every ally within 5 gain temp HP equal to their surge value; dying allies rise at 1 HP.' }),
+    melee({ id: 'w_victory', name: 'Rallying Triumph', dmg: '2W', eff: [{ on: 'alliesNear', incSelf: true, t: 'temp', revive: true, rally: true, amt: 'surgeValue' }], text: 'Win or lose, you and every ally within 5 gain temp HP equal to their surge value; dying allies rise at 1 HP.' }),
   ]);
   add('warlord', 'util2', [
-    { id: 'w_orders', name: 'Quick Orders', action: 'minor', tgt: 'ranged', range: 5, targets: 'ally', noProvoke: true, hit: [{ t: 'shift', n: 2 }] },
+    { id: 'w_orders', name: 'Quick Orders', action: 'minor', tgt: 'ranged', range: 5, targets: 'ally', noProvoke: true, hit: [{ t: 'shift', n: 2 }], text: 'An ally within 5 shifts 2 (you choose where).' },
     { id: 'w_shake', name: 'Shake It Off', action: 'minor', tgt: 'ranged', range: 5, targets: 'allyOrSelf', noProvoke: true, hit: [{ t: 'save', bonus: 2 }, { t: 'temp', amt: 5 }] },
   ]);
 
@@ -257,7 +259,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     impl({ id: 'z_dart', name: 'Arcane Dart', range: 20, atk: { stat: 'INT', vs: 'Ref' }, dmg: '2d4', dtype: 'force' }),
     impl({ id: 'z_thunder', name: 'Thunderclap', tgt: 'closeBlast', size: 3, atk: { stat: 'INT', vs: 'Fort' }, dmg: '1d6', dtype: 'thunder', hit: [{ t: 'push', n: 1 }] }),
     impl({ id: 'z_rime', name: 'Rimeburst', tgt: 'areaBurst', size: 1, atk: { stat: 'INT', vs: 'Fort' }, dmg: '1d6', dtype: 'cold', hit: [{ t: 'cond', c: 'slowed' }] }),
-    impl({ id: 'z_ember', name: 'Ember Scatter', tgt: 'areaBurst', size: 1, atk: { stat: 'INT', vs: 'Ref' }, dmg: '1d6', dtype: 'fire', targets: 'enemy' }),
+    impl({ id: 'z_ember', name: 'Ember Scatter', tgt: 'areaBurst', size: 2, atk: { stat: 'INT', vs: 'Ref' }, dmg: '1d4', dtype: 'fire', targets: 'enemy', text: 'Wide but weak: built for sweeping minions.' }),
   ]);
   add('wizard', 'enc1', [
     impl({ id: 'z_fan', name: 'Fan of Flame', tgt: 'closeBlast', size: 5, atk: { stat: 'INT', vs: 'Ref' }, dmg: '2d6', dtype: 'fire' }),
@@ -315,7 +317,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     executioner: { name: "Executioner's Edge", text: '+2 damage against bloodied enemies.' },
     flanker: { name: 'Pack Fighter', text: 'Combat advantage gives you +3 to hit instead of +2.' },
     deepBreath: { name: 'Deep Breath', text: 'Second Wind heals +5 HP more.' },
-    healer: { name: "Mender's Touch", text: 'Your healing powers restore +3 HP.', cls: ['cleric', 'warlord'] },
+    healer: { name: "Mender's Touch", text: 'Your healing powers restore +3 HP; a Warlord\'s rallies grant +3 more temporary HP.', cls: ['cleric', 'warlord'] },
     backstab: { name: 'Backstabber', text: 'Sneak Attack dice increase by one size.', cls: ['rogue'] },
     lethalHunter: { name: 'Lethal Hunter', text: 'Quarry damage becomes 1d10.', cls: ['ranger'] },
     shieldPush: { name: 'Shield Push', text: 'Combat Challenge attacks push the target 1.', cls: ['fighter'] },
@@ -334,7 +336,8 @@ var G = (typeof G !== 'undefined') ? G : {};
       onEnemyAction: function* (B, u, actor, info) {
         if (u.ccRound === B.turnNo || !E().canReact(u) || actor.dead) return;
         if (!actor.conds.some(c => c.c === 'marked' && c.src === u.uid)) return;
-        if (E().udist(actor, u) !== 1) return;
+        // a shift is judged from where it started: stepping away from the Fighter is exactly what this punishes
+        if (E().udist(actor, u, info.shift && info.from ? info.from : null) !== 1) return;
         if (!(info.shift || (info.attack && !(info.targets || []).includes(u)))) return;
         u.ccRound = B.turnNo;
         E().log(B, `${u.name}'s Combat Challenge punishes ${actor.name}!`, 'oa');
@@ -349,7 +352,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     ravager: {
       atkMod: (B, u, ctx) => weaponish(ctx.power) ? 1 : 0,
       onKill: function* (B, u, victim) {
-        if (B.active !== u || u.turnFlags.cleave) return;
+        if (B.active !== u || u.turnFlags.cleave || !E().canAct(u)) return;
         const o = E().enemiesOf(B, u).find(e => E().udist(e, u) === 1);
         if (!o) return; u.turnFlags.cleave = true;
         E().fx(B, { t: 'banner', text: 'Cleave!', u: u.uid, cls: 'crit' });
@@ -359,10 +362,10 @@ var G = (typeof G !== 'undefined') ? G : {};
     },
     sneakAttack: {
       dmgMod: (B, u, ctx) => {
-        if (!ctx.ca || !weaponish(ctx.power) || u.sneakTurn === B.turnNo) return 0;
+        if (!(ctx.ca || (ctx.power && ctx.power.sneakAlways)) || !weaponish(ctx.power) || u.sneakTurn === B.turnNo) return 0;
         u.sneakTurn = B.turnNo;
         const die = (u.traits.includes('shadowblade') ? 8 : 6) + (u.feats.includes('backstab') ? 2 : 0);
-        const n = u.level >= 5 ? 2 : 2;
+        const n = 2;
         let r = E().rollDice({ dice: [[n, die]], flat: 0 }).total + (u.traits.includes('ruffian') ? Math.max(0, M(u, 'STR')) : 0);
         E().fx(B, { t: 'banner', text: 'Sneak Attack!', u: ctx.target.uid, cls: 'crit' });
         return r;
@@ -529,6 +532,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           case 'cond': return `${who === 'target' ? '' : who + ': '}${e.label || e.c}${dur}`;
           case 'ongoing': return `ongoing ${e.amt} damage (save ends)`;
           case 'mark': return 'marked' + dur;
+          case 'dmg': return e.desc || 'damage';
           case 'heal': return `${who} ${e.flat != null ? `spends a surge to regain ${e.flat} HP` : e.surge ? 'spends a surge' : 'heals'}`;
           case 'temp': return `${who} gains temp HP${e.revive ? ' (revives the dying)' : ''}`;
           case 'shift': return `${who} shifts ${e.n}`;
