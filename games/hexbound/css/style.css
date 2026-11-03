@@ -540,3 +540,24 @@ table.stats tr.mvp td { color: #ffd76a; }
 .gm-item { font-size: 12px; display: flex; align-items: center; gap: 4px; flex-wrap: wrap; } .gm-item select { background: var(--bg2); color: var(--text); border: 1px solid var(--line); border-radius: 4px; font-size: 11px; }
 @media (max-width: 1100px) { .cp-body.two { display: block; } .gm-heroes { grid-template-columns: 1fr 1fr; } }
 @media (max-width: 600px) { .gm-heroes { grid-template-columns: 1fr; } }
+
+/* ---------- site links (cariehl.github.io) ---------- */
+#menu .menu-corner { position: absolute; top: 14px; left: 14px; display: flex; align-items: center; gap: 8px; z-index: 1; }
+#menu .menu-corner .btn { text-decoration: none; }
+.icon-btn { display: inline-grid; place-items: center; width: 32px; height: 32px; border-radius: 50%; border: 1px solid var(--line); color: var(--text); background: var(--bg2); }
+.icon-btn:hover { border-color: var(--gold2); }
+#menu .is-hidden { display: none; }
+.modal.commentary-modal { max-width: 800px; }
+.commentary { max-width: 760px; margin: 0 auto; font-size: 15px; line-height: 1.6; }
+.commentary h1, .commentary h2, .commentary h3 { color: var(--gold); margin: 18px 0 6px; }
+.commentary h1:first-child, .commentary h2:first-child { margin-top: 0; }
+.commentary a { color: var(--gold); }
+.commentary img { display: block; max-width: 100%; max-height: 70vh; margin: 12px auto; border-radius: 8px; }
+.commentary figure { margin: 16px 0; }
+.commentary figure img { margin: 0 auto 6px; }
+.commentary figcaption { text-align: center; font-size: .9em; font-style: italic; opacity: .75; }
+.commentary blockquote { margin: 10px 0; padding: 4px 14px; border-left: 3px solid var(--line); opacity: .85; }
+.commentary code { background: #ffffff14; padding: 1px 5px; border-radius: 4px; }
+.commentary pre { background: #00000059; padding: 10px 12px; border-radius: 8px; overflow-x: auto; }
+.commentary pre code { background: none; padding: 0; }
+@media (max-width: 600px) { .menu-inner { margin-top: 56px; } }

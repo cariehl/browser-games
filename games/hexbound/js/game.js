@@ -24,10 +24,51 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (id === 'battle') setTimeout(() => R().resize(), 0);
   }
 
+  // ---- Site links (only when hosted on cariehl.github.io, or with ?site for a local preview) ----
+  // SOURCE_URL: set to the repo URL to show a GitHub button on the menu (left empty while the repo is private).
+  const SOURCE_URL = '';
+  const ON_SITE = /^https?:$/.test(location.protocol) && (/(^|\.)github\.io$/.test(location.hostname) || /[?&]site\b/.test(location.search));
+  const COMMENTARY_URL = new URL('../commentary/hexbound.md', location.href);
+  const GH_ICON = '<svg viewBox="0 0 16 16" width="18" height="18" aria-hidden="true"><path fill="currentColor" d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.013 8.013 0 0016 8c0-4.42-3.58-8-8-8z"/></svg>';
+  let commentaryP = null;
+  // The commentary file lives outside the game folder, so the button only shows while it exists.
+  function loadCommentary() {
+    if (!ON_SITE) return Promise.resolve(null);
+    return commentaryP || (commentaryP = fetch(COMMENTARY_URL, { cache: 'no-cache' })
+      .then(async r => (r.ok && !(r.headers.get('content-type') || '').includes('text/html') && (await r.text()).trim()) || null)
+      .catch(() => null));
+  }
+  function renderCommentary(md) {
+    const t = document.createElement('template');
+    t.innerHTML = window.marked ? window.marked.parse(md, { async: false }) : `<pre>${esc(md)}</pre>`;
+    // image and link paths are relative to the commentary file
+    for (const [sel, attr] of [['img[src]', 'src'], ['a[href]', 'href']]) t.content.querySelectorAll(sel).forEach(el => {
+      const v = el.getAttribute(attr); if (!v.startsWith('#')) el.setAttribute(attr, new URL(v, COMMENTARY_URL).href);
+    });
+    // ![alt](pic.jpg "Caption") -> figure with a caption
+    t.content.querySelectorAll('img[title]').forEach(img => {
+      const fig = document.createElement('figure'), cap = document.createElement('figcaption');
+      cap.textContent = img.getAttribute('title'); img.removeAttribute('title');
+      const p = img.parentElement;
+      (p && p.tagName === 'P' && p.childNodes.length === 1 ? p : img).replaceWith(fig);
+      fig.append(img, cap);
+    });
+    t.content.querySelectorAll('a[href^="http"]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+    return t.innerHTML;
+  }
+  function siteCorner() {
+    if (!ON_SITE && !SOURCE_URL) return '';
+    return `<div class="menu-corner">
+        ${ON_SITE ? `<a class="btn sm ghost" href="../" title="Back to cariehl.github.io">← Back</a>` : ''}
+        ${SOURCE_URL ? `<a class="icon-btn" href="${SOURCE_URL}" target="_blank" rel="noopener" title="Source code on GitHub" aria-label="GitHub">${GH_ICON}</a>` : ''}
+        <button class="btn sm ghost is-hidden" id="btn-commentary">📝 Commentary</button>
+      </div>`;
+  }
+
   function menu() {
     show('menu');
     const run = G.Campaign.loadRun();
-    $('#menu').innerHTML = `
+    $('#menu').innerHTML = `${siteCorner()}
       <div class="menu-inner">
         <div class="logo"><span class="hexmark">⬢</span> HEXBOUND <small>Tactics · Combat Prototype</small></div>
         <p class="tag">A party of four. A hex grid. A truly unreasonable amount of pastry.</p>
@@ -48,6 +89,11 @@ var G = (typeof G !== 'undefined') ? G : {};
     $('#menu').querySelectorAll('[data-go]').forEach(b => b.onclick = () => { G.Audio.unlock(); G.Audio.play('click'); go(b.dataset.go); });
     $('#opt-speed').onchange = (e) => { G.Settings.speed = +e.target.value; saveSettings(); };
     $('#opt-sound').onchange = () => G.Audio.toggle();
+    loadCommentary().then(md => {
+      const b = $('#btn-commentary'); if (!md || !b) return;
+      b.classList.remove('is-hidden');
+      b.onclick = () => { G.Audio.play('click'); modal(`<div class="commentary">${renderCommentary(md)}</div><div class="modal-btns"><button class="btn" data-close>Close</button></div>`, 'commentary-modal'); };
+    });
   }
   function go(where) {
     if (where === 'select') selectScreen();
