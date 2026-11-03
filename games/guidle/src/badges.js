@@ -132,6 +132,26 @@
   const distinct = s => new Set(s).size;
   const isPal = s => s === [...s].reverse().join('');
   const year = String(new Date().getFullYear());
+  // Doubled characters: runs of exactly two inside a group (55, cc). Returns their indices, two per pair.
+  const pairs = A => memo(A, 'pairs', A => {
+    const idx = [];
+    for (const g of A.groups) { let st = 0; for (let i = 1; i <= g.l; i++) if (i === g.l || g.str[i] !== g.str[st]) { if (i - st === 2) idx.push(g.s + st, g.s + st + 1); st = i; } }
+    return idx;
+  });
+  // Group joins where neighbouring groups meet on the same character (3f-f9).
+  const joins = A => memo(A, 'joins', A => {
+    const idx = [];
+    for (let k = 1; k < 5; k++) { const a = A.groups[k - 1], b = A.groups[k]; if (a.str[a.l - 1] === b.str[0]) idx.push(a.s + a.l - 1, b.s); }
+    return idx;
+  });
+  // Runs of exactly three of the same character, within a group.
+  const triples = A => memo(A, 'triples', A => {
+    const out = [];
+    for (const g of A.groups) { let st = 0; for (let i = 1; i <= g.l; i++) if (i === g.l || g.str[i] !== g.str[st]) { if (i - st === 3) out.push(...rng(g.s + st, 3)); st = i; } }
+    return out;
+  });
+  const midMatches = (A, pred) => midGroups(A).filter(g => pred(g.str));
+  const groupsIdx = gs => gs.flatMap(g => rng(g.s, g.l));
 
   // ---- Exact probabilities where the math is tractable ----
   // A v4 UUID has 30 free hex characters: position 12 is always '4', position 16 is one of 8, 9, a, b.
@@ -143,23 +163,33 @@
     for (let i = 0; i <= 30; i++) { const b = C(30, i) * (6 / 16) ** i * (10 / 16) ** (30 - i); d[i] += b / 2; d[i + 1] += b / 2; }
     return d;
   })();
+  // Distribution of how many independent events happen, given each one's probability.
+  const countDist = ps => ps.reduce((d, p) => d.map((x, k) => x * (1 - p) + (k ? d[k - 1] * p : 0)).concat(d[d.length - 1] * p), [1]);
+  const atLeast = (ps, k) => sum(countDist(ps), k, ps.length);
+  const exactly = (ps, k) => countDist(ps)[k];
   const sum = (a, from, to) => a.slice(from, to + 1).reduce((x, y) => x + y, 0);
   const P_SOLID = 1 / 4096, P_TWO = 1680 / 65536; // per four-character group, same for groups 2, 3 and 4
   const P_SORTED8 = C(23, 8) / 16 ** 8;
+  const P_PAL = 1 / 256; // a middle group is a palindrome (same for all three despite the fixed characters)
+  const P_NUM = [(10 / 16) ** 4, (10 / 16) ** 3, 0.5 * (10 / 16) ** 3], P_LETG = [(6 / 16) ** 4, 0, 0.5 * (6 / 16) ** 3];
+  const P_JOIN = [1 / 16, 1 / 16, 1 / 16, 1 / 16]; // each group join uses different characters, so they're independent
+  // Laddered badges score only their highest rung, so each base badge's odds exclude its extensions.
   const EXACT = {
-    bookends: 1 / 16, freshstart: 1 / 256, strongfinish: 1 / 256,
+    bookends: (1 / 16) * (15 / 16), fullcircle: 1 / 256,
+    freshstart: 1 / 256 - 1 / 4096, cleanslate: 1 / 4096,
+    strongfinish: 1 / 256 - 1 / 4096, grandfinale: 1 / 4096,
     digifirst: (10 / 16) ** 8, letfirst: (6 / 16) ** 8, phonebook: (10 / 16) ** 12,
     hallmirror: 16 ** -4, sorted8: P_SORTED8, twins: 2 / 65536,
     solid: anyOf([P_SOLID, P_SOLID, P_SOLID]),
     twotone: (1 - P_SOLID) ** 3 - (1 - P_SOLID - P_TWO) ** 3, // some group is two-tone and none is solid (solid outranks it)
-    mirror: anyOf([1 / 256, 1 / 256, 1 / 256]),
-    numgroup: anyOf([(10 / 16) ** 4, (10 / 16) ** 3, 0.5 * (10 / 16) ** 3]),
-    letgroup: anyOf([(6 / 16) ** 4, 0, 0.5 * (6 / 16) ** 3]),
+    mirror: exactly([P_PAL, P_PAL, P_PAL], 1), funhouse: atLeast([P_PAL, P_PAL, P_PAL], 2),
+    numgroup: exactly(P_NUM, 1), numbersgame: atLeast(P_NUM, 2),
+    letgroup: exactly(P_LETG, 1), spellchamp: atLeast(P_LETG, 2),
     sorted: anyOf([C(19, 4) / 65536, C(14, 3) / 4096, (C(10, 3) + C(9, 3) + C(8, 3) + C(7, 3)) / 4 / 4096]) * (1 - P_SORTED8),
-    sevens: binomTail(30, 1 / 16, 5),
-    letterlover: sum(LET, 18, 31), digitdiet: sum(LET, 0, 6),
-    handshake: 1 - (15 / 16) ** 4, nozeros: (15 / 16) ** 30,
-    evensteven: 5 / 16, oddcouple: (5 / 16) ** 2, letteropener: (6 / 16) ** 2,
+    sevens: binomTail(30, 1 / 16, 5) - binomTail(30, 1 / 16, 7), jackpot: binomTail(30, 1 / 16, 7),
+    letterlover: sum(LET, 18, 21), letterlegend: sum(LET, 22, 31), digitdiet: sum(LET, 4, 6), digitpurist: sum(LET, 0, 3),
+    handshake: exactly(P_JOIN, 1), chain: exactly(P_JOIN, 2) + exactly(P_JOIN, 3), grouphug: exactly(P_JOIN, 4), nozeros: (15 / 16) ** 30,
+    evensteven: 5 / 16, oddcouple: (5 / 16) ** 2 * (11 / 16), oddsquad: (5 / 16) ** 3, letteropener: (6 / 16) ** 2,
     frontloaded: 8 * (10 / 16) ** 7 * (6 / 16), // exactly seven digits; all eight is Digital Native
     topheavy: (1 / 2) ** 8, alleven: (1 / 2) ** 8, bottomheavy: (1 / 2) ** 12,
   };
@@ -170,7 +200,13 @@
   };
 
   const BADGES = [];
-  const add = (id, name, desc, test, opt = {}) => BADGES.push({ id, name, desc, test, family: opt.family || id, rank: opt.rank || 0, exact: opt.exact, est: opt.est });
+  const add = (id, name, desc, test, opt = {}) => BADGES.push({ id, name, desc, test, family: opt.family || id, rank: opt.rank || 0, exact: opt.exact, est: opt.est, ext: opt.ext });
+  // An extended badge is a stronger version of an existing one. It joins that badge's ladder one rung up,
+  // so a roll scores only the strongest version it earns.
+  const extend = (baseId, id, name, desc, test, rank = 1) => {
+    const base = BADGES.find(b => b.id === baseId);
+    add(id, name, desc, test, { family: base.family, rank: base.rank + rank, ext: baseId });
+  };
 
   // Repeated characters
   add('triple', 'Hat Trick', 'Three of the same character in a row.', A => run(A).len === 3 ? run(A) : null, { family: 'run', rank: 1 });
@@ -228,11 +264,7 @@
   add('letteropener', 'Letter Opener', 'Starts with two letters.', A => !isDigit(A.u[0]) && !isDigit(A.u[1]) ? { idx: [0, 1] } : null);
   add('frontloaded', 'Front-Loaded', 'Seven of the first eight characters are digits.', A => A.groups[0].str.replace(/[a-f]/g, '').length === 7 ? { idx: rng(0, 8).filter(i => isDigit(A.u[i])) } : null, { family: 'front', rank: 1 });
   add('balanced', 'Balanced Books', 'All 32 characters, read as hex values, add up to a multiple of 10.', A => [...A.rawStr].reduce((t, ch) => t + HEX.indexOf(ch), 0) % 10 === 0 ? { idx: [] } : null);
-  add('twinpeaks', 'Twin Peaks', 'Two separate doubled characters, like 55 and cc.', A => {
-    const idx = [];
-    for (const g of A.groups) { let st = 0; for (let i = 1; i <= g.l; i++) if (i === g.l || g.str[i] !== g.str[st]) { if (i - st === 2) idx.push(g.s + st, g.s + st + 1); st = i; } }
-    return idx.length >= 4 ? { idx: idx.slice(0, 4) } : null;
-  });
+  add('twinpeaks', 'Twin Peaks', 'Two separate doubled characters, like 55 and cc.', A => pairs(A).length >= 4 ? { idx: pairs(A).slice(0, 4) } : null);
   add('topheavy', 'Top Heavy', 'Every character in the first group is 8 or higher.', A => /^[89a-f]{8}$/.test(A.groups[0].str) ? { idx: rng(0, 8) } : null);
   add('alleven', 'Even Keel', 'Every character in the first group is even (0, 2, 4 … e).', A => /^[02468ace]{8}$/.test(A.groups[0].str) ? { idx: rng(0, 8) } : null);
   add('bottomheavy', 'Low Profile', 'Every character in the last group is 7 or lower.', A => /^[0-7]{12}$/.test(A.groups[4].str) ? { idx: rng(24, 12) } : null);
@@ -264,6 +296,23 @@
   add('coffee', 'Coffee Break', 'Spells C0FFEE.', spells('coffee'));
   add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'));
   add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'));
+  // Extended badges: stronger versions of the badges above
+  extend('twinpeaks', 'triplethreat', 'Triple Threat', 'Three separate doubled characters, like 55, cc and ee.', A => pairs(A).length >= 6 ? { idx: pairs(A).slice(0, 6) } : null);
+  extend('twinpeaks', 'pairparade', 'Pair Parade', 'Four or more separate doubled characters.', A => pairs(A).length >= 8 ? { idx: pairs(A) } : null, 2);
+  extend('triple', 'doublehat', 'Double Hat Trick', 'Two separate runs of three of the same character, and nothing longer.', A => run(A).len === 3 && triples(A).length >= 6 ? { idx: triples(A) } : null, 0.5);
+  extend('handshake', 'chain', 'Chain Reaction', 'Two or three of the group joins meet on the same character.', A => joins(A).length >= 4 && joins(A).length < 8 ? { idx: joins(A) } : null);
+  extend('handshake', 'grouphug', 'Group Hug', 'All four group joins meet on the same character.', A => joins(A).length === 8 ? { idx: joins(A) } : null, 2);
+  extend('bookends', 'fullcircle', 'Full Circle', 'The first two characters mirror the last two, like 3f…f3.', A => A.u[0] === A.u[35] && A.u[1] === A.u[34] ? { idx: [0, 1, 34, 35] } : null);
+  extend('freshstart', 'cleanslate', 'Clean Slate', 'Begins with 000.', A => A.u.startsWith('000') ? { idx: [0, 1, 2] } : null);
+  extend('strongfinish', 'grandfinale', 'Grand Finale', 'Ends with fff.', A => A.u.endsWith('fff') ? { idx: [33, 34, 35] } : null);
+  extend('sevens', 'jackpot', 'Jackpot', 'Seven or more 7s anywhere in the ID.', A => (counts(A)['7'] || 0) >= 7 ? { idx: A.raw.filter(i => A.u[i] === '7') } : null);
+  extend('mirror', 'funhouse', 'Funhouse', 'Two or more four-character groups read the same backwards.', A => { const m = midMatches(A, isPal); return m.length >= 2 ? { idx: groupsIdx(m) } : null; });
+  extend('numgroup', 'numbersgame', 'Numbers Game', 'Two or more four-character groups made only of digits.', A => { const m = midMatches(A, allDigits); return m.length >= 2 ? { idx: groupsIdx(m) } : null; });
+  extend('letgroup', 'spellchamp', 'Spelling Champ', 'Two four-character groups made only of letters.', A => { const m = midMatches(A, allLetters); return m.length >= 2 ? { idx: groupsIdx(m) } : null; });
+  extend('binary', 'machinecode', 'Machine Code', 'Seven or more characters in a row using only 0 and 1.', A => binRun(A).len >= 7 ? binRun(A) : null);
+  extend('oddcouple', 'oddsquad', 'Odd Squad', 'Starts with three odd digits.', A => [0, 1, 2].every(i => '13579'.includes(A.u[i])) ? { idx: [0, 1, 2] } : null);
+  extend('letterlover', 'letterlegend', 'Letter Legend', 'At least 22 of the 32 characters are letters.', A => letters(A) >= 22 ? { idx: A.raw.filter(i => !isDigit(A.u[i])) } : null);
+  extend('digitdiet', 'digitpurist', 'Digit Purist', 'Three or fewer letters in the whole ID.', A => letters(A) <= 3 ? { idx: A.raw.filter(i => isDigit(A.u[i])) } : null);
   // Consolation (awarded only when nothing else hits)
   // Openers: exactly one per roll, so every roll earns at least one badge.
   const OPENERS = { 0: 'Ground Zero', 1: 'Number One', 2: 'Two’s Company', 3: 'Third Time’s the Charm', 4: 'Four-Leaf Clover', 5: 'Take Five', 6: 'Sixth Sense', 7: 'Lucky Number Seven',
