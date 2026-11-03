@@ -86,6 +86,12 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
 - **Menus**: an animated low-poly hex island behind the main menu (`js/menu-bg.js`, its own small three.js
   scene that only renders while the menu shows), screen and dialog transitions, an animated battle result
   with per-hero stat cards, and a rolling d20 for campaign event skill checks.
+- **Menu screens** (`js/ui.js` shared pieces): every non-battle screen shares one top bar, hex class portraits and card
+  style. The party builder walks through numbered steps (class tiles with HP/surges/armor at a glance, subclass cards,
+  a point-buy budget meter) beside a live character sheet. The act map shows where the party stands, animates the
+  roads you can take next, fades nodes you can no longer reach, lists every fork with its rewards, and opens a node
+  on double-click. Camp lays out spoils, the gear choice and level-up picks with a sticky footer that says what is
+  still needed; rest sites show what each option would gain the party right now; shops flag prices you can't afford.
 - **Juice**: hit-chance previews, flank hints, opportunity-attack path warnings, dice popups, crits with
   camera shake, multi-kill and overkill banners, boss barks, Momentum rerolls, synthesized sound.
 
