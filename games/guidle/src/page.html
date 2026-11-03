@@ -493,7 +493,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568];
   const TIER_NOTE = [0, 2, 3, 5, 7, 8]; // common C5 … mythic G6
   const sfx = {
-    tick: k => tone(260 + k * 16, .035, 'square', .018),
+    tick: k => tone(260 + k * 16, .035, 'square', .045),
     // Each rarity has its own note, so a badge sounds the same however many came before it.
     badge: tier => { const ti = tierIdx(tier), n = NOTES[TIER_NOTE[ti]];
       tone(n, .14, 'triangle', .07); tone(n * 1.5, .12, 'sine', .03, .03);
@@ -745,7 +745,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     if (token !== rollToken) return;
     // The button flips to the countdown on the same beat as the landing sound.
     reeling = false; updateRollBtn(); sfx.lockIn(topI >= 3);
-    await wait(reduced ? 30 : 650);
+    await wait(reduced ? 30 : 1300);
     if (token !== rollToken) return;
 
     // One badge at a time: spotlight its characters, then show the card that explains them.
