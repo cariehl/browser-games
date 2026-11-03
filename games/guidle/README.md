@@ -22,6 +22,14 @@ on their own. Rating bands by Top %: Common above 33%, Uncommon 33% to 10%, Rare
 Legendary 1% to 1 in a million, and Mythic beyond. Rolls past Top 70% read as "Bottom (100 − X)%"
 instead, so a Top 91% roll shows as Bottom 9%.
 
+## Sound
+
+All sound is synthesized in the browser with the Web Audio API, so there are no audio files. The ID
+lands with a thump and a chord, each badge plays a note, and the rating gets a crowd reaction sized to
+how rare the whole roll is: crickets (and a cough) for rolls shown as "Bottom X%", a golf clap for
+Common, polite applause for Uncommon, and growing applause, cheers and whistles from Rare up to Mythic.
+The **Sound** button mutes everything, including a crowd that is mid-cheer.
+
 ## How scoring works
 
 Like RNGdle, a badge is worth its odds: a pattern that turns up 1 in N rolls scores about N points,

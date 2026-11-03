@@ -133,7 +133,7 @@ button { font: inherit; color: inherit; }
 .badge .mt code { font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--tc); background: color-mix(in srgb, var(--tc) 18%, transparent); padding: 1px 6px; border-radius: 5px; }
 .share-text { width: min(100%, 520px); font-family: var(--mono); font-size: 12.5px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface-2); color: var(--ink); resize: none; }
 .hint { font-size: 12.5px; color: var(--muted); text-align: center; min-height: 1.2em; }
-.badge.in { animation: badgeIn .75s cubic-bezier(.2, 1.5, .4, 1) both; }
+.badge.in { animation: badgeIn .55s cubic-bezier(.2, 1.5, .4, 1) both; }
 @keyframes badgeIn { 0% { transform: translateY(14px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
 .badge .txt { min-width: 0; }
 .badge .nm { font-weight: 700; line-height: 1.2; }
@@ -727,10 +727,145 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
     g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .006); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
     o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .03);
   }
+  // Payoff sounds: a lock-in hit when the ID finishes rolling, then a crowd that reacts to the rating.
+  // Everything is synthesized from noise and oscillators and goes through one bus, so muting cuts it off mid-cheer.
+  let busIn = null, noiseBuf = null;
+  function bus(c) {
+    if (!busIn) {
+      busIn = c.createGain(); const comp = c.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 6;
+      busIn.connect(comp).connect(c.destination);
+    }
+    busIn.gain.setValueAtTime(S.muted ? 0 : 1, c.currentTime);
+    return busIn;
+  }
+  function noiseSrc(c) {
+    if (!noiseBuf) { const n = c.sampleRate * 2; noiseBuf = c.createBuffer(1, n, c.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; }
+    const s = c.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s;
+  }
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  // Routes a node to the bus, panned when the browser supports it.
+  function toBus(c, node, pan = 0) {
+    if (pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; node.connect(p).connect(bus(c)); }
+    else node.connect(bus(c));
+  }
+  // One hand clap: filtered noise with a few quick re-strikes, the way a real clap smears.
+  function clap(c, t, vol, pan, freq, soft) {
+    const s = noiseSrc(c), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = soft ? 1.6 : 0.9;
+    g.gain.setValueAtTime(0.0001, t);
+    for (let k = 0; k < 3; k++) { const tk = t + k * 0.007; g.gain.setValueAtTime(vol * (k === 2 ? 1 : 0.6), tk); g.gain.exponentialRampToValueAtTime(vol * 0.12, tk + 0.006); }
+    g.gain.setValueAtTime(vol, t + 0.021); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.021 + (soft ? 0.05 : 0.09));
+    s.connect(f).connect(g); toBus(c, g, pan);
+    s.start(t, Math.random() * 1.5); s.stop(t + 0.16);
+  }
+  // A crowd clapping: each person joins a little late, claps at their own pace, and the last few trail off.
+  function applause(c, t, dur, people, vol, opt = {}) {
+    const rate = opt.rate || [3.6, 5.4];
+    for (let p = 0; p < people; p++) {
+      const hz = rnd(rate[0], rate[1]), pan = rnd(-0.8, 0.8), freq = rnd(opt.lo || 900, opt.hi || 2200), pv = vol * rnd(0.5, 1);
+      const start = t + rnd(0, opt.join ?? 0.35), end = t + dur - rnd(0, dur * 0.35);
+      for (let tc = start; tc < end; tc += (1 / hz) * rnd(0.88, 1.12)) {
+        const fade = Math.min(1, (tc - t) / 0.25, (t + dur - tc) / (dur * 0.45));
+        clap(c, tc, pv * Math.max(0.08, fade), pan, freq, opt.soft);
+      }
+    }
+  }
+  // The roar under a cheering crowd: band-passed noise that swells in and dies away.
+  function roar(c, t, dur, vol, freq = 650) {
+    const s = noiseSrc(c), f = c.createBiquadFilter(), f2 = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.frequency.setValueAtTime(freq * 0.8, t); f.frequency.linearRampToValueAtTime(freq * 1.3, t + dur * 0.4); f.frequency.linearRampToValueAtTime(freq, t + dur); f.Q.value = 0.8;
+    f2.type = 'lowpass'; f2.frequency.value = 2600;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.35); g.gain.setValueAtTime(vol, t + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f).connect(f2).connect(g); toBus(c, g);
+    s.start(t, Math.random()); s.stop(t + dur + 0.05);
+  }
+  // A "woo!": a buzzy voice that slides up and back down through vowel formants.
+  function woo(c, t, vol, pitch, pan) {
+    const dur = rnd(0.55, 0.9), o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(pitch * 0.75, t); o.frequency.exponentialRampToValueAtTime(pitch * 1.3, t + dur * 0.35); o.frequency.exponentialRampToValueAtTime(pitch * 0.85, t + dur);
+    lfo.frequency.value = rnd(5, 7); lg.gain.value = pitch * 0.03; lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.06); g.gain.setValueAtTime(vol, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    for (const [fq, q, a] of [[rnd(380, 520), 6, 1], [rnd(900, 1200), 8, 0.5], [2600, 10, 0.15]]) {
+      const bp = c.createBiquadFilter(), ag = c.createGain(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = q; ag.gain.value = a;
+      o.connect(bp).connect(ag).connect(g);
+    }
+    toBus(c, g, pan);
+    o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+  }
+  // A two-finger stadium whistle.
+  function whistle(c, t, vol, pan) {
+    const o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain(), base = rnd(2000, 2600), dur = rnd(0.5, 0.8);
+    o.type = 'sine'; o.frequency.setValueAtTime(base * 0.7, t); o.frequency.exponentialRampToValueAtTime(base * 1.2, t + 0.12); o.frequency.exponentialRampToValueAtTime(base, t + dur);
+    lfo.frequency.value = 9; lg.gain.value = 40; lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.04); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); toBus(c, g, pan); o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+  }
+  // One cricket: bursts of three or four fast pulses on a high, pure tone.
+  function cricket(c, t, dur, freq, vol, pan, every) {
+    const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    for (let tc = t; tc < t + dur; tc += every * rnd(0.9, 1.1)) {
+      for (let k = 0; k < 4; k++) { const tp = tc + k * 0.032; g.gain.setValueAtTime(0.0001, tp); g.gain.exponentialRampToValueAtTime(vol, tp + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, tp + 0.022); }
+    }
+    o.connect(g); toBus(c, g, pan); o.start(t); o.stop(t + dur + 0.2);
+  }
+  // Someone in the back clears their throat.
+  function cough(c, t, vol) {
+    for (const [dt, v] of [[0, 1], [0.2, 0.7]]) {
+      const s = noiseSrc(c), f = c.createBiquadFilter(), g = c.createGain(), tt = t + dt;
+      f.type = 'bandpass'; f.frequency.value = 450; f.Q.value = 1.2;
+      g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(vol * v, tt + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.16);
+      s.connect(f).connect(g); toBus(c, g, -0.4); s.start(tt, Math.random()); s.stop(tt + 0.2);
+    }
+  }
+  // How the crowd reacts to each rating. Bottom rolls (the ones shown as "Bottom X%") get crickets.
+  const CROWD = {
+    bottom:    { crickets: true },
+    common:    { people: 4,  dur: 2.4, vol: 0.13, golf: true },
+    uncommon:  { people: 10, dur: 2.8, vol: 0.11 },
+    rare:      { people: 16, dur: 3.2, vol: 0.10, roar: 0.05, woos: 2 },
+    epic:      { people: 22, dur: 3.8, vol: 0.10, roar: 0.09, woos: 5, whistles: 1 },
+    legendary: { people: 28, dur: 4.6, vol: 0.11, roar: 0.14, woos: 9, whistles: 3 },
+    mythic:    { people: 34, dur: 6.0, vol: 0.12, roar: 0.20, woos: 14, whistles: 5 },
+  };
+  function crowd(kind) {
+    if (S.muted) return; const c = actx(); if (!c) return;
+    const r = CROWD[kind]; if (!r) return; const t = c.currentTime + 0.05;
+    if (r.crickets) {
+      cricket(c, t + 0.3, 2.6, 4400, 0.035, -0.5, 0.55);
+      cricket(c, t + 0.55, 2.2, 4750, 0.025, 0.6, 0.62);
+      cough(c, t + 2.2, 0.12);
+      return;
+    }
+    if (r.golf) applause(c, t + 0.15, r.dur, r.people, r.vol, { rate: [2.1, 2.7], lo: 1800, hi: 2600, soft: true, join: 0.6 });
+    else applause(c, t, r.dur, r.people, r.vol);
+    if (r.roar) roar(c, t, r.dur, r.roar);
+    for (let i = 0; i < (r.woos || 0); i++) woo(c, t + rnd(0.1, r.dur * 0.6), rnd(0.05, 0.09), rnd(220, 520), rnd(-0.8, 0.8));
+    for (let i = 0; i < (r.whistles || 0); i++) whistle(c, t + rnd(0.2, r.dur * 0.5), 0.035, rnd(-0.7, 0.7));
+  }
+  // The ID is in: a low thump, a snap, and a bright chord. Bigger when the reel teased a big roll.
+  function lockIn(big) {
+    if (S.muted) return; const c = actx(); if (!c) return; const t = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(170, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.22);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(g); toBus(c, g); o.start(t); o.stop(t + 0.35);
+    const s = noiseSrc(c), f = c.createBiquadFilter(), sg = c.createGain();
+    f.type = 'highpass'; f.frequency.value = 2500;
+    sg.gain.setValueAtTime(0.0001, t); sg.gain.exponentialRampToValueAtTime(0.12, t + 0.003); sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    s.connect(f).connect(sg); toBus(c, sg); s.start(t); s.stop(t + 0.1);
+    [523.25, 659.25, 783.99, 1046.5].forEach((n, i) => { tone(n, 0.45, 'triangle', 0.045, 0.02 + i * 0.035); tone(n * 2, 0.3, 'sine', 0.012, 0.02 + i * 0.035); });
+    if (big) [1318.5, 1568, 2093].forEach((n, i) => tone(n, 0.6, 'sine', 0.03, 0.18 + i * 0.06));
+  }
+
   const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568];
+  const TIER_NOTE = [0, 2, 3, 5, 7, 8]; // common C5 … mythic G6
   const sfx = {
     tick: k => tone(260 + k * 16, .035, 'square', .018),
-    badge: (tier, i) => { const n = NOTES[Math.min(NOTES.length - 1, i)]; const ti = tierIdx(tier);
+    // Each rarity has its own note, so a badge sounds the same however many came before it.
+    badge: tier => { const ti = tierIdx(tier), n = NOTES[TIER_NOTE[ti]];
       tone(n, .14, 'triangle', .07); tone(n * 1.5, .12, 'sine', .03, .03);
       if (ti >= 2) { tone(n * 2, .2, 'triangle', .04, .07); }
       if (ti >= 3) { tone(n * 2.5, .3, 'sine', .04, .12); tone(n * 3, .35, 'sine', .03, .18); } },
@@ -738,6 +873,7 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
     fanfare: () => { [523.25, 659.25, 783.99, 1046.5].forEach((n, i) => tone(n, .22, 'square', .04, i * .11));
       [1046.5, 1318.5, 1568].forEach(n => tone(n, .7, 'triangle', .035, .5)); tone(130.8, .8, 'sawtooth', .025, .5); },
     whoosh: () => tone(180, .25, 'sawtooth', .02, 0, 3),
+    lockIn, crowd,
   };
 
   // ---------- particles ----------
@@ -973,13 +1109,16 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
     await reel(u, topI >= 3);
     reeling = false; updateRollBtn();
     if (token !== rollToken) return;
+    await wait(reduced ? 30 : 450); // a beat of silence before the ID lands
+    if (token !== rollToken) return;
+    sfx.lockIn(topI >= 3);
     await wait(reduced ? 30 : 650);
     if (token !== rollToken) return;
 
     // One badge at a time: spotlight its characters, then show the card that explains them.
     let running = 0, prevCard = null;
     for (let i = 0; i < sorted.length; i++) {
-      if (i) await wait(reduced ? 30 : 1250);
+      if (i) await wait(reduced ? 30 : 875);
       if (token !== rollToken) return;
       const h = sorted[i], card = badgeCard(h, newIds.has(h.b.id), true);
       if (prevCard) prevCard.classList.remove('current');
@@ -987,20 +1126,22 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
       focusChars(h.idx, h.b.tier);
       for (const p of h.idx) { const el = chEls[p]; if (el) { el.classList.remove('pop'); void el.offsetWidth; el.style.animationDelay = '0ms'; el.classList.add('pop'); } }
       resultsEl.appendChild(card);
-      running += h.b.points; setScore(running, true); sfx.badge(h.b.tier, i);
+      running += h.b.points; setScore(running, true); sfx.badge(h.b.tier);
       const ti = tierIdx(h.b.tier);
       requestAnimationFrame(() => { const r = rectOf(card); const col = css(`--t-${h.b.tier}`);
         burst(r.left + 24, r.top + r.height / 2, 6 + ti * 10, [col, css('--sun')], { speed: 3 + ti * 1.5, size: 5, decay: .03, gravity: .05, shape: ti >= 2 ? 'spark' : 'hex' }); });
       if (ti >= 3) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); flash(); }
     }
-    await wait(reduced ? 30 : 1300);
+    await wait(reduced ? 30 : 910);
     if (token !== rollToken) return;
     if (prevCard) prevCard.classList.remove('current');
     revealing = false; focusChars(null); highlight(res, true); setScore(sc.total, true);
     await wait(reduced ? 30 : 1100 * PACE);
     if (token !== rollToken) return;
     const rt = showRating(sc.total, true); const rti = tierIdx(rt.tier);
-    sfx.badge(rt.tier, 4 + rti);
+    const low = rt.f > 0.70; // the rolls shown as "Bottom X%"
+    if (!low) sfx.badge(rt.tier);
+    sfx.crowd(low ? 'bottom' : rt.tier);
     if (rti >= 3) { flash(); confetti(rti >= 4); }
 
     await wait(reduced ? 30 : 1400 * PACE);
@@ -1093,7 +1234,7 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
       e.preventDefault(); roll();
     }
   });
-  $('#mute').addEventListener('click', () => { S.muted = !S.muted; save(); renderStats(); if (!S.muted) sfx.chime(); });
+  $('#mute').addEventListener('click', () => { S.muted = !S.muted; save(); renderStats(); if (ac && busIn) busIn.gain.setValueAtTime(S.muted ? 0 : 1, ac.currentTime); if (!S.muted) sfx.chime(); });
   function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
   const SQUARE = { common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', legendary: '🟨', mythic: '🟥' };
   // Map ASCII letters and digits to Unicode Mathematical Sans-Serif Bold / Monospace.
