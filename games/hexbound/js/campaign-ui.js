@@ -69,10 +69,14 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---------- shared bits: header and party panel ----------
+  const M = () => G.Menu;
+  const actTrack = () => `<ol class="act-track" aria-label="Acts">${C().ACTS.map((a, i) => `<li class="${i === run.act ? 'on' : i < run.act ? 'done' : ''}" ${i === run.act ? 'aria-current="step"' : ''}><i>${i < run.act ? '✓' : ROMAN[i]}</i><span>${esc(a.name)}</span></li>`).join('')}</ol>`;
   function head(title, sub, right = '') {
-    const xpNext = C().nextLevelXp(run);
-    return `<header class="pb-head"><button class="btn ghost" id="cp-menu">← Menu</button><h2>${esc(title)}</h2><span class="muted">${esc(sub || '')}</span>
-      <div class="pb-head-r">${gold()}<span class="cp-xp" title="Party level and experience">Level ${run.level}${xpNext ? ` · XP ${run.xp}/${xpNext}` : ' (max)'}</span><button class="btn ghost" id="cp-gear">🎒 Gear & packs</button>${right}</div></header>`;
+    const xpNext = C().nextLevelXp(run), xpPrev = C().XP_LEVELS[run.level] || 0;
+    const xpTip = xpNext ? `Level ${run.level}: ${run.xp} XP, next level at ${xpNext}` : `Level ${run.level}, the highest`;
+    const lv = `<span class="tb-pill lv" title="${xpTip}"><span><b>Level ${run.level}</b> ${xpNext ? `<span class="muted">· ${run.xp}/${xpNext} XP</span>` : '<span class="muted">· max</span>'}</span>${M().meter(xpNext ? run.xp - xpPrev : 1, xpNext ? xpNext - xpPrev : 1, 'xp')}</span>`;
+    return M().topbar({ backId: 'cp-menu', eyebrow: esc(sub || ''), title: esc(title), mid: actTrack(),
+      right: `<span class="tb-pill gold" title="Gold">🪙 ${run.gold}</span>${lv}<button class="btn ghost" id="cp-gear" title="Equip gear and move items between packs">🎒<span class="lbl"> Gear & packs</span></button>${right}` });
   }
   function wireHead() {
     $('#cp-menu').onclick = A().menu;
@@ -80,23 +84,26 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function heroCard(h, i, extra = '') {
     const b = h.build;
-    if (h.dead) return `<div class="cp-hero fallen cls-${b.cls}"><div class="cp-h"><span class="ico ic-${b.cls}">${G.ICON[b.cls]}</span><b>${esc(b.name)}</b></div><small>${heroLine(b)}</small><div class="cp-fell">☠ Fell at ${esc(h.fellAt || '?')}</div>${extra}</div>`;
+    if (h.dead) return `<div class="cp-hero fallen cls-${b.cls}"><div class="cp-h">${M().hexpor(b.cls, { size: 'sm', dead: true })}<div class="cp-id"><b>${esc(b.name)}</b><small>${heroLine(b)}</small></div></div><div class="cp-fell">☠ Fell at ${esc(h.fellAt || '?')}</div>${extra}</div>`;
     const s = C().status(run, h);
     const pct = Math.round(s.hp / s.maxHp * 100);
+    const items = h.pack.map(itemChip).join('') + Array.from({ length: C().PACK_MAX - h.pack.length }, () => '<span class="cp-item empty" title="Empty pack slot"></span>').join('');
     return `<div class="cp-hero cls-${b.cls}" data-hero="${i}">
-      <div class="cp-h"><span class="ico ic-${b.cls}">${G.ICON[b.cls]}</span><b>${esc(b.name)}</b><span class="cp-lv">Lv ${run.level}</span></div>
-      <small>${heroLine(b)} · AC ${s.def.AC}</small>
-      <div class="cp-bar ${pct <= 50 ? 'bloodied' : ''}"><i style="width:${pct}%"></i><span>${s.hp} / ${s.maxHp} HP</span></div>
-      <div class="cp-row"><span title="Healing surges left: each one heals ${s.surgeValue} HP during a short rest">✚ ${s.surges}/${s.maxSurges} surges</span><span class="cp-pack" title="Pack">${h.pack.map(itemChip).join('') || '<span class="muted">empty pack</span>'}</span></div>
-      <div class="cp-row"><span class="cp-gears">${Object.keys(G.GEAR_SLOTS).map(sl => gearChip(h.gear[sl], sl)).join('')}</span><span>${(h.boons || []).map(boonChip).join('')}</span></div>
+      <div class="cp-h">${M().hexpor(b.cls, { size: 'sm' })}<div class="cp-id"><b>${esc(b.name)}</b><small>${heroLine(b)}</small></div><span class="cp-ac" title="Armor Class">AC <b>${s.def.AC}</b></span></div>
+      <div class="cp-bar ${pct <= 50 ? 'bloodied' : ''} ${s.hp === 0 ? 'down' : ''}"><i style="width:${pct}%"></i><span>${s.hp} / ${s.maxHp} HP</span></div>
+      <div class="cp-row"><span class="cp-surges" title="Healing surges left: each heals ${s.surgeValue} HP when you rest">✚ ${M().pips(s.surges, s.maxSurges)} <small>${s.surges}/${s.maxSurges}</small></span></div>
+      <div class="cp-row cp-kit"><span class="cp-gears">${Object.keys(G.GEAR_SLOTS).map(sl => gearChip(h.gear[sl], sl)).join('')}</span><span class="cp-pack" title="Pack">${items}</span></div>
+      ${(h.boons || []).length ? `<div class="cp-row">${h.boons.map(boonChip).join('')}</div>` : ''}
       <div class="cp-dailies">${s.dailies.map(d => `<span class="cp-daily ${d.used ? 'used' : ''}" title="Daily power: ${d.used ? 'spent until you rest' : 'ready'}">${esc(d.name)}</span>`).join('')}</div>
       ${extra}
     </div>`;
   }
-  const partyAside = () => `<aside class="cp-party"><h3>The Party <span class="muted">Level ${run.level}</span></h3>${run.heroes.map((h, i) => heroCard(h, i)).join('')}</aside>`;
+  const partyAside = () => `<aside class="cp-party"><h3>The Party <span class="muted">${C().living(run).length} of ${run.heroes.length} standing</span></h3>${run.heroes.map((h, i) => heroCard(h, i)).join('')}</aside>`;
+  // a centred scene (event, rest site, treasure) beside the party
+  const scene = (icon, crestCls, title, text, body) => `<main class="cp-scene"><div class="cp-event">${M().crest(icon, crestCls)}<h2>${esc(title)}</h2><p class="cp-text">${esc(text)}</p>${body}</div></main>`;
 
   // ---------- the map ----------
-  const ROW_H = 104, PAD = 70, COL_W = 120;
+  const ROW_H = 104, PAD = 80, COL_W = 120;
   function mapLayout() {
     const m = C().mapOf(run), A0 = C().ACTS[run.act];
     const nodes = m.nodes;
@@ -112,6 +119,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   function nodeLabel(n) {
     if (n.type === 'boss') return C().scenOf(n.scen).name;
     if (n.type === 'elite' && n.scen) return C().scenOf(n.scen).name;
+    if ((n.type === 'combat' || n.type === 'elite') && n.faction) return (n.type === 'elite' ? 'Elite: ' : '') + G.Encounters.FACTIONS[n.faction].name;
     return C().NODE_TYPES[n.type].name;
   }
   function mapScreen() {
@@ -120,27 +128,38 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (!sel || !avail.includes(sel)) sel = avail[0];
     const { nodes, W, H, pos } = mapLayout();
     const done = new Set(run.path);
-    const st = (n) => done.has(n.id) ? 'done' : avail.includes(n.id) ? 'open' : 'locked';
+    const byId = {}; nodes.forEach(n => byId[n.id] = n);
+    // everything still reachable from here, so the rest of the map can fade back
+    const reach = new Set(avail), q = avail.slice();
+    while (q.length) { const n = byId[q.shift()]; if (n) for (const t of n.next) if (!reach.has(t)) { reach.add(t); q.push(t); } }
+    const here = [...run.path].reverse().find(id => byId[id]);
+    const st = (n) => done.has(n.id) ? 'done' : avail.includes(n.id) ? 'open' : reach.has(n.id) ? 'locked' : 'locked far';
     const edges = [];
     for (const n of nodes) for (const t of n.next) {
-      const a = pos[n.id], b = pos[t]; const walked = done.has(n.id) && (done.has(t) || avail.includes(t));
-      edges.push(`<path d="M${a.x},${a.y - 26} C${a.x},${(a.y + b.y) / 2} ${b.x},${(a.y + b.y) / 2} ${b.x},${b.y + (C().nodeOf(run, t).type === 'boss' ? 40 : 26)}" class="${walked ? 'walked' : ''}"/>`);
+      const a = pos[n.id], b = pos[t];
+      const walked = done.has(n.id) && done.has(t), next = n.id === here && avail.includes(t), ahead = reach.has(n.id) && reach.has(t);
+      edges.push(`<path d="M${a.x},${a.y - 26} C${a.x},${(a.y + b.y) / 2} ${b.x},${(a.y + b.y) / 2} ${b.x},${b.y + (byId[t].type === 'boss' ? 42 : 26)}" class="${walked ? 'walked' : next ? 'next' : ahead ? 'ahead' : ''}"/>`);
     }
     const A0 = C().ACTS[run.act];
     const node = C().nodeOf(run, sel);
+    const icon = (n) => n.type === 'boss' ? (G.SCEN_ART[n.scen] || '👑').slice(0, 2) : C().NODE_TYPES[n.type].icon;
     $('#campaign').innerHTML = `
-      <div class="cp">
-        ${head(`Act ${ROMAN[run.act]}: ${A0.name}`, `${run.partyName} · ${(A().DIFF[run.difficulty] || A().DIFF.normal).label}`, '<button class="btn ghost danger" id="cp-abandon">Abandon run</button>')}
+      <div class="cp mapview">
+        ${head(A0.name, `${A0.sub} · ${run.partyName} · ${(A().DIFF[run.difficulty] || A().DIFF.normal).label}`)}
         <div class="cp-body">
           ${partyAside()}
           <main class="cp-mapwrap"><div class="cp-map act${run.act + 1}" style="width:${W}px;height:${H}px">
             <svg width="${W}" height="${H}" viewBox="0 0 ${W} ${H}" aria-hidden="true">${edges.join('')}</svg>
-            <div class="cp-acts">${C().ACTS.map((a, i) => `<span class="${i === run.act ? 'on' : i < run.act ? 'done' : ''}">${ROMAN[i]}</span>`).join('')}</div>
-            ${nodes.map(n => `<button class="cp-node t-${n.type} ${st(n)} ${n.id === sel ? 'sel' : ''}" data-node="${n.id}" style="left:${pos[n.id].x}px;top:${pos[n.id].y}px" ${st(n) === 'open' ? '' : 'tabindex="-1"'} aria-label="${esc(nodeLabel(n))}${st(n) === 'done' ? ', visited' : ''}" title="${esc(nodeLabel(n))}"><span class="cp-ic">${n.type === 'boss' ? (G.SCEN_ART[n.scen] || '👑').slice(0, 2) : C().NODE_TYPES[n.type].icon}</span>${st(n) === 'done' ? '<span class="cp-tick">✓</span>' : ''}${n.type === 'boss' ? `<span class="cp-lbl">${esc(nodeLabel(n))}<small>Act boss</small></span>` : ''}</button>`).join('')}
+            <div class="cp-cart"><small>${A0.sub}</small>${esc(A0.name)}</div>
+            ${nodes.map(n => `<button class="cp-node t-${n.type} ${st(n)} ${n.id === sel ? 'sel' : ''} ${n.id === here ? 'here' : ''}" data-node="${n.id}" style="left:${pos[n.id].x}px;top:${pos[n.id].y}px" ${st(n) === 'open' ? '' : 'tabindex="-1"'} aria-label="${esc(nodeLabel(n))}${st(n) === 'done' ? ', visited' : ''}"><span class="cp-ic">${icon(n)}</span>${st(n) === 'done' ? '<span class="cp-tick">✓</span>' : ''}${n.id === here ? '<span class="cp-token" title="Your party is here">⚑</span>' : ''}${n.type === 'boss' ? `<span class="cp-lbl">${esc(nodeLabel(n))}<small>Act boss</small></span>` : `<span class="cp-tip">${esc(nodeLabel(n))}${st(n) === 'open' ? '<small>Click to choose</small>' : st(n) === 'done' ? '<small>Visited</small>' : st(n).includes('far') ? '<small>Out of reach</small>' : ''}</span>`}</button>`).join('')}
           </div>
-          <div class="cp-legend">${Object.entries(C().NODE_TYPES).filter(([k]) => k !== 'boss').map(([k, t]) => `<span>${t.icon} ${t.name}</span>`).join('')}</div></main>
-          <aside class="cp-detail">${node ? nodeDetail(node) : ''}
+          <div class="cp-legend">${Object.entries(C().NODE_TYPES).filter(([k]) => k !== 'boss').map(([k, t]) => `<span class="lg t-${k}"><i>${t.icon}</i>${t.name}</span>`).join('')}</div></main>
+          <aside class="cp-detail">
+            <h3 class="cp-h3">${avail.length > 1 ? `Next stop <span class="muted">${avail.length} roads</span>` : 'Next stop'}</h3>
+            ${avail.length > 1 ? `<div class="cp-forks">${avail.map(id => { const n = byId[id]; return `<button class="cp-fork t-${n.type} ${id === sel ? 'on' : ''}" data-pick="${id}" title="${esc(nodeLabel(n))}"><i>${icon(n)}</i><span>${esc(nodeLabel(n).replace(/^Elite: /, ''))}<small>${n.type === 'boss' ? 'Act boss' : C().NODE_TYPES[n.type].name}</small></span></button>`; }).join('')}</div>` : ''}
+            ${node ? nodeDetail(node) : ''}
             <p class="muted fine-c">${esc(A0.blurb)}</p>
+            <button class="btn sm ghost danger cp-abandon" id="cp-abandon">Abandon run</button>
           </aside>
         </div>
       </div>`;
@@ -149,37 +168,39 @@ var G = (typeof G !== 'undefined') ? G : {};
       if (!await G.Dialog.confirm('Abandon this campaign? It goes into the Record of Heroes as abandoned.', 'Abandon run')) return;
       C().abandon(run); const rec = run.record; run = null; overScreen(rec);
     };
-    document.querySelectorAll('.cp-node.open').forEach(b => b.onclick = () => { sel = b.dataset.node; G.Audio.play('click'); mapScreen(); });
+    const pick = (id) => { if (id === sel) return; sel = id; G.Audio.play('click'); mapScreen(); };
+    document.querySelectorAll('.cp-node.open').forEach(b => { b.onclick = () => pick(b.dataset.node); b.ondblclick = () => go(b.dataset.node); });
+    document.querySelectorAll('[data-pick]').forEach(b => b.onclick = () => pick(b.dataset.pick));
     // keep the next step of the path in view
     const wrap = $('.cp-mapwrap'), cur = sel && $(`[data-node="${sel}"]`);
     if (wrap && cur) wrap.scrollTop = Math.max(0, cur.offsetTop - wrap.clientHeight * 0.6);
     const f = $('#cp-go'); if (f) f.onclick = () => go(sel);
   }
-  function scenCard(scen, level, extra = '') {
-    return `<div class="scen s-${scen.id}"><div class="scen-art">${G.SCEN_ART[scen.id] || '⚔'}</div>
-      <h3>${esc(scen.name)}</h3><div class="scen-sub">Level ${level} · ${esc(scen.sub.split('·').slice(1).join('·').trim())}</div>${extra}<p>${esc(scen.blurb)}</p>
-      <ul>${scen.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>`;
-  }
+  const rewards = (list) => `<div class="cp-rewards">${list.map(([ic, t]) => `<span><i>${ic}</i>${t}</span>`).join('')}</div>`;
   function nodeDetail(n) {
     const T = C().NODE_TYPES[n.type];
-    const btn = (label) => `<button class="btn big" id="cp-go">${label}</button>`;
+    const btn = (label) => `<button class="btn big cp-go" id="cp-go">${label}</button>`;
+    const card = (icon, cls, eyebrow, title, sub, body) => `<div class="cp-nodecard t-${n.type}">${M().crest(icon, cls)}<small class="cp-eyebrow">${eyebrow}</small><h3>${title}</h3>${sub ? `<div class="scen-sub">${sub}</div>` : ''}${body}</div>`;
     if (n.type === 'boss' || (n.type === 'elite' && n.scen)) {
-      const p = C().fightPreview(run, n.id);
-      return scenCard(p.scen, p.level, `<p class="cp-tag ${n.type}">${n.type === 'boss' ? '👑 Act boss: beat it to finish the act, rest fully, and pick from three pieces of gear.' : '💀 Elite fight: a choice of two pieces of gear if you win.'}</p>`) + btn('Enter battle ▶');
+      const p = C().fightPreview(run, n.id), boss = n.type === 'boss';
+      return card((G.SCEN_ART[p.scen.id] || '👑').slice(0, 2), boss ? 'gold' : 'red', boss ? '👑 Act boss' : '💀 Elite', esc(p.scen.name), `Level ${p.level}`,
+        rewards(boss ? [['🛏', 'Full rest'], ['⚙', 'Pick 1 of 3 gear'], ['🪙', 'Gold']] : [['⚙', 'Pick 1 of 2 gear'], ['🪙', 'Gold'], ['🧪', 'Consumable']])
+        + `<p class="cp-flavor">${esc(p.scen.blurb)}</p><ul class="cp-tips">${p.scen.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`) + btn('Enter battle ▶');
     }
     if (n.type === 'combat' || n.type === 'elite') {
-      const F = G.Encounters.FACTIONS[n.faction];
-      return `<div class="cp-nodecard"><div class="cp-big">${T.icon}</div><h3>${n.type === 'elite' ? 'Elite: ' : ''}${esc(F.name)}</h3><div class="scen-sub">Level ${run.level} · ${n.type === 'elite' ? 'a powerful foe and its retinue' : 'a fight on the road'}</div>
-        <p>${n.type === 'elite' ? 'Win for gold, a consumable and a choice of two pieces of magic gear.' : 'Win for gold, XP and a consumable or two.'}</p>
-        <ul>${F.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul></div>${btn('Enter battle ▶')}`;
+      const F = G.Encounters.FACTIONS[n.faction], elite = n.type === 'elite';
+      return card(T.icon, elite ? 'red' : '', elite ? 'Elite fight' : 'Fight', esc(F.name), `Level ${run.level} · ${elite ? 'a powerful foe and its retinue' : 'a fight on the road'}`,
+        rewards(elite ? [['⚙', 'Pick 1 of 2 gear'], ['🪙', 'Gold'], ['✦', '2 XP']] : [['🪙', 'Gold'], ['🧪', 'Consumable'], ['✦', '1 XP']])
+        + `<ul class="cp-tips">${F.tips.map(t => `<li>${esc(t)}</li>`).join('')}</ul>`) + btn('Enter battle ▶');
     }
     const about = {
-      event: 'Something waits on the road: a stranger, a shrine, a choice. Most are settled by skill checks; a few turn into fights.',
-      shop: 'A travelling merchant with consumables, magic gear and a few services, including the Rite of Return for the fallen.',
-      rest: 'A safe campfire. Recover your wounds, regain your daily powers, or forage for supplies. You can only pick one.',
-      treasure: 'A chest, half buried. Magic gear and gold for whoever opens it, if the trap doesn\'t get them first.',
+      event: ['Something waits on the road: a stranger, a shrine, a choice. Most are settled by skill checks; a few turn into fights.', [['🎲', 'Skill checks'], ['❔', 'Anything']]],
+      shop: ['A travelling merchant with consumables, magic gear and a few services, including the Rite of Return for the fallen.', [['⚙', 'Gear'], ['🧪', 'Consumables'], ['✚', 'Healing']]],
+      rest: ['A safe campfire. Recover your wounds, regain your daily powers, or forage for supplies. You can only pick one.', [['🛏', 'Heal'], ['🕯', 'Dailies'], ['🎒', 'Supplies']]],
+      treasure: ['A chest, half buried. Magic gear and gold for whoever opens it, if the trap doesn\'t get them first.', [['⚙', 'Gear'], ['🪙', 'Gold']]],
     }[n.type];
-    return `<div class="cp-nodecard"><div class="cp-big">${T.icon}</div><h3>${esc(T.name)}</h3><p>${esc(about)}</p></div>${btn('Go ▶')}`;
+    const crestCls = { event: 'violet', shop: 'gold', rest: 'ember', treasure: 'green' }[n.type] || '';
+    return card(T.icon, crestCls, 'On the road', esc(T.name), '', rewards(about[1]) + `<p class="cp-flavor">${esc(about[0])}</p>`) + btn('Go ▶');
   }
 
   function go(nodeId) {
@@ -217,32 +238,38 @@ var G = (typeof G !== 'undefined') ? G : {};
       const u = C().unitOf(run, h);
       const gained = before ? u.powers.filter(p => !before.powers.includes(p.id) && p.kind !== 'item') : [];
       const choices = C().levelChoices(run, i);
-      const lv = lvUp ? `<div class="cp-lvup"><b>Level ${cp.to}</b> <span class="good">+${Math.max(0, s.maxHp - (before ? before.maxHp : s.maxHp))} max HP</span>
+      const todo = choices.some(c => !c.pick);
+      const lv = lvUp ? `<div class="cp-lvup ${todo ? 'todo' : ''}"><div class="cp-lvh"><b>Level ${cp.to}</b> <span class="good">+${Math.max(0, s.maxHp - (before ? before.maxHp : s.maxHp))} max HP</span>${todo ? '<em>Choose</em>' : choices.length ? '<em class="ok">✓</em>' : ''}</div>
         ${choices.map((c, k) => c.kind === 'power'
-          ? `<div class="cp-pick"><small>New ${SLOT_LABEL[c.slot] || 'power'}</small><div class="chips">${c.options.map(id => `<button class="chip ${id === c.pick ? 'on' : ''}" data-pick="${i}:${k}:${id}" title="${describe(id)}">${esc(G.Build.POWERS[id].name)}</button>`).join('')}</div></div>`
+          ? `<div class="cp-pick"><small>New ${SLOT_LABEL[c.slot] || 'power'}</small><div class="cp-pows">${c.options.map(id => { const P = G.Build.POWERS[id], d = G.Build.describe(P); return `<button class="cp-pow k-${P.kind} ${id === c.pick ? 'on' : ''}" data-pick="${i}:${k}:${id}" title="${describe(id)}"><b>${esc(P.name)}</b><small>${esc(P.text || d.slice(1).join(' · '))}</small></button>`; }).join('')}</div></div>`
           : `<div class="cp-pick"><small>New feat</small><select data-feat="${i}:${k}"><option value="">Choose a feat…</option>${c.options.map(id => `<option value="${id}" ${c.pick === id ? 'selected' : ''}>${esc(G.Build.FEATS[id].name)}</option>`).join('')}</select>${c.pick ? `<p class="muted">${esc(G.Build.FEATS[c.pick].text)}</p>` : ''}</div>`).join('')}
         ${!choices.length && gained.length ? `<div class="cp-pick"><small>New</small> ${gained.map(p => esc(p.name)).join(', ')}</div>` : ''}</div>` : '';
-      const rest = cp.actDone ? '' : `<div class="cp-rest"><button class="btn sm" data-surge="${i}" ${s.surges > 0 && s.hp < s.maxHp ? '' : 'disabled'}>Spend a surge (+${Math.min(s.surgeValue, s.maxHp - s.hp)} HP)</button>${s.hp === 0 ? `<small class="warn">${s.surges ? 'Unconscious: spend a surge to wake.' : 'Unconscious: wakes at 1 HP.'}</small>` : ''}</div>`;
+      const heal = Math.min(s.surgeValue, s.maxHp - s.hp);
+      const rest = cp.actDone ? '' : `<div class="cp-rest"><button class="btn sm" data-surge="${i}" ${s.surges > 0 && s.hp < s.maxHp ? '' : 'disabled'}>${s.hp >= s.maxHp ? 'Unhurt' : s.surges ? `✚ Spend a surge <b class="good">+${heal} HP</b>` : 'No surges left'}</button>${s.hp === 0 ? `<small class="warn">${s.surges ? 'Unconscious: spend a surge to wake.' : 'Unconscious: wakes at 1 HP.'}</small>` : ''}</div>`;
       return heroCard(h, i, lv + rest);
     }).join('');
-    const found = cp.found.map(f => f.hero != null ? `${itemChip(f.item)} ${esc(G.Items[f.item].name)} <span class="muted">→ ${esc(run.heroes[f.hero].build.name)}</span>` : `${itemChip(f.item)} ${esc(G.Items[f.item].name)} <span class="muted">(packs full: sold for ${f.sold} gold)</span>`);
-    const gearPick = cp.gear.length ? `<div class="cp-loot"><h4>${cp.gearTaken ? 'You took' : `Choose one of ${cp.gear.length === 2 ? 'two' : 'three'} pieces of gear`}</h4><div class="cp-cards">${cp.gear.map(id => gearCard(id, cp.gearTaken ? (cp.gearTaken === id ? '<span class="good">✓ Taken</span>' : '<span class="muted">Left behind</span>') : `<button class="btn" data-take="${id}">Take</button>`)).join('')}</div>${cp.gearTaken ? '<p class="muted fine-c">New gear goes to whoever gains the most from it. Swap it around under 🎒 Gear & packs.</p>' : ''}</div>` : '';
-    const blocked = C().unfilledChoices(run) || (cp.gear.length && !cp.gearTaken);
+    const found = cp.found.map((f, k) => `<div class="spoil" style="animation-delay:${0.1 + k * 0.08}s">${f.item && G.Items[f.item] ? `<i>${G.Items[f.item].icon}</i>` : ''}<span><b>${esc(G.Items[f.item].name)}</b><small>${f.hero != null ? `→ ${esc(run.heroes[f.hero].build.name)}` : `Packs full: sold for ${f.sold} gold`}</small></span></div>`);
+    const gearPick = cp.gear.length ? `<section class="cp-loot ${cp.gearTaken ? 'taken' : 'open'}"><h4>${cp.gearTaken ? 'Gear taken' : `Choose one of ${cp.gear.length === 2 ? 'two' : 'three'} pieces of gear`}</h4><div class="cp-cards">${cp.gear.map(id => gearCard(id, cp.gearTaken ? (cp.gearTaken === id ? '<span class="good">✓ Taken</span>' : '<span class="muted">Left behind</span>') : `<button class="btn" data-take="${id}">Take</button>`, '', cp.gearTaken ? (cp.gearTaken === id ? 'chosen' : 'left') : 'pickable')).join('')}</div>${cp.gearTaken ? '<p class="muted fine-c">New gear goes to whoever gains the most from it. Swap it around under 🎒 Gear & packs.</p>' : ''}</section>` : '';
+    const needGear = cp.gear.length && !cp.gearTaken, needFeat = C().unfilledChoices(run);
+    const blocked = needFeat || needGear;
     const final = run.outcome === 'victory';
+    const hurt = run.heroes.some(h => { if (h.dead) return false; const s = C().status(run, h); return s.hp < s.maxHp && s.surges > 0; });
+    const title = cp.actDone ? (final ? 'Hollowmere is saved!' : `Act ${ROMAN[run.act]} complete`) : 'Camp';
+    const intro = cp.actDone
+      ? (final ? 'The last boss falls. Claim your victory.' : `<b>An extended rest:</b> every hero is back to full HP, healing surges and daily powers. Next: Act ${ROMAN[run.act + 1]}, ${esc(C().ACTS[run.act + 1].name)}.`)
+      : 'A short rest. Spend healing surges to recover; encounter powers, Second Wind and Action Points come back for the next fight. <b>Daily powers stay spent</b> until a rest site or the end of the act.';
     $('#campaign').innerHTML = `
       <div class="cp camp">
-        ${head(cp.actDone ? `Act ${ROMAN[run.act]} complete` : 'Camp', `after ${last.name}`)}
+        ${head(title, `After ${last.name}`)}
         <div class="camp-body">
-          <div class="camp-intro">
-            ${cp.actDone ? `<h3 class="good">${final ? 'Hollowmere is saved!' : `${esc(C().ACTS[run.act].name)} is behind you.`}</h3><p>${final ? 'The last boss falls. Claim your victory below.' : `<b>An extended rest:</b> every hero is back to full HP, healing surges and daily powers. Next: Act ${ROMAN[run.act + 1]}, ${esc(C().ACTS[run.act + 1].name)}.`}</p>` : ''}
-            ${lvUp ? `<h3 class="good">The party reaches Level ${cp.to}!</h3>` : ''}
-            ${cp.actDone ? '' : '<p>A short rest: spend healing surges to recover. Encounter powers, Second Wind and Action Points come back for the next fight. <b>Daily powers stay spent</b> until a rest site or the end of the act.</p>'}
-            <div class="cp-spoils"><b>Spoils:</b> <span class="cp-gold">🪙 +${cp.gold} gold</span>${found.length ? ' · ' + found.join(' · ') : ''}</div>
-            ${gearPick}
-          </div>
-          <div class="camp-heroes">${cards}</div>
-          <div class="camp-foot">${cp.actDone ? '' : '<button class="btn" id="cp-rest">Rest everyone</button>'}<button class="btn big" id="cp-break" ${blocked ? `disabled title="${cp.gear.length && !cp.gearTaken ? 'Take a piece of gear first' : 'Choose a feat for every hero first'}"` : ''}>${final ? 'Claim victory ▶' : cp.actDone ? `On to Act ${ROMAN[run.act + 1]} ▶` : 'Break camp ▶'}</button></div>
+          <section class="camp-banner">${M().crest(cp.actDone ? '👑' : '🔥', cp.actDone ? 'gold' : 'ember')}<div><h2>${cp.actDone ? esc(final ? 'Hollowmere is saved!' : `${C().ACTS[run.act].name} is behind you`) : 'You make camp'}</h2><p>${intro}</p></div></section>
+          <section class="camp-spoils"><h4>Spoils</h4><div class="spoils"><div class="spoil gold"><i>🪙</i><span><b>+${cp.gold} gold</b><small>${run.gold} in the purse</small></span></div>${found.join('')}</div></section>
+          ${gearPick}
+          ${lvUp ? `<div class="camp-lvl"><span>✦</span> The party reaches <b>Level ${cp.to}</b>${needFeat ? ': choose new powers and feats below' : ''}</div>` : ''}
+          <section><h4>The party</h4><div class="camp-heroes">${cards}</div></section>
         </div>
+        <footer class="cp-foot"><span class="cp-foot-note ${blocked ? 'warn' : ''}">${needGear ? 'Take a piece of gear to move on.' : needFeat ? 'Choose a feat for every hero to move on.' : cp.actDone ? '' : hurt ? 'Wounds carry into the next fight.' : 'Everyone is fit to travel.'}</span>
+          ${cp.actDone ? '' : `<button class="btn" id="cp-rest" ${hurt ? '' : 'disabled'} title="Spend surges until everyone is near full HP">✚ Rest everyone</button>`}<button class="btn big" id="cp-break" ${blocked ? `disabled title="${needGear ? 'Take a piece of gear first' : 'Choose a feat for every hero first'}"` : ''}>${final ? 'Claim victory ▶' : cp.actDone ? `On to Act ${ROMAN[run.act + 1]} ▶` : 'Break camp ▶'}</button></footer>
       </div>`;
     wireHead();
     document.querySelectorAll('[data-surge]').forEach(b => b.onclick = () => { if (C().spendSurge(run, +b.dataset.surge)) { G.Audio.play('heal'); save(); campScreen(); } });
@@ -256,13 +283,14 @@ var G = (typeof G !== 'undefined') ? G : {};
       C().breakCamp(run); save(); sel = null; mapScreen();
     };
   }
-  function gearCard(id, action = '', extra = '') {
+  const TIER = ['', 'Common', 'Uncommon', 'Rare'];
+  function gearCard(id, action = '', extra = '', cls = '') {
     const g = G.Gear[id];
-    return `<div class="cp-card gear t${g.tier}"><div class="cp-card-ic">${g.icon}</div><b>${esc(g.name)}</b><small>${esc(G.GEAR_SLOTS[g.slot].name)} · ${['', 'Common', 'Uncommon', 'Rare'][g.tier]}</small><p>${esc(g.text)}</p><p class="muted flavor">${esc(g.flavor || '')}</p>${extra}<div class="cp-card-act">${action}</div></div>`;
+    return `<div class="cp-card gear t${g.tier} ${cls}"><div class="cp-card-top"><span class="cp-card-ic">${g.icon}</span><span><b>${esc(g.name)}</b><small>${esc(G.GEAR_SLOTS[g.slot].name)} · <span class="tier t${g.tier}">${TIER[g.tier]}</span></small></span></div><p>${esc(g.text)}</p>${g.flavor ? `<p class="muted flavor">${esc(g.flavor)}</p>` : ''}${extra}<div class="cp-card-act">${action}</div></div>`;
   }
   function itemCard(id, action = '', extra = '') {
     const it = G.Items[id];
-    return `<div class="cp-card item"><div class="cp-card-ic">${it.icon}</div><b>${esc(it.name)}</b><small>${{ potion: 'Potion · minor action', throwable: 'Throwable · standard action', gear: 'Field gear · standard action' }[it.cat] || ''}</small><p>${esc(it.power.text || '')}</p>${extra}<div class="cp-card-act">${action}</div></div>`;
+    return `<div class="cp-card item"><div class="cp-card-top"><span class="cp-card-ic">${it.icon}</span><span><b>${esc(it.name)}</b><small>${{ potion: 'Potion · minor action', throwable: 'Throwable · standard action', gear: 'Field gear · standard action' }[it.cat] || ''}</small></span></div><p>${esc(it.power.text || '')}</p>${extra}<div class="cp-card-act">${action}</div></div>`;
   }
 
   // ---------- events ----------
@@ -271,11 +299,11 @@ var G = (typeof G !== 'undefined') ? G : {};
     const ev = run.event, E0 = G.Events[ev.id], res = ev.result;
     const choiceBtn = (c, k) => {
       const open = C().choiceOpen(run, c);
-      let info = '';
-      if (c.check) { const o = C().checkOdds(run, c.check.skill, c.check.dc), pc = Math.round(o.chance * 100); info = `<span class="ev-odds ${pc >= 70 ? 'good' : pc >= 45 ? 'ok' : 'bad'}">${pc}%</span>${G.Skills[c.check.skill].name} DC ${o.dc} · ${esc(run.heroes[o.hero].build.name)} +${o.bonus}`; }
-      else if (c.luck) info = 'A gamble';
+      let info = '', odds = '';
+      if (c.check) { const o = C().checkOdds(run, c.check.skill, c.check.dc), pc = Math.round(o.chance * 100); odds = `<span class="ev-odds ${pc >= 70 ? 'good' : pc >= 45 ? 'ok' : 'bad'}" title="Chance of success">${pc}%</span>`; info = `🎲 ${G.Skills[c.check.skill].name} DC ${o.dc} · ${esc(run.heroes[o.hero].build.name)} +${o.bonus}`; }
+      else if (c.luck) { odds = '<span class="ev-odds luck" title="Pure chance">?</span>'; info = 'A gamble'; }
       if (c.cost && c.cost.gold) info = `🪙 ${c.cost.gold}${info ? ' · ' + info : ''}`;
-      return `<button class="btn cp-choice" data-choice="${k}" ${open.ok ? '' : 'disabled'}><b>${esc(c.label)}</b>${info ? `<small>${info}</small>` : ''}${open.ok ? '' : `<small class="warn">${esc(open.why)}</small>`}</button>`;
+      return `<button class="btn cp-choice" data-choice="${k}" ${open.ok ? '' : 'disabled'}>${odds || '<span class="ev-odds sure" title="No roll">✓</span>'}<span><b>${esc(c.label)}</b>${info ? `<small>${info}</small>` : ''}${open.ok ? '' : `<small class="warn">${esc(open.why)}</small>`}</span></button>`;
     };
     let body;
     if (!res) body = `<div class="cp-choices">${E0.choices.map(choiceBtn).join('')}</div>`;
@@ -284,17 +312,15 @@ var G = (typeof G !== 'undefined') ? G : {};
       // a fresh skill check rolls a d20 on screen before the outcome shows
       const die = ck ? `<div class="ev-check ${rolled ? 'rolling' : ''} ${ck.ok ? 'ok' : 'fail'}"><div class="ev-die" data-roll="${ck.roll}"><span>${ck.roll}</span></div><div class="ev-sum"><b>${ck.total}</b> <small>vs DC</small> <b>${ck.dc}</b><em>${ck.ok ? 'Success' : 'Failure'}</em></div></div>` : '';
       body = `${die}<div class="cp-result ${ck && rolled ? 'reveal' : ''}">
-        ${ck ? `<p class="cp-roll ${ck.ok ? 'good' : 'bad'}">${esc(run.heroes[ck.hero].build.name)} rolls ${G.Skills[ck.skill].name}: d20 ${ck.roll} + ${ck.bonus} = ${ck.total} vs DC ${ck.dc}: <b>${ck.ok ? 'success' : 'failure'}</b></p>` : ''}
+        ${ck ? `<p class="cp-roll ${ck.ok ? 'good' : 'bad'}">${esc(run.heroes[ck.hero].build.name)} rolls ${G.Skills[ck.skill].name}: d20 ${ck.roll} + ${ck.bonus} = ${ck.total} vs DC ${ck.dc}</p>` : ''}
         <p>${esc(res.text)}</p>
-        ${res.lines.length ? `<ul>${res.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
+        ${res.lines.length ? `<ul class="cp-lines">${res.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
         <div class="modal-btns">${ev.fight ? '<button class="btn big" id="ev-fight">To battle ▶</button>' : '<button class="btn big" id="ev-done">Continue ▶</button>'}</div></div>`;
     }
     $('#campaign').innerHTML = `
       <div class="cp">
-        ${head(E0.title, `Act ${ROMAN[run.act]}: ${C().ACTS[run.act].name}`)}
-        <div class="cp-body two">${partyAside()}
-          <main class="cp-scene"><div class="cp-event"><div class="cp-big">${E0.icon}</div><h2>${esc(E0.title)}</h2><p class="cp-text">${esc(E0.text)}</p>${body}</div></main>
-        </div>
+        ${head(E0.title, `${C().ACTS[run.act].sub} · ${C().ACTS[run.act].name} · Event`)}
+        <div class="cp-body two">${partyAside()}${scene(E0.icon, 'violet', E0.title, E0.text, body)}</div>
       </div>`;
     wireHead();
     document.querySelectorAll('[data-choice]').forEach(b => b.onclick = () => {
@@ -317,32 +343,33 @@ var G = (typeof G !== 'undefined') ? G : {};
   function shopScreen(msg = '') {
     A().show('campaign');
     const s = run.shop;
-    const price = (p, sold) => sold ? '<span class="muted">Sold</span>' : `<span class="cp-price">🪙 ${p}</span>`;
+    const price = (p) => `<span class="cp-price ${run.gold >= p ? '' : 'short'}">🪙 ${p}</span>`;
     const roomy = C().living(run).some(h => h.pack.length < C().PACK_MAX);
     const items = s.items.map((it, k) => itemCard(it.id, it.sold ? '<span class="muted">Sold</span>' : `${price(it.price)} <button class="btn sm" data-buy="item:${k}" ${run.gold >= it.price && roomy ? '' : 'disabled'} ${roomy ? '' : 'title="Every pack is full"'}>Buy</button>`)).join('');
-    const gear = s.gear.map((it, k) => gearCard(it.id, it.sold ? '<span class="muted">Sold</span>' : `${price(it.price)} <button class="btn sm" data-buy="gear:${k}" ${run.gold >= it.price ? '' : 'disabled'}>Buy</button>`)).join('');
+    const gear = s.gear.map((it, k) => gearCard(it.id, it.sold ? '<span class="muted">Sold</span>' : `${price(it.price)} <button class="btn sm" data-buy="gear:${k}" ${run.gold >= it.price ? '' : 'disabled'}>Buy</button>`, '', it.sold ? 'sold' : '')).join('');
     const dead = run.heroes.map((h, i) => h.dead ? i : null).filter(i => i != null);
     const services = s.services.map((sv, k) => {
       const ok = !sv.used && run.gold >= sv.price;
       const btn = sv.id === 'raise'
         ? (dead.length ? dead.map(i => `<button class="btn sm" data-buy="service:${k}:${i}" ${ok ? '' : 'disabled'}>Raise ${esc(run.heroes[i].build.name)}</button>`).join(' ') : '<span class="muted">Nobody to raise</span>')
         : `<button class="btn sm" data-buy="service:${k}" ${ok ? '' : 'disabled'}>Pay</button>`;
-      return `<div class="cp-card service ${sv.used ? 'used' : ''}"><b>${esc(sv.name)}</b><p>${esc(sv.text)}</p><div class="cp-card-act">${sv.used ? '<span class="muted">Done</span>' : `${price(sv.price)} ${btn}`}</div></div>`;
+      return `<div class="cp-card service ${sv.used ? 'used' : ''}"><div class="cp-card-top"><span class="cp-card-ic">${sv.id === 'raise' ? '🕊' : '✚'}</span><span><b>${esc(sv.name)}</b><small>Service</small></span></div><p>${esc(sv.text)}</p><div class="cp-card-act">${sv.used ? '<span class="muted">Done</span>' : `${price(sv.price)} ${btn}`}</div></div>`;
     }).join('');
-    const sell = run.stash.length ? run.stash.map((id, k) => `<div class="cp-sell">${G.Gear[id].icon} ${esc(G.Gear[id].name)} <button class="btn sm ghost" data-sell="${k}">Sell for 🪙 ${C().sellPrice(id)}</button></div>`).join('') : '<p class="muted">Your stash is empty. Unequip gear under 🎒 Gear & packs to sell it here.</p>';
+    const sell = run.stash.length ? run.stash.map((id, k) => `<div class="cp-sell">${G.Gear[id].icon} <span>${esc(G.Gear[id].name)}</span> <button class="btn sm ghost" data-sell="${k}">Sell for 🪙 ${C().sellPrice(id)}</button></div>`).join('') : '<p class="muted">Your stash is empty. Unequip gear under 🎒 Gear & packs to sell it here.</p>';
     $('#campaign').innerHTML = `
       <div class="cp">
-        ${head('The Merchant', `Act ${ROMAN[run.act]}: ${C().ACTS[run.act].name}`)}
+        ${head('The Merchant', `${C().ACTS[run.act].sub} · ${C().ACTS[run.act].name} · Shop`)}
         <div class="cp-body two">${partyAside()}
           <main class="cp-shop">
-            <p class="cp-text">"Come in, come in! Everything's priced to move, much like yourselves."</p>${msg ? `<p class="warn">${esc(msg)}</p>` : ''}
+            <div class="shop-banner">${M().crest('💰', 'gold')}<div><p class="cp-text">"Come in, come in! Everything's priced to move, much like yourselves."</p><span class="shop-purse">You have <b>🪙 ${run.gold}</b></span></div></div>
+            ${msg ? `<p class="shop-msg warn">${esc(msg)}</p>` : ''}
             <h4>Magic gear</h4><div class="cp-cards">${gear}</div>
-            <h4>Consumables <small class="muted">(go into the emptiest pack)</small></h4><div class="cp-cards">${items}</div>
+            <h4>Consumables <small class="muted">go into the emptiest pack</small></h4><div class="cp-cards">${items}</div>
             <h4>Services</h4><div class="cp-cards">${services}</div>
             <h4>Sell from your stash</h4><div class="cp-sells">${sell}</div>
-            <div class="camp-foot"><button class="btn big" id="sh-done">Leave the shop ▶</button></div>
           </main>
         </div>
+        <footer class="cp-foot"><span class="cp-foot-note">Nothing here carries over once you leave.</span><button class="btn big" id="sh-done">Leave the shop ▶</button></footer>
       </div>`;
     wireHead();
     document.querySelectorAll('[data-buy]').forEach(b => b.onclick = () => {
@@ -356,19 +383,29 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---------- rest sites ----------
+  // what each rest option would do for this party right now
+  function restGain(k) {
+    const L = C().living(run);
+    if (k === 'recover') {
+      let hp = 0, su = 0; for (const h of L) { const s = C().status(run, h); hp += s.maxHp - s.hp; su += Math.min(2, h.surgesSpent); }
+      return hp || su ? `+${hp} HP${su ? ` and +${su} surge${su === 1 ? '' : 's'}` : ''} across the party` : null;
+    }
+    if (k === 'meditate') { const n = L.reduce((a, h) => a + C().status(run, h).dailies.filter(d => d.used).length, 0); return n ? `${n} spent daily power${n === 1 ? '' : 's'} back` : null; }
+    if (k === 'scavenge') { const n = L.filter(h => h.pack.length < C().PACK_MAX).length; return n ? `${n} hero${n === 1 ? '' : 'es'} with room in their pack` : null; }
+    if (k === 'vigil') { const d = run.heroes.filter(h => h.dead); return d.length ? `${d.map(h => esc(h.build.name)).join(' or ')} can return` : null; }
+    return null;
+  }
   function restScreen() {
     A().show('campaign');
     const R = run.rest, opts = C().REST_OPTIONS;
     const body = R.done ? `<div class="cp-result"><p><b>${opts[R.done].icon} ${esc(opts[R.done].name)}.</b> ${esc(opts[R.done].text)}</p>
-        ${R.found && R.found.length ? `<ul>${R.found.map(f => f.raised != null ? `<li>${esc(run.heroes[f.raised].build.name)} returns to the living.</li>` : `<li>${itemChip(f.item)} ${esc(G.Items[f.item].name)} → ${esc(run.heroes[f.hero].build.name)}</li>`).join('')}</ul>` : ''}
+        ${R.found && R.found.length ? `<ul class="cp-lines">${R.found.map(f => f.raised != null ? `<li>${esc(run.heroes[f.raised].build.name)} returns to the living.</li>` : `<li>${itemChip(f.item)} ${esc(G.Items[f.item].name)} → ${esc(run.heroes[f.hero].build.name)}</li>`).join('')}</ul>` : ''}
         <div class="modal-btns"><button class="btn big" id="rs-done">Continue ▶</button></div></div>`
-      : `<div class="cp-choices">${Object.entries(opts).filter(([, o]) => !o.need || o.need(run)).map(([k, o]) => `<button class="btn cp-choice" data-rest="${k}"><b>${o.icon} ${esc(o.name)}</b><small>${esc(o.text)}</small></button>`).join('')}</div>`;
+      : `<div class="rest-opts">${Object.entries(opts).filter(([, o]) => !o.need || o.need(run)).map(([k, o]) => { const g = restGain(k); return `<button class="rest-opt ${g ? '' : 'meh'}" data-rest="${k}"><span class="rest-ic">${o.icon}</span><b>${esc(o.name)}</b><small>${esc(o.text)}</small><em class="${g ? 'good' : 'muted'}">${g || 'Nothing to gain right now'}</em></button>`; }).join('')}</div>`;
     $('#campaign').innerHTML = `
       <div class="cp">
-        ${head('Rest Site', `Act ${ROMAN[run.act]}: ${C().ACTS[run.act].name}`)}
-        <div class="cp-body two">${partyAside()}
-          <main class="cp-scene"><div class="cp-event"><div class="cp-big">🔥</div><h2>A Safe Campfire</h2><p class="cp-text">For once, nothing is trying to kill you. There is time for one thing before you move on.</p>${body}</div></main>
-        </div>
+        ${head('Rest Site', `${C().ACTS[run.act].sub} · ${C().ACTS[run.act].name} · Campfire`)}
+        <div class="cp-body two">${partyAside()}${scene('🔥', 'ember', 'A Safe Campfire', 'For once, nothing is trying to kill you. There is time for one thing before you move on.', body)}</div>
       </div>`;
     wireHead();
     document.querySelectorAll('[data-rest]').forEach(b => b.onclick = () => { C().restAt(run, b.dataset.rest); G.Audio.play('heal'); save(); restScreen(); });
@@ -381,20 +418,18 @@ var G = (typeof G !== 'undefined') ? G : {};
     const T = run.treasure;
     let body;
     if (!T.opened) {
-      const o = C().checkOdds(run, 'thievery', 'easy');
-      body = `<div class="cp-choices"><button class="btn cp-choice" id="tr-open"><b>Open the chest</b><small>Thievery DC ${o.dc} to spot the trap · ${esc(run.heroes[o.hero].build.name)} +${o.bonus} · ${Math.round(o.chance * 100)}%</small></button></div>`;
+      const o = C().checkOdds(run, 'thievery', 'easy'), pc = Math.round(o.chance * 100);
+      body = `<div class="cp-choices"><button class="btn cp-choice" id="tr-open"><span class="ev-odds ${pc >= 70 ? 'good' : pc >= 45 ? 'ok' : 'bad'}">${pc}%</span><span><b>Open the chest</b><small>🎲 Thievery DC ${o.dc} to spot the trap · ${esc(run.heroes[o.hero].build.name)} +${o.bonus}</small></span></button></div>`;
     } else {
       const r = T.opened, ck = r.check;
       body = `<div class="cp-result">${ck ? `<p class="cp-roll ${ck.ok ? 'good' : 'bad'}">${esc(run.heroes[ck.hero].build.name)} rolls Thievery: d20 ${ck.roll} + ${ck.bonus} = ${ck.total} vs DC ${ck.dc}: <b>${ck.ok ? 'trap disarmed' : 'the trap goes off'}</b>${r.trap ? ` (${r.trap} damage)` : ''}</p>` : ''}
-        <p>Inside: <span class="cp-gold">🪙 ${r.gold} gold</span> and</p><div class="cp-cards">${gearCard(r.gear)}</div>
+        <div class="spoils"><div class="spoil gold"><i>🪙</i><span><b>+${r.gold} gold</b><small>${run.gold} in the purse</small></span></div></div><div class="cp-cards one">${gearCard(r.gear)}</div>
         <div class="modal-btns"><button class="btn big" id="tr-done">Continue ▶</button></div></div>`;
     }
     $('#campaign').innerHTML = `
       <div class="cp">
-        ${head('Treasure', `Act ${ROMAN[run.act]}: ${C().ACTS[run.act].name}`)}
-        <div class="cp-body two">${partyAside()}
-          <main class="cp-scene"><div class="cp-event"><div class="cp-big">🧰</div><h2>A Half-Buried Chest</h2><p class="cp-text">Iron-banded oak, green with age. The lock is intact. So, probably, is whatever the last owner left to guard it.</p>${body}</div></main>
-        </div>
+        ${head('Treasure', `${C().ACTS[run.act].sub} · ${C().ACTS[run.act].name} · Chest`)}
+        <div class="cp-body two">${partyAside()}${scene('🧰', 'green', 'A Half-Buried Chest', 'Iron-banded oak, green with age. The lock is intact. So, probably, is whatever the last owner left to guard it.', body)}</div>
       </div>`;
     wireHead();
     const o = $('#tr-open'); if (o) o.onclick = () => { const r = C().openChest(run, true); G.Audio.play(r && r.trap ? 'hit' : 'buff'); save(); treasureScreen(); };
@@ -406,13 +441,13 @@ var G = (typeof G !== 'undefined') ? G : {};
     const m = A().modal('<div id="gm"></div>', 'cp-gm');
     m.dataset.sticky = 1;
     const draw = () => {
-      const hs = run.heroes.map((h, i) => h.dead ? '' : `<div class="gm-hero cls-${h.build.cls}"><h4><span class="ic-${h.build.cls}">${G.ICON[h.build.cls]}</span> ${esc(h.build.name)}</h4>
-        ${Object.entries(G.GEAR_SLOTS).map(([sl, S]) => { const id = h.gear[sl]; return `<div class="gm-slot ${id ? '' : 'empty'}" title="${esc(id ? gearTip(id) : S.hint)}"><span>${id ? G.Gear[id].icon : S.icon}</span><div><b>${id ? esc(G.Gear[id].name) : `No ${S.name.toLowerCase()}`}</b><small>${esc(id ? G.Gear[id].text : S.hint)}</small></div>${id ? `<button class="btn sm ghost" data-unequip="${i}:${sl}">Remove</button>` : ''}</div>`; }).join('')}
-        ${(h.boons || []).length ? `<div class="gm-boons">${h.boons.map(b => `<span class="cp-boon ${G.Boons[b].curse ? 'curse' : ''}">${G.Boons[b].icon} ${esc(G.Boons[b].name)}</span>`).join('')}</div>` : ''}
-        <div class="gm-pack"><small>Pack (${h.pack.length}/${C().PACK_MAX})</small>${h.pack.map((id, k) => `<div class="gm-item" title="${esc(itemTip(id))}">${G.Items[id].icon} ${esc(G.Items[id].name)} <select data-give="${i}:${k}"><option value="">Give to…</option>${run.heroes.map((o, j) => !o.dead && j !== i && o.pack.length < C().PACK_MAX ? `<option value="${j}">${esc(o.build.name)}</option>` : '').join('')}</select></div>`).join('') || '<div class="muted">Empty</div>'}</div>
+      const hs = run.heroes.map((h, i) => h.dead ? '' : `<div class="gm-hero cls-${h.build.cls}"><h4>${M().hexpor(h.build.cls, { size: 'sm' })}<span>${esc(h.build.name)}<small>${heroLine(h.build)}</small></span></h4>
+        ${Object.entries(G.GEAR_SLOTS).map(([sl, S]) => { const id = h.gear[sl]; return `<div class="gm-slot ${id ? `t${G.Gear[id].tier}` : 'empty'}" title="${esc(id ? gearTip(id) : S.hint)}"><span>${id ? G.Gear[id].icon : S.icon}</span><div><b>${id ? esc(G.Gear[id].name) : `No ${S.name.toLowerCase()}`}</b><small>${esc(id ? G.Gear[id].text : S.hint)}</small></div>${id ? `<button class="btn sm ghost" data-unequip="${i}:${sl}" title="Move to the stash">Remove</button>` : ''}</div>`; }).join('')}
+        ${(h.boons || []).length ? `<div class="gm-boons">${h.boons.map(b => `<span class="cp-boon ${G.Boons[b].curse ? 'curse' : ''}" title="${esc(G.Boons[b].text)}">${G.Boons[b].icon} ${esc(G.Boons[b].name)}</span>`).join('')}</div>` : ''}
+        <div class="gm-pack"><small>Pack ${h.pack.length}/${C().PACK_MAX}</small>${h.pack.map((id, k) => `<div class="gm-item" title="${esc(itemTip(id))}"><span>${G.Items[id].icon} ${esc(G.Items[id].name)}</span> <select data-give="${i}:${k}" aria-label="Give ${esc(G.Items[id].name)} to"><option value="">Give to…</option>${run.heroes.map((o, j) => !o.dead && j !== i && o.pack.length < C().PACK_MAX ? `<option value="${j}">${esc(o.build.name)}</option>` : '').join('')}</select></div>`).join('') || '<div class="muted">Empty</div>'}</div>
       </div>`).join('');
-      const stash = run.stash.length ? run.stash.map((id, k) => `<div class="gm-stash-i">${gearCard(id, run.heroes.map((h, i) => h.dead ? '' : `<button class="btn sm" data-equip="${i}:${k}">${esc(h.build.name)}</button>`).join(''))}</div>`).join('') : '<p class="muted">Nothing in the stash. Gear you remove, or that has nobody to wear it, waits here.</p>';
-      $('#gm', m).innerHTML = `<h3>Gear & packs ${gold()}</h3><div class="gm-heroes">${hs}</div><h4>Stash <small class="muted">equip on…</small></h4><div class="cp-cards">${stash}</div><div class="modal-btns"><button class="btn" data-close>Done</button></div>`;
+      const stash = run.stash.length ? run.stash.map((id, k) => `<div class="gm-stash-i">${gearCard(id, `<small class="muted">Equip on</small> ${run.heroes.map((h, i) => h.dead ? '' : `<button class="btn sm ghost" data-equip="${i}:${k}">${esc(h.build.name.split(' ')[0])}</button>`).join('')}`)}</div>`).join('') : '<p class="muted">Nothing in the stash. Gear you remove, or that has nobody to wear it, waits here.</p>';
+      $('#gm', m).innerHTML = `<div class="gm-head"><h3>Gear & packs</h3><span class="tb-pill gold">🪙 ${run.gold}</span></div><div class="gm-heroes">${hs}</div><h4 class="gm-sh">Stash <small class="muted">${run.stash.length} item${run.stash.length === 1 ? '' : 's'}</small></h4><div class="cp-cards">${stash}</div><div class="modal-btns"><button class="btn" data-close>Done</button></div>`;
       m.querySelectorAll('[data-unequip]').forEach(b => b.onclick = () => { const [i, sl] = b.dataset.unequip.split(':'); C().unequip(run, +i, sl); save(); draw(); });
       m.querySelectorAll('[data-equip]').forEach(b => b.onclick = () => { const [i, k] = b.dataset.equip.split(':'); C().equip(run, +i, run.stash[+k]); G.Audio.play('buff'); save(); draw(); });
       m.querySelectorAll('[data-give]').forEach(s => s.onchange = () => { if (s.value === '') return; const [i, k] = s.dataset.give.split(':'); C().movePack(run, +i, +k, +s.value); save(); draw(); });
@@ -425,19 +460,21 @@ var G = (typeof G !== 'undefined') ? G : {};
   function overScreen(rec) {
     A().show('campaign');
     const [label, cls] = OUTCOME[rec.outcome];
+    const win = rec.outcome === 'victory';
     $('#campaign').innerHTML = `
-      <div class="cp over"><div class="over-inner">
-        <h2 class="${cls}">${rec.outcome === 'victory' ? 'Hollowmere is saved!' : rec.outcome === 'defeat' ? 'The party has fallen' : 'Run abandoned'}</h2>
+      <div class="cp over"><div class="over-inner ${rec.outcome}">
+        ${M().crest(win ? '👑' : rec.outcome === 'defeat' ? '☠' : '⚑', win ? 'gold' : rec.outcome === 'defeat' ? 'red' : '')}
+        <h2 class="${cls}">${win ? 'Hollowmere is saved!' : rec.outcome === 'defeat' ? 'The party has fallen' : 'Run abandoned'}</h2>
         <p class="muted">${esc(rec.partyName)} · ${label} · ${runLine(rec)}</p>
         ${recordHeroes(rec)}
-        <div class="modal-btns"><button class="btn" id="ov-rec">📜 Record of Heroes</button><button class="btn ghost" id="ov-menu">Main menu</button></div>
+        <div class="modal-btns"><button class="btn big" id="ov-rec">📜 Record of Heroes</button><button class="btn ghost" id="ov-menu">Main menu</button></div>
       </div></div>`;
     $('#ov-rec').onclick = record;
     $('#ov-menu').onclick = A().menu;
   }
   const runLine = (r) => `${r.acts ? `Act ${ROMAN[(r.act || 1) - 1]} of ${ROMAN[r.acts - 1]}${r.actName ? ` (${esc(r.actName)})` : ''} · ` : ''}won ${r.won} fight${r.won === 1 ? '' : 's'}${r.reached && r.outcome !== 'victory' ? ` · ${r.outcome === 'defeat' ? 'fell at' : 'last fought at'} ${esc(r.reached)}` : ''}`;
   function recordHeroes(r) {
-    return `<div class="rec-heroes">${r.heroes.map(h => `<div class="rec-h ${h.fell ? 'fallen' : ''} cls-${h.cls}"><div><span class="ic-${h.cls}">${G.ICON[h.cls]}</span> <b>${esc(h.name)}</b>${r.mvp === h.name ? ' <span class="mvp-b">★ MVP</span>' : ''}</div><small>${G.Build.CLASSES[h.cls].name} · ${h.kills} kills · ${h.dmg} dmg</small>${h.fell ? `<small class="bad">☠ Fell at ${esc(h.fellAt)}</small>` : '<small class="good">Survived</small>'}</div>`).join('')}</div>`;
+    return `<div class="rec-heroes">${r.heroes.map(h => `<div class="rec-h ${h.fell ? 'fallen' : ''} ${r.mvp === h.name ? 'mvp' : ''} cls-${h.cls}">${M().hexpor(h.cls, { size: 'sm', dead: !!h.fell })}<div><b>${esc(h.name)}</b>${r.mvp === h.name ? ' <span class="mvp-b">★ MVP</span>' : ''}<small>${G.Build.CLASSES[h.cls].name} · ${h.kills} kills · ${h.dmg} dmg</small>${h.fell ? `<small class="bad">☠ Fell at ${esc(h.fellAt)}</small>` : '<small class="good">Survived</small>'}</div></div>`).join('')}</div>`;
   }
 
   // ---------- Record of Heroes ----------
@@ -446,19 +483,20 @@ var G = (typeof G !== 'undefined') ? G : {};
     const list = C().records();
     const wins = list.filter(r => r.outcome === 'victory').length;
     const date = (t) => { try { return new Date(t).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' }); } catch (e) { return ''; } };
+    const stat = (v, l) => `<div><b>${v}</b><small>${l}</small></div>`;
+    const best = list.reduce((a, r) => Math.max(a, r.act || 0), 0);
     $('#record').innerHTML = `
       <div class="rec">
-        <header class="pb-head"><button class="btn ghost" id="rec-back">← Menu</button><h2>Record of Heroes</h2>
-          <span class="muted">${list.length ? `${list.length} run${list.length === 1 ? '' : 's'} · ${wins} victor${wins === 1 ? 'y' : 'ies'}` : ''}</span>
-          <div class="pb-head-r">${list.length ? '<button class="btn ghost danger" id="rec-clear">Clear record</button>' : ''}</div></header>
-        <div class="rec-list">${list.length ? list.map(r => { const [label, cls] = OUTCOME[r.outcome] || ['?', 'muted']; const D = A().DIFF[r.difficulty]; return `
+        ${M().topbar({ backId: 'rec-back', eyebrow: 'Every run, won or lost', title: 'Record of Heroes', right: list.length ? '<button class="btn ghost sm danger" id="rec-clear">Clear record</button>' : '' })}
+        <div class="rec-list">${list.length ? `<div class="rec-stats">${stat(list.length, `run${list.length === 1 ? '' : 's'}`)}${stat(wins, `victor${wins === 1 ? 'y' : 'ies'}`)}${stat(best ? `Act ${ROMAN[best - 1]}` : '—', 'furthest')}${stat(list.reduce((a, r) => a + (r.totals.kills || 0), 0), 'foes slain')}</div>` + list.map(r => { const [label, cls] = OUTCOME[r.outcome] || ['?', 'muted']; const D = A().DIFF[r.difficulty]; return `
           <article class="rec-run ${r.outcome}">
-            <div class="rec-top"><span class="rec-badge ${cls}">${label}</span><b>${esc(r.partyName)}</b><span class="muted">${esc(r.map)} · ${D ? D.label : ''} · ${date(r.ended || r.started)}</span></div>
-            <div class="rec-sum">${runLine(r)} · reached Level ${r.level} · ${r.rounds} rounds · ${r.totals.kills || 0} kills${r.gold != null ? ` · ${r.gold} gold` : ''}</div>
+            <div class="rec-top">${M().crest(r.outcome === 'victory' ? '👑' : r.outcome === 'defeat' ? '☠' : '⚑', r.outcome === 'victory' ? 'gold' : r.outcome === 'defeat' ? 'red' : '')}<div><span class="rec-badge ${cls}">${label}</span><b>${esc(r.partyName)}</b><div class="rec-meta muted">${esc(r.map)} · ${D ? D.label : ''} · ${date(r.ended || r.started)}</div></div></div>
+            <div class="rec-sum">${runLine(r)} · reached Level ${r.level}${r.rounds ? ` · ${r.rounds} rounds` : ''} · ${r.totals.kills || 0} kills${r.gold != null ? ` · ${r.gold} gold` : ''}</div>
             ${recordHeroes(r)}
-          </article>`; }).join('') : '<p class="muted rec-empty">No runs yet. Start a campaign from the main menu, and every run, won or lost, is written down here.</p>'}</div>
+          </article>`; }).join('') : `<div class="rec-empty">${M().crest('📜')}<h3>No runs yet</h3><p class="muted">Every campaign, won or lost, is written down here with its heroes and its fallen.</p><button class="btn big" id="rec-start">Start a campaign ▶</button></div>`}</div>
       </div>`;
     $('#rec-back').onclick = A().menu;
+    const st = $('#rec-start'); if (st) st.onclick = start;
     const c = $('#rec-clear'); if (c) c.onclick = async () => { if (await G.Dialog.confirm('Erase every run from the Record of Heroes? This can\'t be undone.', 'Erase')) { C().clearRecords(); record(); } };
   }
 

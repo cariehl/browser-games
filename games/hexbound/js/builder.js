@@ -122,33 +122,28 @@ var G = (typeof G !== 'undefined') ? G : {};
   function draw() {
     const P = party();
     const h = hero();
+    const U = G.Menu;
+    const begin = state.onBegin ? `<button class="btn big pb-begin" data-act="begin">Begin with ${esc(P.name)} <span aria-hidden="true">▶</span></button>` : '';
     root.innerHTML = `
-    <div class="pb">
-      <header class="pb-head">
-        <button class="btn ghost" data-act="back">← Menu</button>
-        <h2>${state.onBegin ? 'Create Your Party' : 'Party Builder'}</h2>
-        <span class="pb-flash"></span>
-        <div class="pb-head-r">
-          <button class="btn ghost" data-act="export">Export code</button>
-          <button class="btn ghost" data-act="import">Import code</button>
-          ${state.onBegin ? `<button class="btn pb-begin" data-act="begin">Begin Campaign with ${esc(P.name)} ▶</button>` : ''}
-        </div>
-      </header>
+    <div class="pb ${state.onBegin ? 'creating' : ''}">
+      ${U.topbar({ backAct: 'back', eyebrow: state.onBegin ? 'New campaign · Step 1 of 2' : 'Build and save your parties', title: state.onBegin ? 'Create Your Party' : 'Party Builder', mid: '<span class="pb-flash" role="status"></span>', right: begin })}
       <div class="pb-body">
         <aside class="pb-parties">
-          <h3>Parties</h3>
-          <ul>${state.parties.map((p, i) => `<li><button class="pp ${i === state.pi ? 'on' : ''}" data-party="${i}"><span class="pp-name">${esc(p.name)}</span><span class="pp-icons">${p.heroes.map(x => `<span title="${esc(x.name)}" class="ic-${x.cls}">${ICON[x.cls]}</span>`).join('')}</span></button></li>`).join('')}</ul>
+          <h3>Parties <span class="muted">${state.parties.length}</span></h3>
+          <ul>${state.parties.map((p, i) => `<li><button class="pp ${i === state.pi ? 'on' : ''}" data-party="${i}"><span class="pp-name">${esc(p.name)}</span><span class="pp-icons">${p.heroes.map(x => U.hexpor(x.cls, { size: 'xs' })).join('')}</span></button></li>`).join('')}</ul>
           <div class="pb-pbtns">
-            <button class="btn sm" data-act="newparty">+ New</button>
-            <button class="btn sm ghost" data-act="dupparty">Duplicate</button>
-            <button class="btn sm ghost danger" data-act="delparty" ${state.parties.length <= 1 ? 'disabled' : ''}>Delete</button>
+            <button class="btn sm" data-act="newparty" title="Start a new party of four">＋ New party</button>
+            <button class="btn sm ghost" data-act="dupparty" title="Copy this party">⧉ Duplicate</button>
+            <button class="btn sm ghost" data-act="import" title="Add a party from a code">⤓ Import</button>
+            <button class="btn sm ghost" data-act="export" title="Get a code for this party">⤒ Export</button>
+            <button class="btn sm ghost danger" data-act="delparty" ${state.parties.length <= 1 ? 'disabled' : ''} title="Delete this party">✕ Delete</button>
           </div>
         </aside>
         <main class="pb-main">
           <input class="pb-pname" data-f="pname" value="${esc(P.name)}" maxlength="40" aria-label="Party name" title="Rename party">
           <div class="pb-slots">${P.heroes.map((x, i) => {
             const C = B().CLASSES[x.cls]; const bad = validate(x).length;
-            return `<button class="slot ${i === state.hi ? 'on' : ''} cls-${x.cls}" data-hero="${i}"><span class="slot-ico ic-${x.cls}">${ICON[x.cls]}</span><span class="slot-txt"><span class="slot-n">${esc(x.name)}</span><span class="slot-s">${B().ANCESTRIES[x.ancestry].name} ${C.name} · <span class="role-${C.role}">${C.role}</span></span></span>${bad ? '<span class="slot-bad" title="This hero has problems to fix">!</span>' : ''}</button>`;
+            return `<button class="slot ${i === state.hi ? 'on' : ''} cls-${x.cls}" data-hero="${i}">${U.hexpor(x.cls)}<span class="slot-txt"><span class="slot-n">${esc(x.name)}</span><span class="slot-s">${B().ANCESTRIES[x.ancestry].name} ${C.name}</span><span class="slot-role role-${C.role}">${C.role}</span></span>${bad ? '<span class="slot-bad" title="This hero has problems to fix">!</span>' : ''}</button>`;
           }).join('')}</div>
           ${editor(h)}
         </main>
@@ -163,17 +158,22 @@ var G = (typeof G !== 'undefined') ? G : {};
     const left = B().BUDGET - B().pointsSpent(h.base);
     const featCount = B().featSlots(h, 5);
     const featsSet = h.feats.slice(0, featCount).filter(Boolean).length;
-    const badge = { abil: left ? `<em class="${left < 0 ? 'bad' : ''}">${left}</em>` : '', feats: featsSet < featCount ? `<em>${featCount - featsSet}</em>` : '' };
+    const badge = { abil: left ? `<em class="${left < 0 ? 'bad' : ''}" title="${left < 0 ? 'Over budget' : 'Points left to spend'}">${left}</em>` : '', feats: featsSet < featCount ? `<em title="Empty feat slots">${featCount - featsSet}</em>` : '' };
     const body = { class: tabClass, abil: tabAbil, feats: tabFeats, powers: tabPowers }[state.tab](h, C);
+    const ti = TABS.findIndex(t => t[0] === state.tab), next = TABS[ti + 1];
     return `
-    <section class="ed">
+    <section class="ed cls-${h.cls}">
       <div class="ed-head">
-        <span class="ed-ico ic-${h.cls}">${ICON[h.cls]}</span>
-        <input class="ed-name" data-f="name" value="${esc(h.name)}" maxlength="28" aria-label="Hero name" title="Rename hero">
-        <button class="btn ghost sm" data-act="randname" title="Random name">🎲 Random</button>
+        ${G.Menu.hexpor(h.cls, { size: 'lg' })}
+        <div class="ed-id">
+          <input class="ed-name" data-f="name" value="${esc(h.name)}" maxlength="28" aria-label="Hero name" title="Rename hero">
+          <span class="ed-sub">${B().ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name} · <span class="role-${C.role}">${C.role}</span></span>
+        </div>
+        <button class="btn ghost sm" data-act="randname" title="Random name">🎲 Random name</button>
       </div>
-      <nav class="ed-tabs">${TABS.map(([id, label]) => `<button class="${id === state.tab ? 'on' : ''}" data-tab="${id}">${label}${badge[id] || ''}</button>`).join('')}</nav>
+      <nav class="ed-tabs">${TABS.map(([id, label], i) => `<button class="${id === state.tab ? 'on' : ''}" data-tab="${id}"><i>${i + 1}</i>${label}${badge[id] || ''}</button>`).join('')}</nav>
       <div class="ed-body">${body}</div>
+      ${next ? `<div class="ed-next"><button class="btn ghost" data-tab="${next[0]}">Next: ${next[1]} <span aria-hidden="true">→</span></button></div>` : ''}
     </section>`;
   }
 
@@ -184,14 +184,12 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   function tabClass(h, C) {
     const A = B().ANCESTRIES[h.ancestry];
-    const S = C.subs[h.sub];
     return `
       <h4>Class</h4>
-      ${chips(Object.entries(B().CLASSES), h.cls, 'cls', (id, c) => `<span class="ic-${id}">${ICON[id]}</span> ${c.name}<small class="role-${c.role}">${c.role}</small>`)}
-      <div class="detail cls-${h.cls}"><b>${C.name}</b> <span class="role-${C.role}">${C.role}</span><p>${C.blurb}</p><p class="muted">Key abilities: ${C.primary.join(', ')}</p></div>
+      <div class="cls-grid">${Object.entries(B().CLASSES).map(([id, c]) => `<button class="cls-tile cls-${id} ${id === h.cls ? 'on' : ''}" data-cls="${id}">${G.Menu.hexpor(id, { size: 'sm' })}<span><b>${c.name}</b><small class="role-${c.role}">${c.role}</small><small class="ct-stats">${c.hp} HP · ${c.surges} surges · ${c.armor}</small></span></button>`).join('')}</div>
+      <div class="detail cls-${h.cls}"><p>${C.blurb}</p><p class="muted">Key abilities: ${C.primary.join(' › ')}. Changing class resets this hero's choices.</p></div>
       <h4>Subclass</h4>
-      ${chips(Object.entries(C.subs), h.sub, 'sub', (id, s) => s.name)}
-      <div class="detail"><b>${S.name}</b><p>${S.blurb}</p></div>
+      <div class="sub-grid">${Object.entries(C.subs).map(([id, s]) => `<button class="sub-tile ${id === h.sub ? 'on' : ''}" data-sub="${id}"><b>${s.name}</b><small>${s.blurb}</small></button>`).join('')}</div>
       <h4>Ancestry</h4>
       ${chips(Object.entries(B().ANCESTRIES), h.ancestry, 'anc', (id, a) => a.name)}
       <div class="detail"><b>${A.name}</b><p>${A.blurb}</p>
@@ -203,17 +201,18 @@ var G = (typeof G !== 'undefined') ? G : {};
     const fin = B().finalAbil(h, 5);
     const fin1 = B().finalAbil(h, 1);
     const bumpSel = (i) => `<select data-f="bump${i}">${ABIL.map(k => `<option value="${k}" ${h.bump4[i] === k ? 'selected' : ''}>${ABIL_NAME[k]}</option>`).join('')}</select>`;
+    const left = B().BUDGET - spent;
     return `
-      <div class="ab-top"><span class="pts ${spent > B().BUDGET ? 'bad' : ''}"><b>${B().BUDGET - spent}</b> of ${B().BUDGET} points left</span>
-        <button class="btn sm ghost" data-act="autostats">Auto-assign</button></div>
+      <div class="ab-top"><div class="ab-budget ${left < 0 ? 'bad' : left === 0 ? 'done' : ''}"><span><b>${left}</b> of ${B().BUDGET} points left</span>${G.Menu.meter(Math.min(spent, B().BUDGET), B().BUDGET, left < 0 ? 'bad' : 'gold')}</div>
+        <button class="btn sm ghost" data-act="autostats" title="Spread points over ${C.name} key abilities">✨ Auto-assign</button></div>
       <div class="abil">
         <div class="ab-row ab-h"><span></span><span>Base</span><span>Cost</span><span>Lv 1</span><span>Lv 5</span><span>Mod</span></div>
         ${ABIL.map(k => `<div class="ab-row ${C.primary[0] === k ? 'prim' : C.primary.includes(k) ? 'sec' : ''}">
-          <span class="ab-k"><b>${k}</b><small>${ABIL_NAME[k]}</small></span>
+          <span class="ab-k"><b>${k}</b><small>${ABIL_NAME[k]}${C.primary[0] === k ? ' ★' : ''}</small></span>
           <span class="abtn"><button data-ab="${k}" data-d="-1" ${h.base[k] <= 8 ? 'disabled' : ''} aria-label="Lower ${ABIL_NAME[k]}">−</button><b>${h.base[k]}</b><button data-ab="${k}" data-d="1" ${h.base[k] >= 18 ? 'disabled' : ''} aria-label="Raise ${ABIL_NAME[k]}">+</button></span>
           <span class="muted">${B().COST[h.base[k]]}</span><span class="muted">${fin1[k]}</span><span>${fin[k]}</span><span class="ab-mod">${sgn(mod(fin[k]))}</span></div>`).join('')}
       </div>
-      <p class="muted note">Highlighted rows are ${C.name} key abilities (${C.primary.join(' › ')}). Ancestry bonuses are included in the level columns.</p>
+      <p class="muted note">Gold rows are ${C.name} key abilities (${C.primary.join(' › ')}), ★ the most important. Ancestry bonuses are included in the level columns.</p>
       <h4>Level 4 increase</h4>
       <div class="ed-row">+1 to ${bumpSel(0)} and +1 to ${bumpSel(1)}</div>`;
   }
@@ -261,19 +260,19 @@ var G = (typeof G !== 'undefined') ? G : {};
     const stat = (k, v) => `<div><span>${k}</span><b>${v}</b></div>`;
     return `
       <div class="sheet">
-        <div class="lvtabs">${[1, 3, 5].map(l => `<button class="${l === L ? 'on' : ''}" data-lv="${l}">Lv ${l}</button>`).join('')}</div>
-        <div class="sh-name cls-${h.cls}">${esc(h.name)}</div>
-        <div class="sh-sub">${B().ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name} · <span class="role-${C.role}">${C.role}</span></div>
+        <div class="sh-top"><h3>Character sheet</h3><div class="lvtabs" role="group" aria-label="Preview level">${[1, 3, 5].map(l => `<button class="${l === L ? 'on' : ''}" data-lv="${l}">Lv ${l}</button>`).join('')}</div></div>
+        <div class="sh-id cls-${h.cls}">${G.Menu.hexpor(h.cls, { badge: L })}<div><div class="sh-name">${esc(h.name)}</div>
+        <div class="sh-sub">${B().ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name} · <span class="role-${C.role}">${C.role}</span></div></div></div>
         ${probs.length ? `<div class="probs">${probs.map(esc).join('<br>')}</div>` : ''}
         <div class="sh-grid">${stat('HP', u.maxHp)}${stat('Surges', `${u.surges}×${u.surgeValue}`)}${stat('Speed', u.speed)}${stat('Init', sgn(mod(u.abil.DEX) + Math.floor(L / 2) + u.initBonus))}</div>
-        <div class="sh-grid">${stat('AC', u.def.AC)}${stat('Fort', u.def.Fort)}${stat('Ref', u.def.Ref)}${stat('Will', u.def.Will)}</div>
+        <div class="sh-grid def">${stat('AC', u.def.AC)}${stat('Fort', u.def.Fort)}${stat('Ref', u.def.Ref)}${stat('Will', u.def.Will)}</div>
         <div class="sh-sec"><h5>Gear</h5>${u.weapon.name} (d${u.weapon.die[1]}, +${u.weapon.prof} prof${u.weapon.ranged ? ', range ' + u.weapon.range : ''})${u.enh ? ', +1 magic gear' : ''}</div>
         <div class="sh-sec"><h5>Features</h5>${C.features.join(', ')}, ${C.subs[h.sub].name}</div>
         <div class="sh-sec"><h5>Feats</h5>${u.feats.map(f => B().FEATS[f].name).join(', ') || '—'}</div>
         <div class="sh-sec"><h5>Powers</h5></div>
         <div class="sh-pows">${u.powers.map(p => {
           const ab = p.atk ? G.Engine.attackBonus({ units: [] }, u, p, { uid: -1, conds: [] }, {}) : null;
-          return `<div class="sp k-${p.kind}"><b>${p.name}</b>${ab ? ` <i>${sgn(ab.total)} vs ${p.atk.vs}</i>` : ''}</div>`;
+          return `<div class="sp k-${p.kind}" title="${esc(B().describe(p).join('\n'))}"><b>${p.name}</b>${ab ? ` <i>${sgn(ab.total)} vs ${p.atk.vs}</i>` : `<i>${p.kind === 'atwill' ? 'at-will' : p.kind}</i>`}</div>`;
         }).join('')}</div>
       </div>`;
   }

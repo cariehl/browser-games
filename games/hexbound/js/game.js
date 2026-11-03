@@ -114,28 +114,30 @@ var G = (typeof G !== 'undefined') ? G : {};
     const best = (() => { try { return JSON.parse(localStorage.getItem('hexbound.best') || '{}'); } catch (e) { return {}; } })();
     let pIdx = 0; try { pIdx = Math.min(+(localStorage.getItem('hexbound.lastParty') || 0), parties.length - 1) || 0; } catch (e) { }
     const render = () => {
+      const M = G.Menu, P = parties[pIdx];
       $('#select').innerHTML = `
       <div class="sel">
-        <header class="pb-head"><button class="btn ghost" id="sel-back">← Menu</button><h2>Choose a Battle</h2></header>
+        ${M.topbar({ backId: 'sel-back', eyebrow: 'Single battles', title: 'Choose a Battle' })}
+        <div class="sel-wrap">
         <div class="sel-opts">
-          <label>Party <select id="sel-party">${parties.map((p, i) => `<option value="${i}" ${i === pIdx ? 'selected' : ''}>${esc(p.name)} — ${p.heroes.map(h => G.Build.CLASSES[h.cls].name).join(', ')}</option>`).join('')}</select></label>
-          <button class="btn sm" id="sel-edit">Edit parties</button>
-          <span class="diff"><span class="diff-row"><span class="diff-h">Difficulty</span>${Object.entries(DIFF).map(([k, d]) => `<label class="radio ${G.Settings.difficulty === k ? 'on' : ''}" title="${d.desc}"><input type="radio" name="diff" value="${k}" ${G.Settings.difficulty === k ? 'checked' : ''}>${d.label}</label>`).join('')}</span><small class="diff-note">${(DIFF[G.Settings.difficulty] || DIFF.normal).desc} Minions keep 1 HP.</small></span>
+          <div class="sel-box sel-parties"><h4>Party <button class="btn sm ghost" id="sel-edit">✎ Edit parties</button></h4>
+            <div class="sel-plist">${parties.map((p, i) => `<button class="sel-p ${i === pIdx ? 'on' : ''}" data-party="${i}"><b>${esc(p.name)}</b><span>${p.heroes.map(h => M.hexpor(h.cls, { size: 'xs' })).join('')}</span></button>`).join('')}</div></div>
+          <div class="sel-box diff"><h4>Difficulty</h4><span class="diff-row" role="radiogroup">${Object.entries(DIFF).map(([k, d]) => `<label class="radio ${G.Settings.difficulty === k ? 'on' : ''}" title="${d.desc}"><input type="radio" name="diff" value="${k}" ${G.Settings.difficulty === k ? 'checked' : ''}>${d.label}</label>`).join('')}</span><small class="diff-note">${(DIFF[G.Settings.difficulty] || DIFF.normal).desc} Minions keep 1 HP.</small></div>
         </div>
-        <div class="sel-party">${parties[pIdx].heroes.map(h => { const C = G.Build.CLASSES[h.cls]; const bad = G.validateHero(h); return `<div class="mini cls-${h.cls}"><span class="ico">${G.ICON[h.cls]}</span><b>${esc(h.name)}</b><small>${G.Build.ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name}</small>${bad.length ? `<em class="bad">${esc(bad[0])}</em>` : ''}</div>`; }).join('')}</div>
+        <div class="sel-party">${P.heroes.map(h => { const C = G.Build.CLASSES[h.cls]; const bad = G.validateHero(h); return `<div class="mini cls-${h.cls}">${M.hexpor(h.cls, { size: 'sm' })}<span><b>${esc(h.name)}</b><small>${G.Build.ANCESTRIES[h.ancestry].name} ${C.subs[h.sub].name} ${C.name}</small>${bad.length ? `<em class="bad">${esc(bad[0])}</em>` : ''}</span></div>`; }).join('')}</div>
         <div class="scen-cards">${G.Scenarios.map((s, i) => `
-          <div class="scen s-${s.id}">
-            <div class="scen-art">${G.SCEN_ART[s.id]}</div>
-            <h3>${s.name}</h3><div class="scen-sub">${s.sub}</div>
+          <div class="scen s-${s.id}" style="animation-delay:${i * 0.06}s">
+            <div class="scen-art">${G.SCEN_ART[s.id]}<span class="scen-lv" title="Party level for this battle">Lv ${s.level}</span>${best[s.id] ? `<span class="best" title="Your best clear">★ ${esc(best[s.id])}</span>` : ''}</div>
+            <h3>${s.name}</h3><div class="scen-sub">${s.sub.split('·').slice(1).join('·').trim()}</div>
             <p>${s.blurb}</p>
-            <ul>${s.tips.map(t => `<li>${t}</li>`).join('')}</ul>
-            ${best[s.id] ? `<div class="best">★ Cleared on ${best[s.id]}</div>` : ''}
-            <button class="btn big" data-scen="${i}">Fight</button>
+            <details><summary>Tactics</summary><ul>${s.tips.map(t => `<li>${t}</li>`).join('')}</ul></details>
+            <button class="btn big" data-scen="${i}">Fight ▶</button>
           </div>`).join('')}</div>
+        </div>
       </div>`;
       $('#sel-back').onclick = menu;
       $('#sel-edit').onclick = () => go('builder');
-      $('#sel-party').onchange = (e) => { pIdx = +e.target.value; try { localStorage.setItem('hexbound.lastParty', pIdx); } catch (err) { } render(); };
+      document.querySelectorAll('#select [data-party]').forEach(b => b.onclick = () => { pIdx = +b.dataset.party; try { localStorage.setItem('hexbound.lastParty', pIdx); } catch (err) { } G.Audio.play('click'); render(); });
       document.querySelectorAll('input[name=diff]').forEach(r => r.onchange = () => { G.Settings.difficulty = r.value; saveSettings(); render(); });
       document.querySelectorAll('[data-scen]').forEach(b => b.onclick = () => {
         const bad = parties[pIdx].heroes.some(h => G.validateHero(h).length);
