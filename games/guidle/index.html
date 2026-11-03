@@ -845,6 +845,38 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
     for (let i = 0; i < (r.woos || 0); i++) woo(c, t + rnd(0.1, r.dur * 0.6), rnd(0.05, 0.09), rnd(220, 520), rnd(-0.8, 0.8));
     for (let i = 0; i < (r.whistles || 0); i++) whistle(c, t + rnd(0.2, r.dur * 0.5), 0.035, rnd(-0.7, 0.7));
   }
+  // A soft snare roll under the spinning ID: a looped two-stroke buffer (one stroke per hand) that slowly swells.
+  // Returns a stop function so the roll ends the instant the last character locks.
+  let strokeBuf = null;
+  function drumroll() {
+    if (S.muted) return () => {}; const c = actx(); if (!c) return () => {};
+    if (!strokeBuf) {
+      const hz = 15, len = Math.round(c.sampleRate * 2 / hz); strokeBuf = c.createBuffer(1, len, c.sampleRate); const d = strokeBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) { const half = i < len / 2, tt = (half ? i : i - len / 2) / c.sampleRate; d[i] = (Math.random() * 2 - 1) * Math.exp(-tt / 0.02) * (half ? 1 : 0.8); }
+    }
+    const t = c.currentTime, s = c.createBufferSource(), hp = c.createBiquadFilter(), bp = c.createBiquadFilter(), g = c.createGain(), out = c.createGain();
+    s.buffer = strokeBuf; s.loop = true;
+    hp.type = 'highpass'; hp.frequency.value = 350; bp.type = 'peaking'; bp.frequency.value = 2400; bp.gain.value = 6;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.006, t + 0.4); g.gain.linearRampToValueAtTime(0.02, t + 5);
+    s.connect(hp).connect(bp).connect(g).connect(out); toBus(c, out); s.start(t);
+    // The swell stays on `g`; the quick fade-out goes on its own node so it never fights the swell's automation.
+    return () => { const n = c.currentTime; out.gain.setValueAtTime(1, n); out.gain.linearRampToValueAtTime(0, n + 0.03); s.stop(n + 0.05); };
+  }
+  // The roll's finish: one hard snare hit with a cymbal crash ringing out over it.
+  function crash() {
+    if (S.muted) return; const c = actx(); if (!c) return; const t = c.currentTime;
+    const s = noiseSrc(c), bp = c.createBiquadFilter(), g = c.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = 1900; bp.Q.value = 0.6;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+    s.connect(bp).connect(g); toBus(c, g); s.start(t, Math.random()); s.stop(t + 0.25);
+    const o = c.createOscillator(), og = c.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(150, t + 0.1);
+    og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.12, t + 0.003); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(og); toBus(c, og); o.start(t); o.stop(t + 0.15);
+    const cs = noiseSrc(c), hp = c.createBiquadFilter(), pk = c.createBiquadFilter(), cg = c.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 4500; pk.type = 'peaking'; pk.frequency.value = 7500; pk.gain.value = 5;
+    cg.gain.setValueAtTime(0.0001, t); cg.gain.exponentialRampToValueAtTime(0.09, t + 0.005); cg.gain.exponentialRampToValueAtTime(0.03, t + 0.35); cg.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+    cs.connect(hp).connect(pk).connect(cg); toBus(c, cg, 0.3); cs.start(t, Math.random()); cs.stop(t + 1.9);
+  }
   // The ID is in: a low thump, a snap, and a bright chord. Bigger when the reel teased a big roll.
   function lockIn(big) {
     if (S.muted) return; const c = actx(); if (!c) return; const t = c.currentTime;
@@ -863,7 +895,7 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
   const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568];
   const TIER_NOTE = [0, 2, 3, 5, 7, 8]; // common C5 … mythic G6
   const sfx = {
-    tick: k => tone(260 + k * 16, .035, 'square', .018),
+    tick: k => tone(260 + k * 16, .035, 'square', .045),
     // Each rarity has its own note, so a badge sounds the same however many came before it.
     badge: tier => { const ti = tierIdx(tier), n = NOTES[TIER_NOTE[ti]];
       tone(n, .14, 'triangle', .07); tone(n * 1.5, .12, 'sine', .03, .03);
@@ -873,7 +905,7 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
     fanfare: () => { [523.25, 659.25, 783.99, 1046.5].forEach((n, i) => tone(n, .22, 'square', .04, i * .11));
       [1046.5, 1318.5, 1568].forEach(n => tone(n, .7, 'triangle', .035, .5)); tone(130.8, .8, 'sawtooth', .025, .5); },
     whoosh: () => tone(180, .25, 'sawtooth', .02, 0, 3),
-    lockIn, crowd,
+    lockIn, crowd, drumroll, crash,
   };
 
   // ---------- particles ----------
@@ -1106,13 +1138,16 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
     if (topI >= 3) { stage.classList.add('glowing'); sfx.whoosh(); }
 
     reeling = true; skipReel = false; rollBtn.innerHTML = 'Rolling…<kbd>Press again to skip</kbd>';
+    const stopRoll = sfx.drumroll();
     await reel(u, topI >= 3);
-    reeling = false; updateRollBtn();
+    stopRoll();
     if (token !== rollToken) return;
+    sfx.crash();
     await wait(reduced ? 30 : 450); // a beat of silence before the ID lands
     if (token !== rollToken) return;
-    sfx.lockIn(topI >= 3);
-    await wait(reduced ? 30 : 650);
+    // The button flips to the countdown on the same beat as the landing sound.
+    reeling = false; updateRollBtn(); sfx.lockIn(topI >= 3);
+    await wait(reduced ? 30 : 1300);
     if (token !== rollToken) return;
 
     // One badge at a time: spotlight its characters, then show the card that explains them.
