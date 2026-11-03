@@ -74,6 +74,14 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
 - **Juice**: hit-chance previews, flank hints, opportunity-attack path warnings, dice popups, crits with
   camera shake, multi-kill and overkill banners, boss barks, Momentum rerolls, synthesized sound.
 
+## Published copy
+
+The game is published at https://cariehl.github.io/hexbound/ (from the `cariehl.github.io` repo, which holds a copy of
+`index.html`, `css/`, `js/` and `vendor/`). When it runs on a `github.io` host (or with `?site` in the URL for a local
+preview over http), the main menu shows a **← Back** link to the site's front page and a **📝 Commentary** button
+that renders `../commentary/hexbound.md` with the vendored `marked` (the button stays hidden while that file is missing).
+Set `SOURCE_URL` at the top of `js/game.js` to also show a GitHub link.
+
 ## Tests
 
 ```
