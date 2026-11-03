@@ -14,6 +14,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     asleep: { name: 'Asleep', icon: 'Z', cls: 'cond', match: 'asleep|drowsy', text: 'Can\'t take actions. Attackers have combat advantage against it. Taking any damage wakes it up.' },
     slowed: { name: 'Slowed', icon: '🐌', cls: 'cond', match: 'slowed|creamed', text: 'Speed drops to 2 hexes.' },
     immobilized: { name: 'Immobilized', icon: '⛓', cls: 'cond', match: 'immobilized|glazed|jammed', text: 'Can\'t move from its hex (speed 0), though it can still be pushed, pulled or slid.' },
+    pinned: { name: 'Pinned', icon: '📌', cls: 'cond', match: 'pinned', text: 'Can\'t shift. To get away it has to walk, and walking out of an enemy\'s reach provokes an opportunity attack.' },
     weakened: { name: 'Weakened', icon: '↓', cls: 'cond', match: 'weakened', text: 'Deals only half damage with its attacks.' },
     blinded: { name: 'Blinded', icon: '◌', cls: 'cond', match: 'blinded', text: 'Takes −5 to attack rolls, and everyone has combat advantage against it.' },
     marked: { name: 'Marked', icon: '◎', cls: 'cond', match: 'marked|marks?', text: 'Takes −2 to attack rolls against anyone except the creature that marked it. A creature can carry only one mark; a new mark replaces the old one.' },
@@ -65,7 +66,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     los: { name: 'Line of sight', cls: 'terrain', match: 'line of sight', text: 'Ranged and area attacks need a clear line to the target. Trees, rocks, walls and pillars block it.' },
   };
   // condition code (engine) → keyword id
-  const COND = { prone: 'prone', dazed: 'dazed', stunned: 'stunned', asleep: 'asleep', slowed: 'slowed', immobilized: 'immobilized', weakened: 'weakened', blinded: 'blinded', marked: 'marked', ongoing: 'ongoing', cagrant: 'exposed', vuln: 'vulnerable', hidden: 'hidden', quarry: 'quarry', dying: 'dying' };
+  const COND = { prone: 'prone', dazed: 'dazed', stunned: 'stunned', asleep: 'asleep', slowed: 'slowed', immobilized: 'immobilized', weakened: 'weakened', blinded: 'blinded', marked: 'marked', ongoing: 'ongoing', cagrant: 'exposed', vuln: 'vulnerable', hidden: 'hidden', quarry: 'quarry', dying: 'dying', pinned: 'pinned' };
 
   const ids = Object.keys(KW);
   const rx = {};
