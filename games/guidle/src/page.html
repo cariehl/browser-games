@@ -128,7 +128,7 @@ button { font: inherit; color: inherit; }
 .badge .mt code { font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--tc); background: color-mix(in srgb, var(--tc) 18%, transparent); padding: 1px 6px; border-radius: 5px; }
 .share-text { width: min(100%, 520px); font-family: var(--mono); font-size: 12.5px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface-2); color: var(--ink); resize: none; }
 .hint { font-size: 12.5px; color: var(--muted); text-align: center; min-height: 1.2em; }
-.badge.in { animation: badgeIn .75s cubic-bezier(.2, 1.5, .4, 1) both; }
+.badge.in { animation: badgeIn .55s cubic-bezier(.2, 1.5, .4, 1) both; }
 @keyframes badgeIn { 0% { transform: translateY(14px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
 .badge .txt { min-width: 0; }
 .badge .nm { font-weight: 700; line-height: 1.2; }
@@ -459,9 +459,11 @@ GUIDLE.applyOdds(/*__ODDS__*/);
   }
 
   const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568];
+  const TIER_NOTE = [0, 2, 3, 5, 7, 8]; // common C5 … mythic G6
   const sfx = {
     tick: k => tone(260 + k * 16, .035, 'square', .018),
-    badge: (tier, i) => { const n = NOTES[Math.min(NOTES.length - 1, i)]; const ti = tierIdx(tier);
+    // Each rarity has its own note, so a badge sounds the same however many came before it.
+    badge: tier => { const ti = tierIdx(tier), n = NOTES[TIER_NOTE[ti]];
       tone(n, .14, 'triangle', .07); tone(n * 1.5, .12, 'sine', .03, .03);
       if (ti >= 2) { tone(n * 2, .2, 'triangle', .04, .07); }
       if (ti >= 3) { tone(n * 2.5, .3, 'sine', .04, .12); tone(n * 3, .35, 'sine', .03, .18); } },
@@ -705,6 +707,8 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     await reel(u, topI >= 3);
     reeling = false; updateRollBtn();
     if (token !== rollToken) return;
+    await wait(reduced ? 30 : 450); // a beat of silence before the ID lands
+    if (token !== rollToken) return;
     sfx.lockIn(topI >= 3);
     await wait(reduced ? 30 : 650);
     if (token !== rollToken) return;
@@ -712,7 +716,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     // One badge at a time: spotlight its characters, then show the card that explains them.
     let running = 0, prevCard = null;
     for (let i = 0; i < sorted.length; i++) {
-      if (i) await wait(reduced ? 30 : 1250);
+      if (i) await wait(reduced ? 30 : 875);
       if (token !== rollToken) return;
       const h = sorted[i], card = badgeCard(h, newIds.has(h.b.id), true);
       if (prevCard) prevCard.classList.remove('current');
@@ -720,13 +724,13 @@ GUIDLE.applyOdds(/*__ODDS__*/);
       focusChars(h.idx, h.b.tier);
       for (const p of h.idx) { const el = chEls[p]; if (el) { el.classList.remove('pop'); void el.offsetWidth; el.style.animationDelay = '0ms'; el.classList.add('pop'); } }
       resultsEl.appendChild(card);
-      running += h.b.points; setScore(running, true); sfx.badge(h.b.tier, i);
+      running += h.b.points; setScore(running, true); sfx.badge(h.b.tier);
       const ti = tierIdx(h.b.tier);
       requestAnimationFrame(() => { const r = rectOf(card); const col = css(`--t-${h.b.tier}`);
         burst(r.left + 24, r.top + r.height / 2, 6 + ti * 10, [col, css('--sun')], { speed: 3 + ti * 1.5, size: 5, decay: .03, gravity: .05, shape: ti >= 2 ? 'spark' : 'hex' }); });
       if (ti >= 3) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); flash(); }
     }
-    await wait(reduced ? 30 : 1300);
+    await wait(reduced ? 30 : 910);
     if (token !== rollToken) return;
     if (prevCard) prevCard.classList.remove('current');
     revealing = false; focusChars(null); highlight(res, true); setScore(sc.total, true);
@@ -734,7 +738,7 @@ GUIDLE.applyOdds(/*__ODDS__*/);
     if (token !== rollToken) return;
     const rt = showRating(sc.total, true); const rti = tierIdx(rt.tier);
     const low = rt.f > 0.70; // the rolls shown as "Bottom X%"
-    if (!low) sfx.badge(rt.tier, 4 + rti);
+    if (!low) sfx.badge(rt.tier);
     sfx.crowd(low ? 'bottom' : rt.tier);
     if (rti >= 3) { flash(); confetti(rti >= 4); }
 
