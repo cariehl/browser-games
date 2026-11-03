@@ -18,6 +18,12 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
   saves, minions, elites and a solo boss that acts twice per round.
 - **Classes** (`js/data/classes.js`): Fighter, Rogue, Ranger, Cleric, Warlord, Wizard, each with 2 subclasses
   and 11–12 powers to choose from; 6 ancestries; 21 feats.
+  Each class has its own lane, and `tests/rules.js` checks no two classes share a power with the same mechanics:
+  the **Fighter** marks and pins (Hold the Line stops shifting; Crushing Blow punishes its own marks), the **Rogue**
+  lives on combat advantage (Twisting Knife sneak-attacks without it, Deadly Gambit crits on 17+ with it), the
+  **Ranger** hunts its quarry and moves, the **Cleric** heals, sears and protects (defense bonuses, dazzling and
+  blinding foes), the **Warlord** rallies with temporary HP, commands attacks, buffs attacks and moves allies, and the
+  **Wizard** controls areas.
 - **Campaign** (`js/campaign.js`, `js/campaign-ui.js`): *Start a Campaign* on the main menu opens the party
   builder as party creation, then a three-act run on Slay-the-Spire-style branching maps:
   *Act I, The Thornwood* (boss: The Lantern Barrow), *Act II, The King's Road* (boss: The Red Toll) and
@@ -96,6 +102,7 @@ Set `SOURCE_URL` at the top of `js/game.js` to also show a GitHub link.
 ```
 node tests/rules.js           # rules regression checks (line of sight, movement, charge, dying, Large creatures)
 node tests/sim.js 20          # headless AI-vs-AI balance runs for every scenario × premade party
+node tests/fuzz.js 40         # fires every hero power and item in random situations (walls, hazards, the Large golem, objects, the dying) and checks the battle stays sane
 node tests/campaign.js 20      # headless AI runs through the whole three-act campaign (add --verbose for a fight log)
 node tests/one.js golem 0 5   # one verbose battle log (scenario, party index, seed)
 node tests/shot.js /tmp/shots # Playwright screenshots of menu, builder and each battle

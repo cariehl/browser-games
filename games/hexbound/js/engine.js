@@ -168,6 +168,8 @@ var G = (typeof G !== 'undefined') ? G : {};
   const udist = (a, b, aPos, bPos) => Math.max(0, Hex.dist(aPos || a.pos, bPos || b.pos) - rad(a) - rad(b));
   const hdist = (u, h, at) => Math.max(0, Hex.dist(at || u.pos, h) - rad(u));
   const unitAt = (B, h) => B.units.find(u => !u.dead && u.pos && occupies(u, h));
+  // someone other than u in hex h (unitAt alone can return u itself when a Large creature's space overlaps h)
+  const otherAt = (B, u, h) => B.units.find(o => o !== u && !o.dead && o.pos && occupies(o, h));
   const isHostile = (a, b) => a.side !== b.side && !(a.object && b.object);
   const enemiesOf = (B, u) => B.units.filter(o => !o.dead && !o.object && o.side !== u.side && o.side !== 'object');
   const alliesOf = (B, u, incSelf) => B.units.filter(o => !o.dead && o.side === u.side && (incSelf || o !== u));
@@ -202,7 +204,12 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (u.dead) return;
     if (u.immune && u.immune.includes(c)) return;
     const dur = opts.dur || 'eont';
-    if (c === 'marked') u.conds = u.conds.filter(x => x.c !== 'marked');
+    if (c === 'marked') {
+      // re-marking a foe you already hold with a lasting mark (Defiant Roar, Ruinous Strike) doesn't shorten it
+      const mine = u.conds.find(x => x.c === 'marked' && x.src === opts.src);
+      if (mine && (mine.dur === 'save' || mine.dur === 'enc') && (dur === 'eont' || dur === 'sont')) return;
+      u.conds = u.conds.filter(x => x.c !== 'marked');
+    }
     if (c === 'quarry') for (const o of B.units) o.conds = o.conds.filter(x => !(x.c === 'quarry' && x.src === opts.src));
     if (c === 'ongoing') { // ongoing damage of the same type doesn't stack: keep the larger
       const og = u.conds.find(x => x.c === 'ongoing' && x.dtype === opts.dtype);
@@ -210,7 +217,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     }
     const existing = u.conds.find(x => x.c === c && x.src === opts.src && !opts.stack);
     if (existing && !['ongoing', 'atkBonus', 'defBonus', 'dmgBonus'].includes(c)) { existing.dur = dur; existing.fresh = !!(B.active && B.active.uid === opts.src); return; }
-    u.conds.push({ c, dur, src: opts.src, amt: opts.amt, dtype: opts.dtype, then: opts.then, vs: opts.vs, label: opts.label, fresh: !!(B.active && B.active.uid === opts.src), savePen: opts.savePen || 0 });
+    u.conds.push({ c, dur, src: opts.src, amt: opts.amt, dtype: opts.dtype, then: opts.then, vs: opts.vs, label: opts.label, fresh: !!(B.active && B.active.uid === opts.src), savePen: opts.savePen || 0, sticky: opts.sticky });
     if (['slowed', 'immobilized', 'dazed', 'stunned', 'prone', 'weakened', 'blinded', 'asleep'].includes(c)) fx(B, { t: 'cond', u: u.uid, c });
   }
   function removeCond(u, pred) { u.conds = u.conds.filter(x => !pred(x)); }
@@ -234,7 +241,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   function defense(B, u, which, ctx = {}) {
     let v = u.def[which] + condSum(u, 'defBonus', null);
     v += traitSum(B, u, 'defMod', which, ctx);
-    for (const a of B.units) if (a !== u && !a.dead && a.side === u.side && a.pos && u.pos && udist(a, u) === 1) v += traitSum(B, a, 'auraDefAlly', which);
+    for (const a of B.units) if (a !== u && canAct(a) && a.side === u.side && a.pos && u.pos && udist(a, u) === 1) v += traitSum(B, a, 'auraDefAlly', which);
     if (u.secondWindUntil) v += 2;
     if (which !== 'AC' || true) {
       // prone: +2 vs ranged, (combat advantage handled separately)
@@ -283,7 +290,7 @@ var G = (typeof G !== 'undefined') ? G : {};
 
   // ---------- Power helpers ----------
   function powerRange(u, p) {
-    if (p.weapon && p.adapt && u.weapon && u.weapon.ranged) return { kind: 'ranged', range: u.weapon.range };
+    if (p.weapon && p.adapt && u.weapon && u.weapon.ranged && !isArea(p)) return { kind: 'ranged', range: u.weapon.range };
     if (p.tgt === 'melee') return { kind: 'melee', range: (p.range || 1) + ((u.weapon && u.weapon.reach && p.weapon) ? u.weapon.reach - 1 : 0) + (u.monster && p.range == null ? (u.reach - 1) : 0) };
     if (p.tgt === 'ranged' && p.weapon && u.weapon && u.weapon.ranged && !p.range) return { kind: 'ranged', range: u.weapon.range };
     return { kind: p.tgt, range: p.range || 0 };
@@ -322,7 +329,8 @@ var G = (typeof G !== 'undefined') ? G : {};
   function damageSpec(B, u, p, tgt) {
     const dmgStr = (u.monster || !p.dmgMod && p.noMod) ? p.dmg : p.dmg;
     const spec = parseDice(dmgStr, u);
-    if (!u.monster && p.dmg && !p.noMod) {
+    const noMod = p.noMod && !(p.modVsQuarry && tgt && tgt.conds && tgt.conds.some(c => c.c === 'quarry' && c.src === u.uid));
+    if (!u.monster && p.dmg && !noMod) {
       const s = p.dmgMod || atkStat(u, p);
       if (s) spec.flat += mod(u.abil[s]);
     }
@@ -338,6 +346,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const pr = powerRange(u, p);
     const want = p.targets || 'enemy';
     if (want === 'enemy' && !(t.side !== u.side)) return false;
+    if (want === 'enemy' && t.object && !p.atk) return false; // a barrel can be smashed, not marked or hunted
     if (want === 'ally' && (t.side !== u.side || t === u || t.object)) return false;
     if (want === 'allyOrSelf' && (t.side !== u.side || t.object)) return false;
     if (want === 'self' && t !== u) return false;
@@ -368,6 +377,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     for (const h of hexes) {
       const t = unitAt(B, h); if (!t || out.includes(t)) continue;
       if (want === 'enemy' && t.side === u.side) continue;
+      if (want === 'enemy' && t.object && !p.atk) continue;
       if (want === 'ally' && (t.side !== u.side || t.object)) continue;
       if (want === 'allyOrSelf' && (t.side !== u.side || t.object)) continue;
       if (want === 'creature' && t.object && false) continue;
@@ -425,12 +435,14 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---------- Movement ----------
+  // immobilized creatures can't move at all, and a pinned one (a Fighter's Hold the Line) can't shift
+  function canShift(u) { return canAct(u) && !hasCond(u, 'immobilized') && !hasCond(u, 'pinned'); }
   // can u's space be at h while moving? (blocked terrain or a hostile body in the way)
   function canPass(B, u, h) {
     for (const f of footprint(u, h)) {
       if (!passable(B, f, u)) return false;
-      const occ = unitAt(B, f);
-      if (occ && occ !== u && (occ.side !== u.side || occ.object)) return false;
+      const occ = otherAt(B, u, f);
+      if (occ && (occ.side !== u.side || occ.object)) return false;
     }
     return true;
   }
@@ -464,21 +476,32 @@ var G = (typeof G !== 'undefined') ? G : {};
       }
     }
     // can't end sharing a hex with another creature
-    for (const v of res.values()) if (footprint(u, v.h).some(f => { const o = unitAt(B, f); return o && o !== u; })) v.noEnd = true;
+    for (const v of res.values()) if (footprint(u, v.h).some(f => otherAt(B, u, f))) v.noEnd = true;
     return res;
   }
   function pathFrom(node) { const p = []; while (node) { p.unshift(node.h); node = node.prev; } return p; }
 
   // teleport/jump: any free hex within n regardless of path
   function freeHexesWithin(B, u, n, from) {
-    return Hex.within(from || u.pos, n).filter(h => tile(B, h) && footprint(u, h).every(f => passable(B, f) && (!unitAt(B, f) || unitAt(B, f) === u)) && !Hex.eq(h, u.pos));
+    return Hex.within(from || u.pos, n).filter(h => tile(B, h) && footprint(u, h).every(f => passable(B, f) && !otherAt(B, u, f)) && !Hex.eq(h, u.pos));
   }
 
+  // a creature stopped part-way (an opportunity attack, a sticky hazard) while passing through an ally
+  // steps back along its path to the last hex it can actually stand in
+  function settle(B, u, path, i) {
+    const shared = (h) => footprint(u, h).some(f => otherAt(B, u, f));
+    if (u.dead || !shared(u.pos)) return;
+    for (let k = i - 1; k >= 0; k--) if (!shared(path[k])) { u.pos = path[k]; fx(B, { t: 'step', u: u.uid, to: u.pos, kind: 'undo' }); return; }
+  }
   function* moveAlong(B, u, path, kind = 'move') {
     // path includes start hex
     if (path.length < 2) return;
     const reactedOA = new Set();
-    for (let i = 1; i < path.length; i++) {
+    let i = 1;
+    try { yield* walk(); } finally { settle(B, u, path, i); }
+    if (kind === 'shift' && !u.dead) yield* notifyEnemyAction(B, u, { shift: true, from: path[0] });
+    function* walk() {
+    for (; i < path.length; i++) {
       if (u.dead || isDying(u)) return;
       const from = path[i - 1], to = path[i];
       if (kind === 'move') {
@@ -491,14 +514,14 @@ var G = (typeof G !== 'undefined') ? G : {};
           if (stop) { log(B, `${u.name} is stopped in their tracks!`, 'cond'); return; }
         }
       }
-      if (i === path.length - 1 && footprint(u, to).some(f => unitAt(B, f) && unitAt(B, f) !== u)) return; // can't end on an occupant
+      if (i === path.length - 1 && footprint(u, to).some(f => otherAt(B, u, f))) return; // can't end on an occupant
       u.pos = to;
       if (u.turnFlags) u.turnFlags.moved = (u.turnFlags.moved || 0) + 1;
       fx(B, { t: 'step', u: u.uid, to, kind });
       yield* enterHex(B, u, to, kind);
-      if (hasCond(u, 'immobilized') && kind === 'move') return;
+      if (hasCond(u, 'immobilized') && kind !== 'forced') return;
     }
-    if (kind === 'shift') yield* notifyEnemyAction(B, u, { shift: true });
+    }
   }
   function* enterHex(B, u, h, kind) {
     const t = terr(B, h);
@@ -617,8 +640,11 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
   function* drop(B, src, tgt, o = {}) {
     if (tgt.side === 'hero') {
-      const prevent = traitSum(B, tgt, 'preventDrop');
-      if (prevent) { tgt.hp = 1; return; }
+      // Relentless, a Phoenix Feather...: the first one that's still unused saves you, and the rest wait
+      if (!isDying(tgt)) for (const id of tgt.traits || []) {
+        const T = G.Traits[id];
+        if (T && T.preventDrop && T.preventDrop(B, tgt)) { tgt.hp = 1; return; }
+      }
       if (isDying(tgt)) {
         // a blow against the dying counts as a failed death save; a critical hit counts twice
         const n = o.crit ? 2 : 1;
@@ -675,6 +701,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     return got;
   }
   function spendSurge(B, src, tgt, bonus = 0) {
+    if (tgt.hp >= tgt.maxHp && !isDying(tgt)) { log(B, `${tgt.name} is unhurt: no surge spent.`, 'heal'); return 0; }
     if (tgt.surges > 0) { tgt.surges--; return heal(B, src, tgt, tgt.surgeValue + bonus); }
     if (bonus > 0) return heal(B, src, tgt, bonus);
     log(B, `${tgt.name} has no healing surges left!`, 'miss'); return 0;
@@ -699,7 +726,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     let roll = d(20);
     let hit, crit;
     const evalRoll = () => {
-      const critRange = 20 - traitSum(B, u, 'critRange', p);
+      const critRange = 20 - traitSum(B, u, 'critRange', p) - (p.critCA && ctx.ca ? p.critCA : 0);
       crit = roll >= critRange;
       hit = roll !== 1 && (crit || roll + ab.total >= dv);
     };
@@ -743,6 +770,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         const ectx = Object.assign({}, ctx, { power: p, target: t, crit });
         total += traitSum(B, u, 'dmgMod', ectx);
         total += condSum(u, 'dmgBonus', { target: t });
+        if (p.bonusDmg) { const extra = p.bonusDmg(B, u, t, ctx); if (extra) total += rollDice(parseDice(extra, u), crit).total; }
         res.dmg = yield* dealDamage(B, u, t, total, { dtype: p.dtype, crit });
       }
       // a killing blow still carries the power's other effects (cleave, temp HP for an ally, ...);
@@ -769,7 +797,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     let subjects = [t];
     if (e.on === 'self') subjects = [u];
     else if (e.on === 'allyNear') {
-      const cands = alliesOf(B, u).filter(a => !a.object && Hex.dist(a.pos, u.pos) <= (e.within || 5));
+      const cands = alliesOf(B, u, e.incSelf).filter(a => !a.object && Hex.dist(a.pos, u.pos) <= (e.within || 5) && (!e.hurtOnly || a.hp < a.maxHp || isDying(a)));
       cands.sort((a, b) => (e.prefer === 'hurt' ? (a.hp / a.maxHp) - (b.hp / b.maxHp) : Hex.dist(a.pos, t.pos) - Hex.dist(b.pos, t.pos)));
       subjects = cands.slice(0, 1);
     } else if (e.on === 'alliesNear') {
@@ -790,7 +818,7 @@ var G = (typeof G !== 'undefined') ? G : {};
         }
         case 'cond': {
           if (s.object) break;
-          addCond(B, s, e.c, { dur: e.dur || 'eont', src: u.uid, amt: e.amt != null ? num(e.amt) : undefined, then: e.then, vs: e.vs === 'self' ? u.uid : e.vs, savePen: traitSum(B, u, 'savePen') });
+          addCond(B, s, e.c, { dur: e.dur || 'eont', src: u.uid, amt: e.amt != null ? num(e.amt) : undefined, then: e.then, vs: e.vs === 'self' ? u.uid : e.vs, savePen: traitSum(B, u, 'savePen'), sticky: e.sticky });
           const lbl = e.c === 'prone' ? 'until they stand' : { eont: 'until end of next turn', save: 'save ends', sont: 'until start of next turn', enc: 'until end of encounter', eot: 'until end of turn' }[e.dur || 'eont'];
           log(B, `${s.name} is ${e.label || e.c}${e.amt ? ' (' + num(e.amt) + ')' : ''} (${lbl}).`, 'cond');
           break;
@@ -802,7 +830,7 @@ var G = (typeof G !== 'undefined') ? G : {};
           fx(B, { t: 'cond', u: s.uid, c: 'ongoing' });
           break;
         }
-        case 'mark': addCond(B, s, 'marked', { dur: e.dur || 'eont', src: u.uid }); break;
+        case 'mark': if (!s.object) addCond(B, s, 'marked', { dur: e.dur || 'eont', src: u.uid, savePen: traitSum(B, u, 'savePen') }); break;
         case 'heal': {
           const bonus = num(e.bonus || 0) + (u.healBonus || 0);
           if (e.flat != null) { // a surge spent for a fixed amount instead of the surge value
@@ -814,12 +842,13 @@ var G = (typeof G !== 'undefined') ? G : {};
         case 'temp': {
           // revive: a dying target is lifted to 1 HP before the buffer goes on (temp HP alone can't wake them)
           if (e.revive && isDying(s)) heal(B, u, s, 1);
-          giveTemp(B, s, e.amt === 'surgeValue' ? s.surgeValue : num(e.amt));
+          // a Warlord's rallies are their healing: Mender's Touch makes them bigger too
+          giveTemp(B, s, (e.amt === 'surgeValue' ? s.surgeValue : num(e.amt)) + (e.rally ? (u.healBonus || 0) : 0));
           break;
         }
-        case 'dmg': yield* dealDamage(B, u, s, num(e.amt), { dtype: e.dtype }); break;
+        case 'dmg': yield* dealDamage(B, u, s, num(e.amt), { dtype: e.dtype || p.dtype, label: e.label, miss: e.miss }); break;
         case 'shift': { // subject shifts n: chosen by controller of u
-          if (!canAct(s) && s !== u) break;
+          if (!canShift(s)) { if (s === u || s.side === u.side) log(B, `${s.name} can't shift${hasCond(s, 'immobilized') ? ' (immobilized)' : hasCond(s, 'pinned') ? ' (pinned)' : ''}.`, 'miss'); break; }
           const r = reach(B, s, e.n, 'shift');
           const hexes = [...r.values()].filter(v => !v.noEnd && v.cost > 0).map(v => v.h);
           if (!hexes.length) break;
@@ -834,10 +863,12 @@ var G = (typeof G !== 'undefined') ? G : {};
           break;
         }
         case 'swap': {
-          if (s.immuneForced || s.object) break;
+          if (s.immuneForced || s.object || rad(s) || rad(u) || s === u || isDying(u)) break;
           const a = u.pos; u.pos = s.pos; s.pos = a;
           fx(B, { t: 'step', u: u.uid, to: u.pos, kind: 'shift' }); fx(B, { t: 'step', u: s.uid, to: s.pos, kind: 'forced' });
           log(B, `${u.name} and ${s.name} trade places!`, 'move');
+          yield* enterHex(B, s, s.pos, 'forced');
+          if (!u.dead) yield* enterHex(B, u, u.pos, 'shift');
           break;
         }
         case 'grantAttack': yield* grantAttack(B, u, s, t, { atk: num(e.atk || 0), dmg: e.dmg ? num(e.dmg) : 0 }); break;
@@ -877,7 +908,10 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   function* savingThrows(B, u, bonus = 0, single) {
+    const WORST = ['stunned', 'asleep', 'dominated', 'blinded', 'dazed', 'immobilized', 'weakened', 'ongoing', 'pinned', 'slowed', 'marked'];
+    const rank = (x) => { const i = WORST.indexOf(x.c); return i < 0 ? WORST.length : i; };
     const saves = u.conds.filter(x => x.dur === 'save');
+    if (single) saves.sort((a, b) => rank(a) - rank(b) || (b.amt || 0) - (a.amt || 0));
     for (const c of saves) {
       const r = d(20); const tot = r + (u.saveBonus || 0) + bonus - (c.savePen || 0);
       if (tot >= 10) {
@@ -887,7 +921,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       } else {
         log(B, `${u.name} fails a save against ${c.label || c.c} (${tot}).`, 'cond');
         fx(B, { t: 'save', u: u.uid, ok: false, c: c.c });
-        if (c.then && !c.thenDone) { c.thenDone = true; u.conds = u.conds.filter(x => x !== c); addCond(B, u, c.then, { dur: 'save', src: c.src }); log(B, `${u.name} succumbs: now ${c.then}!`, 'cond'); }
+        if (c.then && !c.thenDone) { c.thenDone = true; u.conds = u.conds.filter(x => x !== c); addCond(B, u, c.then, { dur: 'save', src: c.src, savePen: c.savePen }); log(B, `${u.name} succumbs: now ${c.then}!`, 'cond'); }
       }
       if (single) break;
     }
@@ -900,6 +934,10 @@ var G = (typeof G !== 'undefined') ? G : {};
     (p.eff || []).length > 0 && p.eff.every(e => (e.on || 'self') === 'self' && (e.t === 'shift' || e.t === 'teleport'));
   function* usePower(B, u, p, aim = {}) {
     if (!canUse(B, u, p)) { log(B, `${u.name} can't use ${p.name} now.`, 'miss'); return false; }
+    // never spend a power on an aim it can't use (out of range, out of sight, the wrong kind of target)
+    if (isArea(p) ? (p.tgt !== 'closeBurst' && !areaHexes(B, u, p, aim.hex).length) : (p.tgt !== 'self' && !validTarget(B, u, p, aim.unit))) {
+      log(B, `${p.name} has no valid target there.`, 'miss'); return false;
+    }
     commitMove(u);
     const undo = isMovePower(p) && {
       pos: u.pos, conds: u.conds.slice(), act: Object.assign({}, u.act), cost: 0, moved: u.turnFlags && u.turnFlags.moved, acted: u.actedThisFight,
@@ -1002,13 +1040,14 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (!open) commitMove(u);
     if (!open && !canSpend(u, 'move')) return false;
     if (!open && hasCond(u, 'prone')) { spend(u, 'move'); removeCond(u, x => x.c === 'prone'); log(B, `${u.name} stands up.`, 'move'); fx(B, { t: 'stand', u: u.uid }); return true; }
+    if (kind === 'shift' && !canShift(u)) return false;
     const budget = open ? open.budget - open.spent : kind === 'shift' ? 1 + (u.shiftBonus || 0) : speedOf(u);
     const r = reach(B, u, budget, kind);
     const node = r.get(Hex.hk(dest));
     if (!node || node.noEnd || node.cost === 0) return false;
     const leg = { pos: u.pos, conds: u.conds.slice(), act: Object.assign({}, u.act), cost: node.cost, moved: u.turnFlags && u.turnFlags.moved, acted: u.actedThisFight };
     if (!open) spend(u, 'move');
-    removeCond(u, x => x.c === 'hidden');
+    removeCond(u, x => x.c === 'hidden' && !x.sticky);
     u.actedThisFight = true;
     const logLen = B.log.length;
     yield* moveAlong(B, u, pathFrom(node), kind);
@@ -1054,7 +1093,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       }
       const end = path[path.length - 1];
       if (cost < 2 || cost > speedOf(u) || udist(u, tgt, end) !== 1) return null;
-      if (footprint(u, end).some(f => unitAt(B, f) && unitAt(B, f) !== u)) return null;
+      if (footprint(u, end).some(f => otherAt(B, u, f))) return null;
       return path;
     }
     let best = null;
@@ -1311,7 +1350,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     bloodied, isDying, helpless, canAct, canReact, passable, los, threatening, addCond, removeCond, log, fx,
     speedOf, defense, hasCA, caReason, flanking, traitSum, traitRun, powerRange, atkStat, attackBonus, damageSpec,
     validTarget, areaHexes, areaTargets, isArea, canSpend, spend, canUse, powerReady, reach, pathFrom, freeHexesWithin,
-    udist, hdist, footprint, occupies, canPass, moveLeft, commitMove, canUndoMove, undoMove, chargePath,
+    udist, hdist, footprint, occupies, canPass, canShift, moveLeft, commitMove, canUndoMove, undoMove, chargePath,
     moveAlong, forcedMove, forcedOptions, dealDamage, heal, spendSurge, giveTemp, attackRoll, applyEffect, savingThrows,
     usePower, doMove, doCharge, chargeOptions, secondWind, actionPoint, hasMinorUse, startBattle, nextTurn, startTurn, endTurn, checkEnd,
     runAuto, gainMomentum, grantAttack, kill, enterHex, isHostile, itemPower, randomItem, isItem,

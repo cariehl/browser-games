@@ -4,7 +4,7 @@ var G = (typeof G !== 'undefined') ? G : {};
   const Hex = G.Hex;
   const E = () => G.Engine;
 
-  const COND_VALUE = { stunned: 16, asleep: 12, dazed: 7, immobilized: 4, slowed: 2.5, prone: 4, weakened: 7, blinded: 5, marked: 1.5, cagrant: 3, quarry: 0, vuln: 6, atkBonus: 0, defBonus: 0 };
+  const COND_VALUE = { stunned: 16, asleep: 12, dazed: 7, immobilized: 4, slowed: 2.5, prone: 4, weakened: 7, blinded: 5, marked: 1.5, cagrant: 3, quarry: 0, vuln: 6, atkBonus: 0, defBonus: 0, pinned: 2.5 };
 
   function hitChance(B, u, p, t, ctx) {
     if (!p.atk) return 1;
@@ -15,12 +15,14 @@ var G = (typeof G !== 'undefined') ? G : {};
   function avgDmg(B, u, p, t, ctx) {
     if (!p.dmg) return 0;
     let a = E().avgDice(E().damageSpec(B, u, p, t));
-    if (ctx.ca && u.traits.includes('sneakAttack') && (p.weapon || p.basic) && u.sneakTurn !== B.turnNo) a += u.traits.includes('shadowblade') ? 9 : 7;
+    if ((ctx.ca || p.sneakAlways) && u.traits.includes('sneakAttack') && (p.weapon || p.basic) && u.sneakTurn !== B.turnNo) a += u.traits.includes('shadowblade') ? 9 : 7;
     if (ctx.ca && u.traits.includes('caDamage')) a += E().avgDice(E().parseDice(G.Monsters[u.id].caDmg));
-    if (u.traits.includes('quarry') && t.conds.some(c => c.c === 'quarry' && c.src === u.uid)) a += 3.5;
+    if (u.traits.includes('quarry') && t.conds.some(c => c.c === 'quarry' && c.src === u.uid)) a += p.quarryEachHit || !p.hits || p.hits < 2 ? 3.5 : 3.5 / p.hits; // once per turn, unless every hit counts
     if (u.traits.includes('evoker') && E().isArea(p)) a += 2;
     if (u.traits.includes('twinblade') && p.weapon && E().powerRange(u, p).kind === 'melee') a += 2;
     if (u.traits.includes('lightbringer') && p.implement) a += 2;
+    if (p.bonusDmg && p.bonusDmg(B, u, t, ctx)) a += E().avgDice(E().parseDice(p.bonusDmg(B, u, t, ctx), u));
+    if (p.critCA && ctx.ca) a += 0.15 * a; // a wider crit range is worth a little on average
     if (u.phase3) a += 4;
     if (E().hasCond(u, 'weakened')) a /= 2;
     return a;
@@ -32,7 +34,7 @@ var G = (typeof G !== 'undefined') ? G : {};
       else if (e.t === 'ongoing') v += (typeof e.amt === 'number' ? e.amt : 5) * 1.5;
       else if (e.t === 'push' || e.t === 'pull' || e.t === 'slide') v += 1;
       else if (e.t === 'grantAttack') v += 8;
-      else if (e.t === 'heal') v += e.on ? 6 : 0;
+      else if (e.t === 'heal') v += e.on ? (E().alliesOf(B, u, e.incSelf).some(a => !a.object && a.hp < a.maxHp - 3 && Hex.dist(a.pos, u.pos) <= (e.within || 5)) ? 6 : 0) : 0;
       else if (e.t === 'temp') v += 3;
       else if (e.t === 'fn') v += 3;
       else if (e.t === 'swap') v += 1;
@@ -115,6 +117,8 @@ var G = (typeof G !== 'undefined') ? G : {};
         } else {
           v = allyEffectValue(B, u, p, ts);
         }
+        // Grand Command: every ally in the burst who can reach a foe swings (up to three)
+        if (p.id === 'w_grand') v = Math.min(3, ts.filter(a => G.allyCanAttack && E().canAct(a) && E().enemiesOf(B, a).some(e => a.powers.some(q => (q.basicMelee || q.basicRanged) && E().validTarget(B, a, q, e)))).length) * 8;
         if (p.after && p.id === 'c_sunfall') v += B.units.filter(a => a.side === u.side && !a.dead && Hex.dist(a.pos, aim) <= 2 && a.hp < a.maxHp - 5).length * 6;
         consider({ hex: aim || u.pos }, v);
       }
@@ -151,9 +155,15 @@ var G = (typeof G !== 'undefined') ? G : {};
           else v += Math.min(missing, 6) * 0.3;
           if (e.surge && t.surges <= 0) v -= 10;
         } else if (e.t === 'cond' && e.c === 'atkBonus') v += e.dur === 'enc' ? 5 : 2;
+        else if (e.t === 'cond' && e.c === 'defBonus') v += e.dur === 'enc' ? 4 : (E().enemiesOf(B, t).some(f => E().udist(f, t) <= (f.reach || 1)) ? 2 : 0.5);
         else if (e.t === 'save') v += t.conds.some(c => c.dur === 'save' && c.c !== 'ongoing' || c.c === 'ongoing') ? 6 : 0;
         else if (e.t === 'temp') v += e.revive && E().isDying(t) ? 40 : t.hp < t.maxHp * 0.7 ? 3 : 1;
-        else if (e.t === 'shift') v += 0;
+        else if (e.t === 'shift') {
+          // Quick Orders: pull a threatened archer or caster out of melee, or a melee ally into a flank
+          if (!E().canShift(t)) continue;
+          const adj = E().enemiesOf(B, t).filter(f => E().udist(f, t) <= (f.reach || 1)).length;
+          if (adj && isRangedUnit(t)) v += 5;
+        }
       }
     }
     return v;
@@ -204,7 +214,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     const powers = u.powers.filter(p => (p.action || 'standard') === 'standard' && E().canUse(B, u, p) && !p.passive);
     const moveOk = !opts.noMove && E().canSpend(u, 'move') && E().speedOf(u) > 0 && !E().hasCond(u, 'prone');
     let nodes = moveOk ? [...E().reach(B, u, E().speedOf(u), 'move').values()].filter(n => !n.noEnd) : [{ h: u.pos, cost: 0, prov: 0, prev: null }];
-    if (moveOk) { // shifting 1 never provokes: offer it as an alternative way to reposition
+    if (moveOk && E().canShift(u)) { // shifting 1 never provokes: offer it as an alternative way to reposition
       const sh = [...E().reach(B, u, 1 + (u.shiftBonus || 0), 'shift').values()].filter(n => !n.noEnd && n.cost > 0).map(n => Object.assign({}, n, { shift: true, prov: 0 }));
       nodes = nodes.concat(sh);
     }
