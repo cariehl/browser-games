@@ -857,7 +857,7 @@ GUIDLE.applyOdds({"triple":{"p":0.072672125,"m":"sim"},"quad":{"p":0.003811375,"
     const t = c.currentTime, s = c.createBufferSource(), hp = c.createBiquadFilter(), bp = c.createBiquadFilter(), g = c.createGain(), out = c.createGain();
     s.buffer = strokeBuf; s.loop = true;
     hp.type = 'highpass'; hp.frequency.value = 350; bp.type = 'peaking'; bp.frequency.value = 2400; bp.gain.value = 6;
-    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.03, t + 0.4); g.gain.linearRampToValueAtTime(0.1, t + 5);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.006, t + 0.4); g.gain.linearRampToValueAtTime(0.02, t + 5);
     s.connect(hp).connect(bp).connect(g).connect(out); toBus(c, out); s.start(t);
     // The swell stays on `g`; the quick fade-out goes on its own node so it never fights the swell's automation.
     return () => { const n = c.currentTime; out.gain.setValueAtTime(1, n); out.gain.linearRampToValueAtTime(0, n + 0.03); s.stop(n + 0.05); };
