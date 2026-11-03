@@ -705,11 +705,11 @@ GUIDLE.applyOdds(/*__ODDS__*/);
 
     reeling = true; skipReel = false; rollBtn.innerHTML = 'Rolling…<kbd>Press again to skip</kbd>';
     await reel(u, topI >= 3);
-    reeling = false; updateRollBtn();
     if (token !== rollToken) return;
     await wait(reduced ? 30 : 450); // a beat of silence before the ID lands
     if (token !== rollToken) return;
-    sfx.lockIn(topI >= 3);
+    // The button flips to the countdown on the same beat as the landing sound.
+    reeling = false; updateRollBtn(); sfx.lockIn(topI >= 3);
     await wait(reduced ? 30 : 650);
     if (token !== rollToken) return;
 
