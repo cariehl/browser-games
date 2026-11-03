@@ -172,7 +172,8 @@ var G = (typeof G !== 'undefined') ? G : {};
     wpn({ id: 'g_careful', name: 'Careful Aim', atk: { stat: 'WPN', vs: 'AC', bonus: 2 }, noMod: true, modVsQuarry: true, text: 'Accurate (+2). Weapon dice only, unless the target is your quarry: then full damage.' }),
   ]);
   add('ranger', 'enc1', [
-    wpn({ id: 'g_fangs', name: 'Twin Fangs', hits: 2 }),
+    // Paired Strike's big sibling: full damage on both swings, and your quarry bleeds from each of them
+    wpn({ id: 'g_fangs', name: 'Twin Fangs', hits: 2, quarryEachHit: true, text: 'Two attacks against the target, each with full damage. Against your quarry, Hunter\'s Quarry damage lands on every hit, not just once this turn.' }),
     wpn({ id: 'g_hobble', name: 'Hobbling Strike', dmg: '2W', hit: [{ t: 'cond', c: 'immobilized' }] }),
   ]);
   add('ranger', 'enc3', [
@@ -376,7 +377,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     ruffian: { defMod: (B, u, which) => (which === 'AC' && B.round <= 1) ? 2 : 0 },
     quarry: {
       dmgMod: (B, u, ctx) => {
-        if (u.quarryTurn === B.turnNo) return 0;
+        if (u.quarryTurn === B.turnNo && !(ctx.power && ctx.power.quarryEachHit)) return 0;
         if (!ctx.target.conds.some(c => c.c === 'quarry' && c.src === u.uid)) return 0;
         u.quarryTurn = B.turnNo;
         return E().rollDice({ dice: [[1, u.feats.includes('lethalHunter') ? 10 : 6]], flat: 0 }).total;

@@ -752,6 +752,23 @@ test('signature tricks: Twisting Knife, Careful Aim, Crushing Blow, Deadly Gambi
   assert.strictEqual(cb.bonusDmg(B, ftr, gob), '1W');
 });
 
+test('Twin Fangs: quarry damage on both hits, where Paired Strike gets it once', () => {
+  const { B, ranger, gob } = arena('goblins', { ranger: u => u.cls === 'ranger', gob: u => u.id === 'goblin_skulker' }, 7, 1);
+  gob.hp = gob.maxHp = 500; ranger.pos = off(4, 9); gob.pos = Hex.add(ranger.pos, { q: 3, r: 0 }); B.active = ranger;
+  E.addCond(B, gob, 'quarry', { src: ranger.uid, dur: 'enc' });
+  const fangs = ranger.powers.find(p => p.id === 'g_fangs'), twin = ranger.powers.find(p => p.id === 'g_twin');
+  assert(fangs && twin, 'Thessaly knows both');
+  const quarryHits = (p) => {
+    let n = 0; const orig = G.Traits.quarry.dmgMod;
+    G.Traits.quarry.dmgMod = (...a) => { const r = orig(...a); if (r) n++; return r; };
+    B.turnNo = (B.turnNo || 0) + 1; ranger.act = { std: 1, move: 1, minor: 1 }; ranger.used = {};
+    fixDice(19); E.runAuto(E.usePower(B, ranger, p, { unit: gob })); E.setRng(Math.random);
+    G.Traits.quarry.dmgMod = orig; return n;
+  };
+  assert.strictEqual(quarryHits(twin), 1);
+  assert.strictEqual(quarryHits(fangs), 2);
+});
+
 test('class identity: no two classes share a power with the same mechanics', () => {
   const sig = (p) => JSON.stringify({ tgt: p.tgt, size: p.size, vs: p.atk && p.atk.vs, bonus: p.atk && p.atk.bonus, dmg: p.dmg, hits: p.hits, noMod: !!p.noMod,
     hit: (p.hit || []).map(e => [e.t, e.c, e.dur, e.on, e.n, e.vs].join()), miss: Array.isArray(p.miss) ? p.miss.map(e => [e.t, e.c].join()) : p.miss,

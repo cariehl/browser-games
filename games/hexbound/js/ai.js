@@ -17,7 +17,7 @@ var G = (typeof G !== 'undefined') ? G : {};
     let a = E().avgDice(E().damageSpec(B, u, p, t));
     if ((ctx.ca || p.sneakAlways) && u.traits.includes('sneakAttack') && (p.weapon || p.basic) && u.sneakTurn !== B.turnNo) a += u.traits.includes('shadowblade') ? 9 : 7;
     if (ctx.ca && u.traits.includes('caDamage')) a += E().avgDice(E().parseDice(G.Monsters[u.id].caDmg));
-    if (u.traits.includes('quarry') && t.conds.some(c => c.c === 'quarry' && c.src === u.uid)) a += 3.5;
+    if (u.traits.includes('quarry') && t.conds.some(c => c.c === 'quarry' && c.src === u.uid)) a += p.quarryEachHit || !p.hits || p.hits < 2 ? 3.5 : 3.5 / p.hits; // once per turn, unless every hit counts
     if (u.traits.includes('evoker') && E().isArea(p)) a += 2;
     if (u.traits.includes('twinblade') && p.weapon && E().powerRange(u, p).kind === 'melee') a += 2;
     if (u.traits.includes('lightbringer') && p.implement) a += 2;
