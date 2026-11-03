@@ -266,13 +266,13 @@ var G = (typeof G !== 'undefined') ? G : {};
   }
 
   // ---------- events ----------
-  function eventScreen() {
+  function eventScreen(rolled) {
     A().show('campaign');
     const ev = run.event, E0 = G.Events[ev.id], res = ev.result;
     const choiceBtn = (c, k) => {
       const open = C().choiceOpen(run, c);
       let info = '';
-      if (c.check) { const o = C().checkOdds(run, c.check.skill, c.check.dc); info = `${G.Skills[c.check.skill].name} DC ${o.dc} · ${esc(run.heroes[o.hero].build.name)} +${o.bonus} · ${Math.round(o.chance * 100)}%`; }
+      if (c.check) { const o = C().checkOdds(run, c.check.skill, c.check.dc), pc = Math.round(o.chance * 100); info = `<span class="ev-odds ${pc >= 70 ? 'good' : pc >= 45 ? 'ok' : 'bad'}">${pc}%</span>${G.Skills[c.check.skill].name} DC ${o.dc} · ${esc(run.heroes[o.hero].build.name)} +${o.bonus}`; }
       else if (c.luck) info = 'A gamble';
       if (c.cost && c.cost.gold) info = `🪙 ${c.cost.gold}${info ? ' · ' + info : ''}`;
       return `<button class="btn cp-choice" data-choice="${k}" ${open.ok ? '' : 'disabled'}><b>${esc(c.label)}</b>${info ? `<small>${info}</small>` : ''}${open.ok ? '' : `<small class="warn">${esc(open.why)}</small>`}</button>`;
@@ -281,7 +281,9 @@ var G = (typeof G !== 'undefined') ? G : {};
     if (!res) body = `<div class="cp-choices">${E0.choices.map(choiceBtn).join('')}</div>`;
     else {
       const ck = res.check;
-      body = `<div class="cp-result">
+      // a fresh skill check rolls a d20 on screen before the outcome shows
+      const die = ck ? `<div class="ev-check ${rolled ? 'rolling' : ''} ${ck.ok ? 'ok' : 'fail'}"><div class="ev-die" data-roll="${ck.roll}"><span>${ck.roll}</span></div><div class="ev-sum"><b>${ck.total}</b> <small>vs DC</small> <b>${ck.dc}</b><em>${ck.ok ? 'Success' : 'Failure'}</em></div></div>` : '';
+      body = `${die}<div class="cp-result ${ck && rolled ? 'reveal' : ''}">
         ${ck ? `<p class="cp-roll ${ck.ok ? 'good' : 'bad'}">${esc(run.heroes[ck.hero].build.name)} rolls ${G.Skills[ck.skill].name}: d20 ${ck.roll} + ${ck.bonus} = ${ck.total} vs DC ${ck.dc}: <b>${ck.ok ? 'success' : 'failure'}</b></p>` : ''}
         <p>${esc(res.text)}</p>
         ${res.lines.length ? `<ul>${res.lines.map(l => `<li>${esc(l)}</li>`).join('')}</ul>` : ''}
@@ -297,7 +299,15 @@ var G = (typeof G !== 'undefined') ? G : {};
     wireHead();
     document.querySelectorAll('[data-choice]').forEach(b => b.onclick = () => {
       const r = C().resolveChoice(run, +b.dataset.choice); if (!r) return;
-      G.Audio.play(r.check ? (r.check.ok ? 'buff' : 'miss') : 'click'); save(); eventScreen();
+      save();
+      if (!r.check) { G.Audio.play('click'); eventScreen(); return; }
+      G.Audio.play('dice'); eventScreen(true);
+      const d = $('.ev-die span'), t0 = performance.now();
+      const iv = setInterval(() => {
+        if (!d.isConnected) return clearInterval(iv);
+        if (performance.now() - t0 > 850) { clearInterval(iv); d.textContent = r.check.roll; G.Audio.play(r.check.ok ? 'buff' : 'miss'); }
+        else d.textContent = 1 + Math.floor(Math.random() * 20);
+      }, 55);
     });
     const d = $('#ev-done'); if (d) d.onclick = () => { C().leave(run); save(); sel = null; mapScreen(); };
     const f = $('#ev-fight'); if (f) f.onclick = () => { G.Audio.play('click'); fight(run.node); };

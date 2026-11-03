@@ -77,6 +77,15 @@ everything is plain scripts, and three.js is vendored in `vendor/`.
   distance, skirmishers hunt flanks, leaders heal, monsters ignore the fallen with area attacks.
 - **Keyword popups** (`js/keywords.js`): tooltips for units, terrain and powers get side panels explaining
   the statuses and rules words they mention (prone, marked, combat advantage, difficult terrain…).
+- **Battle HUD** (`js/game.js`, `css/style.css`): an action dock with the active hero's portrait, HP and action
+  pips, movement buttons, pack items and power cards that show cadence, action, reach, attack bonus and damage
+  dice, plus a big End Turn button that glows once nothing useful is left. Aiming at a target opens a
+  Fire Emblem style **forecast** (hit chance, roll needed, damage range, ☠ Lethal / May defeat) and ghosts the
+  damage onto the target's overhead health bar. Pointing at an enemy, or its chip in the turn order, shades
+  where it can move and strike next turn; **T** toggles the melee threat of every enemy at once.
+- **Menus**: an animated low-poly hex island behind the main menu (`js/menu-bg.js`, its own small three.js
+  scene that only renders while the menu shows), screen and dialog transitions, an animated battle result
+  with per-hero stat cards, and a rolling d20 for campaign event skill checks.
 - **Juice**: hit-chance previews, flank hints, opportunity-attack path warnings, dice popups, crits with
   camera shake, multi-kill and overkill banners, boss barks, Momentum rerolls, synthesized sound.
 
