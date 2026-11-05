@@ -11,7 +11,8 @@
     "check-loops": "node tools/check_loops.js",
     "check-reach": "node tools/check_reach.js",
     "check-text": "node tools/check_text.js",
-    "editor": "node tools/editor/server.js"
+    "editor": "node tools/editor/server.js",
+    "build:pages": "node tools/build_pages.js"
   },
   "dependencies": {
     "@colyseus/core": "^0.18.18",

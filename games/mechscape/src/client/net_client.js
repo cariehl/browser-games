@@ -12,6 +12,7 @@ import { applySnapshot } from '../sim/snapshot.js';
 import { TICK_SECONDS } from '../sim/constants.js';
 import { SimulatedLink } from './simulated_link.js';
 import { LookEditor, savedLook, rememberLook } from '../ui/look_editor.js';
+import { serverInfo, pageBuild } from './server_address.js';
 
 export const ROOM_NAME = 'scrapyard';
 const NAME_KEY = 'mechscape_name';
@@ -98,13 +99,14 @@ function loadSdk() {
 }
 
 /**
- * Joins the server this page came from as [name]. Resolves to
+ * Joins [server] (an origin like https://abc.trycloudflare.com; null for
+ * the server this page came from) as [name]. Resolves to
  * { room, loop, id, debug } once the first snapshot is in the mirror, or
  * rejects with the server's reason (name taken, server full...).
  */
-export async function join(name, mapPath = World.defaultMap, look = savedLook()) {
+export async function join(name, mapPath = World.defaultMap, look = savedLook(), server = null) {
   const Colyseus = await loadSdk();
-  const client = new Colyseus.Client(window.location.origin);
+  const client = new Colyseus.Client(server || window.location.origin);
   const room = await client.join(ROOM_NAME, look ? { name, look } : { name });
   rememberName(name);
   // Ticks can arrive before the welcome is handled; hold them until the mirror exists.
@@ -125,22 +127,14 @@ export async function join(name, mapPath = World.defaultMap, look = savedLook())
   return { room, loop, id: welcome.id, debug: welcome.debug, xpRate: welcome.xp_rate || 1 };
 }
 
-/** What the server says about itself (GET /server-info), or null. */
-async function serverInfo() {
-  try {
-    const res = await fetch('/server-info');
-    return res.ok ? await res.json() : null;
-  } catch {
-    return null;
-  }
-}
-
 /**
  * Shows the connect screen over the loading screen (a name box and the look
  * picker) and resolves with the name typed; the look picked is remembered.
- * [error] is shown above it (why the last try failed).
+ * [error] is shown above it (why the last try failed). [server] is the
+ * server being joined, or null for the one this page came from; with one,
+ * there's also a way back to the start screen.
  */
-export function askName(status, initial = '', error = '') {
+export function askName(status, initial = '', error = '', server = null) {
   return new Promise((resolve) => {
     status.textContent = '';
     status.classList.remove('error');
@@ -149,16 +143,35 @@ export function askName(status, initial = '', error = '') {
     form.innerHTML = '<div class="title">MechScape</div><div class="muted small server-info"></div>'
       + '<label>Pilot name <input name="name" maxlength="12" autocomplete="nickname" spellcheck="false"></label>'
       + '<div class="look-slot"></div>'
-      + '<div class="warn join-error"></div><button type="submit">Join</button>';
+      + '<div class="warn join-error"></div><div class="warn small version-warning"></div>'
+      + '<div class="row"><button type="submit" class="grow">Join</button></div>';
+    if (server) {
+      const back = document.createElement('button');
+      back.type = 'button';
+      back.textContent = 'Back';
+      back.title = 'Play another way, or on another server';
+      back.onclick = () => window.location.reload();
+      form.querySelector('.row').prepend(back);
+    }
     const input = form.querySelector('input');
     input.value = initial;
     form.querySelector('.join-error').textContent = error;
     const editor = new LookEditor(form.querySelector('.look-slot'), savedLook());
-    serverInfo().then((info) => {
+    Promise.all([serverInfo(server), server ? pageBuild() : null]).then(([info, build]) => {
       if (!info) return;
       const parts = [`${info.online} online`];
+      if (server) parts.unshift(new URL(server).host);
       if (info.xp_rate && info.xp_rate !== 1) parts.push(`XP rate ×${info.xp_rate}`);
       form.querySelector('.server-info').textContent = parts.join('  ·  ');
+      // This page's files and the server's can be different versions of the game.
+      if (build && info.build && build !== info.build) {
+        const warning = form.querySelector('.version-warning');
+        warning.textContent = `This server runs a different version of MechScape (${info.build}) than this page (${build}). If things look wrong, play from the server's own page: `;
+        const link = document.createElement('a');
+        link.href = `${server}/`;
+        link.textContent = new URL(server).host;
+        warning.appendChild(link);
+      }
     });
     form.addEventListener('submit', (e) => {
       e.preventDefault();

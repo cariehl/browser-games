@@ -15,7 +15,11 @@ Then open <http://localhost:2567>, pick a pilot name and play. Friends open `htt
 
 To play alone without a server, `npm run offline` serves the files and you open <http://localhost:8000/?offline>. That runs the whole sim in the page, with local saves, as before. Any static file server works for this (`python -m http.server 8000`, for one); browsers just won't load ES modules from a `file://` URL, so double-clicking `index.html` doesn't work.
 
-The page has no build step. three.js 0.170.0 is vendored in `vendor/three/` (only the files the game uses) and loaded with an import map in `index.html`; the Colyseus browser client is vendored in `vendor/colyseus/` (`npm run vendor-sdk` copies it again after an upgrade).
+Without `?offline`, a page that isn't served by a game server (`npm run offline`, or the copy on GitHub Pages) opens on a start screen: **Play in browser** (the offline game), or **Play on a server** by its address. A link with `?serverUrl=<address>` picks the server for you, like Orbs of Magic: the address is remembered in that browser and taken out of the address bar, and **Copy invite link** puts it back. The server answers `/server-info` and matchmaking for any origin, so the GitHub Pages copy can join a Cloudflare tunnel; a page on https can only reach https servers (or localhost).
+
+GitHub Pages: the game is at <https://cariehl.github.io/mechscape/>. `npm run build:pages` copies the browser's files into `dist/` with a `build.json` holding a fingerprint of `src/` and `data/` (`server/game_version.js`); replace `mechscape/` in cariehl.github.io with `dist/`. The server reports the same fingerprint, and the name screen warns when the page and the server are different versions, with a link to the server's own page. Commentary goes in `commentary/mechscape.md` in cariehl.github.io; the start screen shows Back and Commentary only on github.io (or with `?site` for a local preview), and a GitHub link everywhere.
+
+The page has no build step. three.js 0.170.0 is vendored in `vendor/three/` (only the files the game uses) and loaded with an import map in `index.html`; the Colyseus browser client is vendored in `vendor/colyseus/` (`npm run vendor-sdk` copies it again after an upgrade), and marked (for the commentary) in `vendor/marked/`.
 
 Controls:
 - **Mouse:** hover over an NPC, node or station to see what a left click does ("Attack Loader mech", "Salvage Crashed drone"). Left-click does it; left-click open ground to walk there.
