@@ -210,10 +210,14 @@ function env(ctx: BaseAudioContext, t: number, a: number, peak: number, hold: nu
   return g;
 }
 
+/** The most recently made oscillator: play() hangs the note's clean-up on it (all of a note's oscillators stop together). */
+let lastOsc: OscillatorNode | null = null;
+
 function osc(ctx: BaseAudioContext, type: OscillatorType, f: number, t: number, end: number, detune = 0) {
   const o = ctx.createOscillator();
   o.type = type; o.frequency.value = f; o.detune.value = detune;
   o.start(t); o.stop(end);
+  lastOsc = o;
   return o;
 }
 
@@ -227,7 +231,13 @@ function vibrato(ctx: BaseAudioContext, t: number, end: number, rate: number, ce
 }
 
 function play(ctx: BaseAudioContext, bus: Bus, e: Ev, t: number, dur: number) {
-  const out = bus.ch.get(e.inst)!;
+  // Each note gets its own output, unplugged once the note has finished. Without this, a finished note's
+  // filters stay in the audio graph until the next garbage collection (a filter whose cutoff is still
+  // gliding never counts as silent), so thousands pile up, the audio thread falls behind after a few
+  // minutes, and the music stutters and dies.
+  const out = ctx.createGain();
+  out.connect(bus.ch.get(e.inst)!);
+  lastOsc = null;
   const f = hz(e.midi);
   const v = e.vel;
   switch (e.inst) {
@@ -340,6 +350,8 @@ function play(ctx: BaseAudioContext, bus: Bus, e: Ev, t: number, dur: number) {
       break;
     }
   }
+  const last = lastOsc as OscillatorNode | null;
+  if (last) last.onended = () => out.disconnect();
 }
 
 // ───────────── playback ─────────────
