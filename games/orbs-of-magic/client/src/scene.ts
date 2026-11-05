@@ -4,7 +4,7 @@ import { OutputPass } from 'three/examples/jsm/postprocessing/OutputPass.js';
 import { RenderPass } from 'three/examples/jsm/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/examples/jsm/postprocessing/UnrealBloomPass.js';
 import { COLOR_INFO, KEYWORD_INFO, cardDef } from '../../shared/cards';
-import { ALL_HEXES, LEY_ORBS, deployRows, key, toWorld, type Hex } from '../../shared/hex';
+import { ALL_HEXES, LEY_ORBS, deployRows, isManaOrb, key, toWorld, type Hex } from '../../shared/hex';
 import type { GameEvent, GameState, Unit } from '../../shared/types';
 import { sfx } from './audio';
 
@@ -477,7 +477,7 @@ export class BoardScene {
       const w = toWorld(h);
       const ring = new THREE.Mesh(new THREE.RingGeometry(0.62, 0.8, 6), new THREE.MeshBasicMaterial({ color: NEUTRAL_ORB, transparent: true, opacity: 0.7, side: THREE.DoubleSide }));
       ring.rotation.x = -Math.PI / 2; ring.rotation.z = Math.PI / 2; ring.position.set(w.x, TILE_TOP + 0.02, w.z);
-      const orb = new THREE.Mesh(new THREE.IcosahedronGeometry(0.3, 2), new THREE.MeshStandardMaterial({ color: NEUTRAL_ORB, emissive: NEUTRAL_ORB, emissiveIntensity: 2.2 }));
+      const orb = new THREE.Mesh(isManaOrb(h) ? new THREE.OctahedronGeometry(0.36, 0) : new THREE.IcosahedronGeometry(0.3, 2), new THREE.MeshStandardMaterial({ color: NEUTRAL_ORB, emissive: NEUTRAL_ORB, emissiveIntensity: 2.2 }));
       orb.position.set(w.x, 2.3, w.z);
       const light = new THREE.PointLight(NEUTRAL_ORB, 6, 5, 1.5);
       light.position.set(w.x, 1.6, w.z);
@@ -935,7 +935,12 @@ export class BoardScene {
         if (!o) break;
         const col = e.p === seat ? MY_COLOR : ENEMY_COLOR;
         this.burst(o.orb.position.clone(), col, 30, 2.5, 0.25, 0.7);
-        await this.projectile(o.orb.position.clone(), this.sanctumPos(1 - e.p), col, 0.45, 0.14);
+        if (e.kind === 'mana') {
+          // Mana flows home to the holder's side.
+          await this.projectile(o.orb.position.clone(), this.sanctumPos(e.p), 0x7fd8ff, 0.45, 0.1);
+        } else {
+          await this.projectile(o.orb.position.clone(), this.sanctumPos(1 - e.p), col, 0.45, 0.14);
+        }
         break;
       }
       case 'fx': {

@@ -60,7 +60,7 @@ The server writes every game to `logs/games/<time>-<room>.jsonl`: the seed and b
 - **Units** are summoned onto your two back rows (your *territory*). They can't act the round they arrive unless they're **Swift**. An **order** moves a unit up to its speed (usually 2) and/or attacks something in range.
 - **Combat:** attacker and defender damage each other simultaneously unless the defender can't reach back (ranged attacks). Damage persists between rounds.
 - **Sanctum attacks:** melee units can attack the enemy Sanctum from the enemy's back row. Ranged units can attack it from anywhere in *enemy territory* (the enemy's two back rows).
-- **Ley Orbs:** three orbs hover over the centre row. Each one you stand on at the start of a round gives you +1 mana that round and deals 1 damage to the enemy Sanctum.
+- **Ley Orbs:** three orbs hover over the centre row. At the start of each round, a unit on the middle **Mana Orb** gives its owner +1 mana that round, and a unit on either outer **War Orb** deals 1 damage to the enemy Sanctum.
 - **Spell mana:** up to 3 unspent mana carries over, usable only for Spells and Orders.
 - Card types: **Units**, **Spells** (instant effects) and **Orders** (effects that command your units: ready them, buff them, make them fight).
 

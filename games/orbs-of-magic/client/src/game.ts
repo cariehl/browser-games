@@ -1,7 +1,7 @@
 import { COLOR_INFO, cardDef } from '../../shared/cards';
 import { allDecks, deckOptions } from './deckstore';
 import { Game, MAX_SPELL_MANA } from '../../shared/engine';
-import { ALL_HEXES, canHitSanctum, dist, key, same, type Hex } from '../../shared/hex';
+import { ALL_HEXES, canHitSanctum, dist, isManaOrb, isOrb, key, same, type Hex } from '../../shared/hex';
 import type { Action, GameEvent, GameState, Target, Unit } from '../../shared/types';
 import { isMuted, sfx, toggleMute } from './audio';
 import { music } from './music';
@@ -539,8 +539,10 @@ export class GameController {
       setHC(`<div class="hc-row">${cardHTML(d, { unit: u, extraClass: 'big' })}${lvl}</div><div class="hc-help"><div class="unit-status">${u.owner === this.seat ? '<b class="mine">Your unit</b>' : '<b class="theirs">Enemy unit</b>'}${status.map((s) => `<div>${s}</div>`).join('')}</div>${cardHelp(d, u.kw)}</div>`);
       hc.classList.add('show');
       this.markOverflow(hc);
-    } else if (this.hoverHex && this.view && [1, 4, 7].includes(this.hoverHex.c) && this.hoverHex.r === 3) {
-      setHC(`<div class="sanctum-card"><h3>🔮 Ley Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>`);
+    } else if (this.hoverHex && this.view && isOrb(this.hoverHex)) {
+      setHC(isManaOrb(this.hoverHex)
+        ? `<div class="sanctum-card"><h3>💎 Mana Orb</h3><p>At the start of each round, a unit standing here gives its owner <b>+1 mana</b> for that round.</p></div>`
+        : `<div class="sanctum-card"><h3>⚔️ War Orb</h3><p>At the start of each round, a unit standing here deals <b>1 damage</b> to the enemy Sanctum.</p></div>`);
       hc.classList.add('show');
       this.markOverflow(hc);
     } else hc.classList.remove('show');
@@ -611,7 +613,7 @@ export class GameController {
     const extra = Math.max(0, pl.mana - pl.maxMana);
     let gems = '';
     for (let i = 0; i < pl.maxMana; i++) gems += `<i class="gem ${i < pl.mana ? 'full' : ''}"></i>`;
-    for (let i = 0; i < extra; i++) gems += `<i class="gem full bonus" title="Ley Orb bonus mana"></i>`;
+    for (let i = 0; i < extra; i++) gems += `<i class="gem full bonus" title="Mana Orb bonus mana"></i>`;
     let spell = '';
     for (let i = 0; i < MAX_SPELL_MANA; i++) spell += `<i class="sgem ${i < pl.spellMana ? 'full' : ''}"></i>`;
     const active = this.view!.phase === 'action' && this.view!.turn === p;
@@ -876,7 +878,7 @@ export const HELP_HTML = `
   <div><h4>🔁 Rounds</h4><p>Each round you gain a mana crystal (up to 10) and draw a card. Players take turns doing <b>one action at a time</b>. The player with the <b>initiative</b> goes first; it swaps every round. The round ends when both players <b>pass in a row</b>, so passing just to see what your opponent does is a real tactic.</p></div>
   <div><h4>🃏 Actions</h4><p><b>Play a card</b>: Units are summoned onto your two back rows. Spells and Orders take effect immediately.<br><b>Order a unit</b>: Move it up to its speed (usually 2 hexes) and/or attack something in range. Each unit can be ordered once per round, starting the round after it is summoned.<br><b>Pass</b>.</p></div>
   <div><h4>⚔️ Combat</h4><p>Attacker and defender damage each other at the same time, unless the defender can't reach back (ranged attacks). Damage stays on units between rounds. To attack the enemy Sanctum directly, melee units must reach the enemy's <b>back row</b>. Ranged units can attack it from either of the enemy's two back rows.</p></div>
-  <div><h4>🔮 Ley Orbs</h4><p>Three orbs float over the center row. Each one you stand on at the start of a round gives you <b>+1 mana</b> for that round and deals <b>1 damage</b> to the enemy Sanctum.</p></div>
+  <div><h4>🔮 Ley Orbs</h4><p>Three orbs float over the center row. At the start of each round, holding the <b>middle Mana Orb</b> gives you <b>+1 mana</b> for that round, and each <b>outer War Orb</b> you hold deals <b>1 damage</b> to the enemy Sanctum.</p></div>
   <div><h4>💧 Spell mana</h4><p>Up to 3 unspent mana carries over as <b>spell mana</b>, which can only pay for Spells and Orders.</p></div>
 </div>
 <h4>Keywords</h4>

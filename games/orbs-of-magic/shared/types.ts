@@ -105,7 +105,7 @@ export type GameEvent =
   | { t: 'ready'; uid: number }
   | { t: 'bounce'; uid: number }
   | { t: 'teleport'; uid: number; to: Hex }
-  | { t: 'orbPulse'; p: number; orb: Hex }
+  | { t: 'orbPulse'; p: number; orb: Hex; kind: 'mana' | 'attack' }
   | { t: 'pass'; p: number }
   | { t: 'fx'; kind: string; at: Hex | null; p?: number; uid?: number }
   | { t: 'mana'; p: number }

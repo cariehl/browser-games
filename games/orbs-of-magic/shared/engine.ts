@@ -1,7 +1,7 @@
 import { CARDS, cardDef, type CardDef, type TargetSpec } from './cards';
 import { deckColors, deckIcon, prebuiltList, validateDeck, type DeckList } from './decks';
 import {
-  ALL_HEXES, LEY_ORBS, canHitSanctum, deployRows, dist, inBounds, key, neighbors, ownHalfRows, same, type Hex,
+  ALL_HEXES, LEY_ORBS, canHitSanctum, isManaOrb, deployRows, dist, inBounds, key, neighbors, ownHalfRows, same, type Hex,
 } from './hex';
 import type { Action, CardInst, GameEvent, GameState, Keyword, PlayerState, Target, Unit } from './types';
 
@@ -361,13 +361,18 @@ export class Game {
     }
     this.draw(s.initiative, 1);
     this.draw(1 - s.initiative, 1);
-    // Ley Orbs pulse for whoever holds them.
+    // Ley Orbs pulse for whoever holds them: the middle orb grants mana,
+    // the two outer orbs strike the enemy Sanctum.
     for (const orb of LEY_ORBS) {
       const u = this.unitAt(orb);
       if (!u) continue;
-      s.players[u.owner].mana += 1;
-      this.emit({ t: 'orbPulse', p: u.owner, orb });
-      this.damageSanctum(1 - u.owner, 1, null);
+      if (isManaOrb(orb)) {
+        s.players[u.owner].mana += 1;
+        this.emit({ t: 'orbPulse', p: u.owner, orb, kind: 'mana' });
+      } else {
+        this.emit({ t: 'orbPulse', p: u.owner, orb, kind: 'attack' });
+        this.damageSanctum(1 - u.owner, 1, null);
+      }
     }
     for (const u of [...s.units]) if (u.hp > 0) cardDef(u.cardId).onRoundStart?.(this, u);
     this.resolveDeaths();
