@@ -1,7 +1,7 @@
 # GUIDle
 
 A daily browser game: once a day you roll a random UUID. The game scans each ID for fun patterns
-(runs, palindromes, counting sequences, hex words like `C0FFEE`, famous numbers like `404`)
+(runs, palindromes, counting sequences, hex words like `C0FFEE` or `D4D`, famous numbers like `404`)
 and awards badges for them. Rarer badges score more points, a roll scores the sum of its
 badges, and beating your high score sets off a celebration.
 
@@ -50,6 +50,8 @@ Legendary (to 1 in a million), and Mythic beyond that.
 
 Some badges are a ladder (for example Hat Trick → Four of a Kind → High Five → Broken Record);
 only the highest rung on a ladder is awarded.
+
+Words can be spelled with digits standing in for the letters hex lacks (0=O, 1=I/L, 5=S, 7=T, 9=G), and 4 can stand in for A, so both `DAD` and `D4D` earn Dad Joke.
 Extended badges are stronger versions of a regular badge and sit one rung above it on its ladder: for example
 **Triple Threat** (three doubled characters) and **Pair Parade** (four or more) extend Twin Peaks, and **Group Hug**
 (all four group joins match) extends Handshake. The collection marks each one with the badge it extends. A roll with no patterns earns **Perfectly Average**.
