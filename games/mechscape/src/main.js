@@ -18,6 +18,8 @@ import { SimulatedLink } from './client/simulated_link.js';
 import { PlayerController } from './client/player_controller.js';
 import { SaveManager } from './client/save_manager.js';
 import { NetLink, join, savedName, askName } from './client/net_client.js';
+import { takeServerFromUrl, serverInfo } from './client/server_address.js';
+import { showStartScreen } from './ui/start_screen.js';
 import { savedLook } from './ui/look_editor.js';
 import { Models } from './view/models.js';
 import { WorldViews, modelFiles } from './view/world_views.js';
@@ -80,17 +82,20 @@ function makeRenderer(canvas) {
   return renderer;
 }
 
-/** Asks for a name if there isn't one, and joins; asks again if the server turns it away. */
-async function joinServer(status) {
+/**
+ * Asks for a name if there isn't one, and joins [server] (null: the one this
+ * page came from); asks again if the server turns it away.
+ */
+async function joinServer(status, server) {
   let name = savedName();
   // A name in the URL joins straight away; otherwise the connect screen (name and look) shows first.
   const quick = new URLSearchParams(window.location.search).has('name');
   let error = '';
   for (;;) {
-    if (!name || error || !quick) name = await askName(status, name, error);
+    if (!name || error || !quick) name = await askName(status, name, error, server);
     status.textContent = `Joining as ${name}…`;
     try {
-      return await join(name, DEFAULT_MAP);
+      return await join(name, DEFAULT_MAP, undefined, server);
     } catch (e) {
       console.error(e);
       error = e.message || "Couldn't reach the game server.";
@@ -113,7 +118,15 @@ function watchConnection(room, ui) {
 
 async function main() {
   const status = document.getElementById('loading');
-  const offline = new URLSearchParams(window.location.search).has('offline');
+  takeServerFromUrl();
+  // ?offline plays alone; a page served by a game server joins it; anywhere
+  // else (a static copy, like the one on GitHub Pages) asks which.
+  let choice = { mode: 'offline' };
+  if (!new URLSearchParams(window.location.search).has('offline')) {
+    choice = (await serverInfo()) ? { mode: 'online', server: null } : await showStartScreen(status);
+    status.textContent = 'Loading…';
+  }
+  const offline = choice.mode === 'offline';
   await loadContent();
   status.textContent = 'Loading models…';
   await Models.preload(modelFiles(Content));
@@ -127,7 +140,7 @@ async function main() {
     const look = savedLook();
     if (look && me) me.look = look;
   } else {
-    net = await joinServer(status);
+    net = await joinServer(status, choice.server);
     ClientState.online = true;
     ClientState.start(net.loop.world, net.loop);
     ClientState.localPlayerId = net.id;

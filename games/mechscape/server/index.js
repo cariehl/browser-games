@@ -20,6 +20,7 @@ import { Game } from './game.js';
 import { WorldStore } from './world_store.js';
 import { ScrapyardRoom } from './scrapyard_room.js';
 import { staticFiles } from './static_files.js';
+import { gameVersion } from './game_version.js';
 
 export const ROOM_NAME = 'scrapyard';
 
@@ -39,13 +40,14 @@ export async function startServer({ port = 2567, savePath = join(ROOT, 'saves', 
   const colyseus = httpServer.listeners('request');
   httpServer.removeAllListeners('request');
   const files = staticFiles(ROOT);
+  const build = gameVersion();
   httpServer.on('request', (req, res) => {
     if (req.url.startsWith('/matchmake') || req.url.startsWith('/__')) {
       for (const listener of colyseus) listener.call(httpServer, req, res);
     } else if (req.url === '/server-info') {
-      // What the connect screen shows before you join.
-      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store' });
-      res.end(JSON.stringify({ xp_rate: game.xpRate, online: game.online.size, debug: game.debug }));
+      // What the connect screen shows before you join. Any page may ask (the copy on GitHub Pages does).
+      res.writeHead(200, { 'Content-Type': 'application/json', 'Cache-Control': 'no-store', 'Access-Control-Allow-Origin': '*' });
+      res.end(JSON.stringify({ xp_rate: game.xpRate, online: game.online.size, debug: game.debug, build }));
     } else {
       files(req, res);
     }
