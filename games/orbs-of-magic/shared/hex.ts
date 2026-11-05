@@ -66,3 +66,6 @@ export const ownHalfRows = (p: number) => (p === 0 ? [0, 1, 2, 3] : [3, 4, 5, 6]
 /** The three Ley Orbs sit on the centre row. */
 export const LEY_ORBS: Hex[] = [{ c: 1, r: 3 }, { c: 4, r: 3 }, { c: 7, r: 3 }];
 export const isOrb = (h: Hex) => LEY_ORBS.some((o) => same(o, h));
+/** The middle orb grants mana; the two outer orbs strike the enemy Sanctum. */
+export const MANA_ORB: Hex = { c: 4, r: 3 };
+export const isManaOrb = (h: Hex) => same(MANA_ORB, h);
