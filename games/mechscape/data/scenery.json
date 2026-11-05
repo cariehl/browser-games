@@ -1,0 +1,107 @@
+{
+ "sky": {
+  "day": {
+   "horizon": [0.6, 0.66, 0.7],
+   "zenith": [0.4, 0.54, 0.7],
+   "ridges": [0.37, 0.43, 0.47],
+   "fog_near": 45,
+   "fog_far": 125,
+   "ambient": 0.6,
+   "ambient_color": [0.6, 0.62, 0.66],
+   "sun": 1
+  },
+  "dark": {
+   "horizon": [0.04, 0.045, 0.06],
+   "zenith": [0.04, 0.045, 0.06],
+   "ridges": null,
+   "fog_near": 10,
+   "fog_far": 34,
+   "ambient": 0.16,
+   "ambient_color": [0.6, 0.62, 0.66],
+   "sun": 0.12
+  }
+ },
+ "regions": {
+  "commons": {
+   "areas": ["scrapyard", "quiet_reach"],
+   "margin": 90,
+   "base_level": 1,
+   "falloff": { "scrapyard": 14, "quiet_reach": 30 },
+   "noise": { "levels": 3, "scale": 14 },
+   "hills": [
+    { "at": [18, -22], "radius": 18, "levels": 7 },
+    { "at": [50, -30], "radius": 24, "levels": 10 },
+    { "at": [82, -20], "radius": 16, "levels": 6 },
+    { "at": [110, 6], "radius": 15, "levels": 7 },
+    { "at": [114, 40], "radius": 18, "levels": 5 },
+    { "at": [-24, 12], "radius": 16, "levels": 6 },
+    { "at": [86, 80], "radius": 22, "levels": 5 }
+   ],
+   "ground": { "color": "dirt", "patch": "grass", "patch_scale": 20, "patch_amount": 0.4, "rock": [0.4, 0.37, 0.33], "edge_blend": 6 },
+   "fences": [
+    {
+     "area": "scrapyard", "height": 2.7, "spacing": 2,
+     "post": [0.24, 0.23, 0.22],
+     "panels": [[0.44, 0.35, 0.28], [0.42, 0.41, 0.39], [0.4, 0.38, 0.34], [0.47, 0.38, 0.3], [0.38, 0.38, 0.38]],
+     "gaps": [[3, 47, 6, 47]]
+    }
+   ],
+   "clear": [[2, 47, 6, 55]],
+   "scatter": [
+    { "decor": "grass_tuft", "every": 2, "chance": 0.25, "from": 1, "to": 30, "scale": [1, 1.6] },
+    { "decor": "boulder", "every": 3, "chance": 0.35, "from": 1, "to": 10, "scale": [0.8, 1.6] },
+    { "decor": "boulder", "every": 6, "chance": 0.4, "from": 10, "to": 70, "scale": [1, 2.4] },
+    { "decor": "dead_tree", "every": 4, "chance": 0.25, "from": 1.5, "to": 60, "scale": [1.2, 2.2], "max_slope": 0.8 },
+    { "decor": "scrub_tree", "every": 5, "chance": 0.25, "from": 3, "to": 70, "scale": [1.2, 2], "max_slope": 0.8 },
+    { "decor": "skull", "every": 5, "chance": 0.2, "from": 1, "to": 20, "scale": [1, 1.6] },
+    { "decor": "scrap_pile", "every": 3, "chance": 0.2, "from": 1, "to": 14, "scale": [1.2, 2] },
+    { "decor": "rust_pile", "every": 5, "chance": 0.2, "from": 1, "to": 14, "scale": [1.2, 2] },
+    { "decor": "tire", "every": 6, "chance": 0.2, "from": 1, "to": 12 },
+    { "decor": "girder", "every": 7, "chance": 0.2, "from": 1, "to": 20, "scale": [1.2, 2] },
+    { "decor": "rock_spire", "every": 12, "chance": 0.25, "from": 15, "to": 70, "scale": [1.5, 3] },
+    { "decor": "boulder", "area": "quiet_reach", "every": 2, "chance": 0.45, "from": 0.6, "to": 3, "scale": [0.7, 1.4], "max_slope": 4 },
+    { "decor": "boulder", "area": "scrapyard", "every": 2, "chance": 0.5, "from": 0.6, "to": 2.5, "scale": [0.8, 1.5], "max_slope": 4 },
+    { "decor": "pine", "area": "quiet_reach", "every": 3, "chance": 0.4, "from": 2, "to": 26, "scale": [1.4, 2.6], "max_slope": 1 },
+    { "decor": "scrub_tree", "area": "quiet_reach", "every": 4, "chance": 0.3, "from": 1, "to": 20, "scale": [1.2, 2], "max_slope": 1 }
+   ],
+   "props": [
+    { "decor": "titan_skull", "at": [96, 26], "scale": 2.2, "turn": 250 },
+    { "decor": "titan_ribs", "at": [-14, 28], "scale": 2, "turn": 20 },
+    { "decor": "titan_arm", "at": [40, -12], "scale": 2, "turn": 160 },
+    { "decor": "titan_skull", "at": [64, -10], "scale": 1.6, "turn": 190 }
+   ]
+  },
+  "deadfields": {
+   "areas": ["deadfields"],
+   "margin": 80,
+   "base_level": 0,
+   "falloff": { "deadfields": 10 },
+   "noise": { "levels": 2.5, "scale": 16 },
+   "hills": [
+    { "at": [-20, 4], "radius": 16, "levels": 6 },
+    { "at": [30, -22], "radius": 20, "levels": 8 },
+    { "at": [72, 10], "radius": 18, "levels": 7 },
+    { "at": [20, 46], "radius": 18, "levels": 5 }
+   ],
+   "ground": { "color": "ash", "patch": "scorch", "patch_scale": 14, "patch_amount": 0.45, "rock": [0.3, 0.28, 0.27], "edge_blend": 5 },
+   "scatter": [
+    { "decor": "boulder", "every": 2, "chance": 0.45, "from": 1, "to": 4, "scale": [0.8, 1.6] },
+    { "decor": "boulder", "every": 6, "chance": 0.35, "from": 4, "to": 60, "scale": [1, 2.4] },
+    { "decor": "skull", "every": 4, "chance": 0.25, "from": 1, "to": 25, "scale": [1, 1.8] },
+    { "decor": "dead_tree", "every": 5, "chance": 0.2, "from": 2, "to": 50, "scale": [1.2, 2.2], "max_slope": 0.8 },
+    { "decor": "girder", "every": 5, "chance": 0.25, "from": 1, "to": 25, "scale": [1.2, 2.2] },
+    { "decor": "scrap_pile", "every": 4, "chance": 0.25, "from": 1, "to": 20, "scale": [1.2, 2.2] },
+    { "decor": "bones", "every": 5, "chance": 0.2, "from": 1, "to": 20, "scale": [1.2, 2] },
+    { "decor": "titan_skull", "every": 14, "chance": 0.35, "from": 4, "to": 60, "scale": [1.5, 3] },
+    { "decor": "titan_ribs", "every": 16, "chance": 0.3, "from": 4, "to": 60, "scale": [1.5, 2.8] },
+    { "decor": "titan_arm", "every": 16, "chance": 0.3, "from": 4, "to": 60, "scale": [1.4, 2.6] },
+    { "decor": "rock_spire", "every": 12, "chance": 0.25, "from": 12, "to": 65, "scale": [1.5, 3] }
+   ],
+   "props": [
+    { "decor": "titan_skull", "at": [24, -8], "scale": 3.2, "turn": 180 },
+    { "decor": "titan_ribs", "at": [56, 12], "scale": 3, "turn": 80 },
+    { "decor": "titan_arm", "at": [12, 42], "scale": 2.6, "turn": 30 }
+   ]
+  }
+ }
+}

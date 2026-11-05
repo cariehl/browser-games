@@ -146,6 +146,8 @@ export class World {
     const area = {
       index, id: entry.id, name: entry.name || (map ? map.name : ''), offset: { ...offset }, size: { ...size },
       dark: !!entry.dark, ground: map ? map.defaultGround : null, music: entry.music || '',
+      /** Added to every ground level in the area, to stand it on a hilltop (or sink it) beside the others. */
+      level: entry.level || 0,
     };
     this.areas.push(area);
     Text.areas[area.id] = area.name;
@@ -156,7 +158,7 @@ export class World {
         this._areaOf[k] = index;
         this._grid.solid[k] = 0;
         if (map) {
-          this._grid.heights[k] = map.heights[y * size.x + x];
+          this._grid.heights[k] = map.heights[y * size.x + x] + area.level;
           this._groundOf[k] = map.ground[y * size.x + x];
         }
       }

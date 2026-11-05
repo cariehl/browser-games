@@ -61,6 +61,15 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 - **Combat levels** for players and hostiles (see README). People, pets and the walker have none, since nobody can fight them. The Scrap colossus comes out at 125 from its 400 HP, which suits "only a mech can touch it".
 - **A minimap in the top-right**, and the side panel moved to the bottom-right with its tabs along the bottom, so they stay put when the pages change height. The minimap draws only your own area (the snapshot only sends that area's things anyway); there are no map icons yet beyond station dots.
 
+## Scenery
+
+- **The land round the maps is drawn, not walked.** Hills, cliffs, trees, rocks, skulls, scrap and titan wrecks out to the fog, from `data/scenery.json`, so the areas no longer float in the sky. None of it is in the sim, so it costs the server nothing and can't wall anything off. New props: boulders, rock spires, scrub trees, pines, and a titan's skull, ribs and arm.
+- **A tall fence runs round the Scrapyard,** just outside its edge, with a gap for the elevator.
+- **The Quiet Reach moved to a hilltop just south of the Commons** (at 0,54, ten levels up), so each can see the other. The survey lift is now an elevator: its cage is at the Commons' south fence (it moved from 4,38 to 4,47, with the surveyor), a lattice tower climbs the cliff behind it, and a walkway runs over to the Reach's north rim, where it arrives (4,0 there, was 3,22). A save with a player in the Reach's old place puts them back at spawn; opened puzzles are kept.
+- **You can see the Reach's ground and scenery from the Commons and the other way, but not the people:** each client is only sent its own area's players and NPCs.
+- **The sky is a gradient dome with far ridges in the haze,** and the fog is closer (45 to 125 m) so the land fades out before it ends. Underground stays dark, with no sky.
+- **A boss test measured damage from full HP;** with the map changed, another mark could hit someone first, so it now measures from just before the soak lands.
+
 ## Known rough edges
 
 - **The browser asks for `/favicon.ico` and gets a 404.** It's harmless.

@@ -127,12 +127,14 @@ test('Overclocked: needs the unlock; soaks split the damage; an empty soak hurts
   while (world.tick < soak.resolve - 1) { hold(); world.runTick(); }
   hold();
   world.hazards = world.hazards.filter((h) => h === soak);
+  // Other marks may have caught someone while they waited: measure from here.
+  const [a, b, c] = [ann.hp, bob.hp, cy.hp];
   world.runTick();
   const share = Math.ceil(soak.damage / 2);
   const wipe = boss.mode.wipe_damage;
-  assert.equal(ann.hp, 1000 - share - wipe);
-  assert.equal(bob.hp, 1000 - share - wipe);
-  assert.equal(cy.hp, 1000 - wipe);
+  assert.equal(ann.hp, a - share - wipe);
+  assert.equal(bob.hp, b - share - wipe);
+  assert.equal(cy.hp, c - wipe);
 });
 
 test('the shield blocks all damage until the panels are stepped on in order; a wrong one resets the run', () => {
