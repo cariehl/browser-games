@@ -305,12 +305,6 @@
   add('coffee', 'Coffee Break', 'Spells C0FFEE.', spells('coffee'));
   add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'));
   add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'));
-  add('dad', 'Dad Joke', 'Spells DAD (or D4D).', spells('dad'));
-  add('idle', 'Name of the Game', 'Spells 1D1E, as in GUIDle.', spells('idle'));
-  add('test', 'Tests Pass', 'Spells 7E57.', spells('test'));
-  add('best', 'Personal Best', 'Spells BE57.', spells('best'));
-  add('gold', 'Gold Star', 'Spells 901D.', spells('gold'));
-  add('call', 'Quick Call', 'Spells CA11 (or C411).', spells('call'));
   add('access', 'Access Granted', 'Spells ACCE55 (or 4CCE55).', spells('access'));
   add('offsite', 'Team Offsite', 'Spells 0FF517E.', spells('offsite'));
   add('database', 'Source of Truth', 'Spells DA7ABA5E (4s work for the As too).', spells('database'));
