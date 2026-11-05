@@ -14,7 +14,7 @@
  },
  "rock": {
   "id": "rock",
-  "display_name": "TODO",
+  "display_name": "Boulder",
   "blocks_movement": true,
   "blocks_sight": true,
   "color": [
@@ -24,7 +24,7 @@
    1.0
   ],
   "height": 0.9,
-  "description": "TODO",
+  "description": "It's been holding position longer than the sentries have.",
   "inspect": true,
   "vary": true
  },
@@ -95,7 +95,7 @@
  },
  "ruin_wall": {
   "id": "ruin_wall",
-  "display_name": "TODO",
+  "display_name": "Ancient wall",
   "blocks_movement": true,
   "blocks_sight": true,
   "color": [
@@ -105,7 +105,7 @@
    1.0
   ],
   "height": 1.4,
-  "description": "TODO",
+  "description": "Older than the yard, and not built by the fleet. Nobody knows who did. Pell has theories.",
   "inspect": true
  },
  "hedge": {

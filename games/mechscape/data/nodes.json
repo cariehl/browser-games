@@ -2,7 +2,7 @@
  "breacher_husk": {
   "id": "breacher_husk",
   "display_name": "Breacher husk",
-  "description": "TODO",
+  "description": "What's left of a breacher. Its knee servos might still be worth pulling.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 15,
@@ -35,7 +35,7 @@
  "coolant_leak": {
   "id": "coolant_leak",
   "display_name": "Coolant leak",
-  "description": "TODO",
+  "description": "A cracked coolant line, still bleeding cold blue. A canister would catch it.",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 10,
@@ -60,7 +60,7 @@
  "crashed_drone": {
   "id": "crashed_drone",
   "display_name": "Crashed drone",
-  "description": "TODO",
+  "description": "A drone that flew its last patrol into the dirt. Good for a bit of scrap.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -85,7 +85,7 @@
  "derelict_hull": {
   "id": "derelict_hull",
   "display_name": "Derelict mech hull",
-  "description": "TODO",
+  "description": "A mech hull from the yard's working days, stripped and left behind. Plenty of plating still on it.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 10,
@@ -111,7 +111,7 @@
  "gas_vent": {
   "id": "gas_vent",
   "display_name": "Gas vent",
-  "description": "TODO",
+  "description": "Vent gas hisses out of the ground here. Canisters at the ready.",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 1,
@@ -136,7 +136,7 @@
  "glowroot_tangle": {
   "id": "glowroot_tangle",
   "display_name": "Glowroot tangle",
-  "description": "TODO",
+  "description": "Roots that glow with the ichor they drink. They hum if you get close.",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 15,
@@ -163,7 +163,7 @@
  "ichor_seep": {
   "id": "ichor_seep",
   "display_name": "Ichor seep",
-  "description": "TODO",
+  "description": "Ichor oozing up through the cracks. Nobody knows where it comes from. Splicers don't care.",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 5,
@@ -187,7 +187,7 @@
  "ichor_wellspring": {
   "id": "ichor_wellspring",
   "display_name": "Ichor wellspring",
-  "description": "TODO",
+  "description": "A deep spring of ichor, glowing bright enough to read by. It'll fill a canister fast.",
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 15,
@@ -212,7 +212,7 @@
  "loader_husk": {
   "id": "loader_husk",
   "display_name": "Loader husk",
-  "description": "TODO",
+  "description": "A loader that has finally stopped working. There's alloy plating under the dents.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 10,
@@ -251,7 +251,7 @@
  "rustcap_cluster": {
   "id": "rustcap_cluster",
   "display_name": "Rustcap cluster",
-  "description": "TODO",
+  "description": "Mushrooms that eat rust. In this yard they'll never go hungry.",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 10,
@@ -278,7 +278,7 @@
  "seep_moss_patch": {
   "id": "seep_moss_patch",
   "display_name": "Seep moss patch",
-  "description": "TODO",
+  "description": "Moss growing where the ichor seeps. Damp, spongy, and useful to a splicer.",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 5,
@@ -305,7 +305,7 @@
  "sentry_husk": {
   "id": "sentry_husk",
   "display_name": "Sentry husk",
-  "description": "TODO",
+  "description": "A felled sentry, done holding at last. Its relic circuitry might still be good.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -344,7 +344,7 @@
  "ventbloom_patch": {
   "id": "ventbloom_patch",
   "display_name": "Ventbloom patch",
-  "description": "TODO",
+  "description": "Flowers that grow on vent gas and don't mind the smell. Sometimes there's salt in the roots.",
   "skill": "xenobiology",
   "verb": "harvest",
   "level_required": 1,
@@ -372,7 +372,7 @@
  "wrecked_hauler": {
   "id": "wrecked_hauler",
   "display_name": "Wrecked hauler",
-  "description": "TODO",
+  "description": "A hauler that never made its last delivery. Scrap inside, and maybe some grease.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 5,
@@ -400,7 +400,7 @@
  "foundry_cache": {
   "id": "foundry_cache",
   "display_name": "Foundry cache",
-  "description": "TODO",
+  "description": "A sealed parts cache from the foundry's working days. Relic circuitry, still in the wrapper.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 8,
@@ -426,7 +426,7 @@
  "titan_hulk": {
   "id": "titan_hulk",
   "display_name": "Titan hulk",
-  "description": "TODO",
+  "description": "The hulk of a titan, the biggest machine the yard ever broke. Too tough to strip on foot; it needs a mech.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -457,7 +457,7 @@
  "crawler_husk": {
   "id": "crawler_husk",
   "display_name": "Crawler husk",
-  "description": "TODO",
+  "description": "A scrap crawler that won't crawl again. Mostly scrap, as advertised.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -490,7 +490,7 @@
  "foundry_drone_husk": {
   "id": "foundry_drone_husk",
   "display_name": "Foundry drone husk",
-  "description": "TODO",
+  "description": "A downed foundry drone. Its circuits came off the foundry floor and could go back on a bench.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 5,
@@ -523,7 +523,7 @@
  "warden_husk": {
   "id": "warden_husk",
   "display_name": "Warden husk",
-  "description": "TODO",
+  "description": "The Undercroft warden, relieved of duty at last. Its plating is the best the foundry made.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -556,7 +556,7 @@
  "splatterpress_husk": {
   "id": "splatterpress_husk",
   "display_name": "Splatterpress husk",
-  "description": "TODO",
+  "description": "The Splatterpress, finally still. Everything around it is a different colour.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -597,7 +597,7 @@
  "colossus_husk": {
   "id": "colossus_husk",
   "display_name": "Colossus husk",
-  "description": "TODO",
+  "description": "The scrap colossus, felled. It took a walker to bring it down; it'll take a crew to strip it.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
@@ -630,7 +630,7 @@
  "glowcap_cluster": {
   "id": "glowcap_cluster",
   "display_name": "Glowcap cluster",
-  "description": "TODO",
+  "description": "Caps that light the cavern from below. Pell wants a sample of these.",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -656,7 +656,7 @@
  "skyfern_patch": {
   "id": "skyfern_patch",
   "display_name": "Skyfern patch",
-  "description": "TODO",
+  "description": "Ferns that turn to follow the open sky. Pell wants a sample of these.",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -682,7 +682,7 @@
  "ruin_orchid": {
   "id": "ruin_orchid",
   "display_name": "Ruin orchid",
-  "description": "TODO",
+  "description": "An orchid rooted in the cracks of the old ruins. Pell wants a sample of these.",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -708,7 +708,7 @@
  "mech_wreckage": {
   "id": "mech_wreckage",
   "display_name": "Mech wreckage",
-  "description": "TODO",
+  "description": "What's left of our walker. The plating's still good if someone salvages it soon.",
   "skill": "salvaging",
   "verb": "salvage",
   "level_required": 1,
