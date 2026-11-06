@@ -2,18 +2,22 @@
 (function (root) {
   const HEX = '0123456789abcdef';
   const GROUPS = [[0, 8], [9, 4], [14, 4], [19, 4], [24, 12]]; // [start, length] in the dashed string
-  const LEET = { a: 'a', b: 'b', c: 'c', d: 'd', e: 'e', f: 'f', o: '0', i: '1', l: '1', s: '5', t: '7', g: '9' };
+  // Each letter's hex spellings. Digits stand in for letters hex lacks (0=O, 1=I/L, 5=S, 7=T, 9=G), and 4 can stand in for A.
+  const LEET = { a: 'a4', b: 'b', c: 'c', d: 'd', e: 'e', f: 'f', o: '0', i: '1', l: '1', s: '5', t: '7', g: '9' };
   const WORD_LIST = (
-    'ace add bad bed bee cab dab fab fed ice odd oat tea sea bit bot dot cog dog egg fig log gel bag tab lab lid lot oil old sad set sit toe tie ' +
+    'ace add bad bed bee cab dab dad fab fed ice odd oat tea sea bit bot dot cog dog egg fig log gel bag tab lab lid lot oil old sad set sit toe tie ' +
     'cafe face fade bead deed feed food code boss dice taco toad boat coat data soda idea safe best bold cold gold golf goal good file idle side site seed beef lead load cost list slot test stat edit ' +
-    'decaf toast basic asset salad oasis coast boost staff ideas cable table bagel ' +
-    'coffee office facade decade accede effect access bottle assets cabbage seafood'
+    'call ball bell base case sale deal beat ' +
+    'decaf toast basic asset salad oasis coast boost staff ideas cable table bagel class scale label ' +
+    'coffee office facade decade accede effect access bottle assets offset select cabbage seafood offsite database deadbeef'
   ).split(' ');
+  // Every spelling of every word, e.g. DAD and D4D. A word counts once however it's spelled.
   const WORDS = [];
   for (const w of WORD_LIST) {
-    let e = '', ok = true;
-    for (const ch of w) { if (!(ch in LEET)) { ok = false; break; } e += LEET[ch]; }
-    if (ok) WORDS.push({ w, e });
+    if (![...w].every(ch => ch in LEET)) continue;
+    let enc = [''];
+    for (const ch of w) enc = enc.flatMap(e => [...LEET[ch]].map(x => e + x));
+    for (const e of enc) WORDS.push({ w, e });
   }
 
   const rng = (s, l) => Array.from({ length: l }, (_, k) => s + k);
@@ -103,9 +107,11 @@
 
   const words = A => memo(A, 'words', A => {
     const found = [];
+    const seen = new Set();
     for (const W of WORDS) {
+      if (seen.has(W.w)) continue;
       const p = findInGroups(A, W.e);
-      if (p.length) found.push({ w: W.w, e: W.e, idx: rng(p[0], W.e.length) });
+      if (p.length) { seen.add(W.w); found.push({ w: W.w, e: W.e, idx: rng(p[0], W.e.length) }); }
     }
     found.sort((a, b) => b.e.length - a.e.length);
     return found;
@@ -195,8 +201,11 @@
   };
   // Rough estimates for patterns too rare to simulate well (rounded to 1 / 5 / 10 / 50... million style buckets).
   const EST = {
-    six: 9.5 / 16 ** 5, pimaster: 12 / 16 ** 5, decaf: 12 / 16 ** 5,
-    coffee: 10 / 16 ** 6, office: 10 / 16 ** 6, seafood: 8 / 16 ** 7,
+    // Words: one try per window that fits inside a group (12 for five letters, 10 for six, 8 for seven, 6 for eight),
+    // times the number of spellings (each A doubles them: DECAF and DEC4F).
+    six: 9.5 / 16 ** 5, pimaster: 12 / 16 ** 5, decaf: 24 / 16 ** 5,
+    coffee: 10 / 16 ** 6, office: 10 / 16 ** 6, access: 20 / 16 ** 6, seafood: 16 / 16 ** 7, offsite: 8 / 16 ** 7,
+    deadbeef: 12 / 16 ** 8, database: 24 / 16 ** 8,
   };
 
   const BADGES = [];
@@ -281,7 +290,7 @@
   add('fib', 'Fibonacci Fan', 'Contains 1123, the start of the Fibonacci sequence.', contains('1123'));
   add('year', 'Calendar Roll', `Contains the current year (${year}).`, contains(year));
   // Words
-  add('word3', 'Small Talk', 'Spells a three-letter word. Digits can stand in: 0=O, 1=I/L, 5=S, 7=T, 9=G.', wordTier(3, 3), { family: 'word', rank: 1 });
+  add('word3', 'Small Talk', 'Spells a three-letter word. Digits can stand in: 0=O, 1=I/L, 4=A, 5=S, 7=T, 9=G.', wordTier(3, 3), { family: 'word', rank: 1 });
   add('word4', 'Wordsmith', 'Spells a four-letter word.', wordTier(4, 4), { family: 'word', rank: 2 });
   add('word5', 'Lexicographer', 'Spells a five-letter word.', wordTier(5, 5), { family: 'word', rank: 3 });
   add('word6', 'Hex Poet', 'Spells a word of six letters or more.', wordTier(6, 99), { family: 'word', rank: 4 });
@@ -296,6 +305,10 @@
   add('coffee', 'Coffee Break', 'Spells C0FFEE.', spells('coffee'));
   add('office', 'Back to the Office', 'Spells 0FF1CE.', spells('office'));
   add('seafood', 'Catch of the Day', 'Spells 5EAF00D.', spells('seafood'));
+  add('access', 'Access Granted', 'Spells ACCE55 (or 4CCE55).', spells('access'));
+  add('offsite', 'Team Offsite', 'Spells 0FF517E.', spells('offsite'));
+  add('database', 'Source of Truth', 'Spells DA7ABA5E (4s work for the As too).', spells('database'));
+  add('deadbeef', 'Dead Beef', 'Spells DEADBEEF, the classic debug value (or DE4DBEEF).', spells('deadbeef'));
   // Extended badges: stronger versions of the badges above
   extend('twinpeaks', 'triplethreat', 'Triple Threat', 'Three separate doubled characters, like 55, cc and ee.', A => pairs(A).length >= 6 ? { idx: pairs(A).slice(0, 6) } : null);
   extend('twinpeaks', 'pairparade', 'Pair Parade', 'Four or more separate doubled characters.', A => pairs(A).length >= 8 ? { idx: pairs(A) } : null, 2);
