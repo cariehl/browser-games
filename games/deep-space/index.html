@@ -1,0 +1,51 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<meta name="description" content="An idle survival game. You are the only crew left on a broken ship far past the charts. Salvage, breathe, repair, and find your way home.">
+<meta name="theme-color" content="#0a0c16">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🛰️</text></svg>">
+<title>Deep Space</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:wght@500;600;700&family=Barlow+Semi+Condensed:wght@400;600;700&family=IBM+Plex+Mono:wght@400&display=swap">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<div id="app">
+  <header id="hud">
+    <div class="hrow">
+      <div class="sector" id="sector"><b>The Drift</b><small>Sector 1</small></div>
+      <button class="badge" id="badge" aria-label="Talents"><span class="ring" id="ring"><i id="lvl">1</i></span><span><b>Crew</b><em id="xpTxt" style="font-style:normal">level 1</em></span><span class="pip" id="pip" hidden>0</span></button>
+      <button class="icon-btn" id="menuBtn" aria-label="Menu">☰</button>
+    </div>
+    <div class="hrow">
+      <div class="air" id="air"><i id="airBar"></i><span><b>Air</b><em id="airTxt">70 / 100</em></span></div>
+      <div class="pwr" id="pwr" title="Power in use / power made">⚡ <span id="pwrTxt">0 / 6</span></div>
+    </div>
+    <div id="res"></div>
+  </header>
+  <div id="stage"><canvas id="cv"></canvas><div id="abil"></div><div id="hint"></div></div>
+  <div id="side">
+    <nav id="tabs">
+      <button class="tab on" data-tab="systems"><b>⚙</b>Systems</button>
+      <button class="tab" data-tab="repairs"><b>⚒</b>Repairs<span class="dot" hidden></span></button>
+      <button class="tab" data-tab="talents"><b>✧</b>Talents<span class="dot" hidden></span></button>
+      <button class="tab" data-tab="probes"><b>◎</b>Probes<span class="dot" hidden></span></button>
+      <button class="tab" data-tab="log"><b>✉</b>Log<span class="dot" hidden></span></button>
+    </nav>
+    <section id="panel"></section>
+  </div>
+</div>
+<div class="overlay" id="ov" hidden></div>
+<div id="tree" hidden></div>
+<div id="toast"></div>
+
+<script src="js/data.js"></script>
+<script src="js/core.js"></script>
+<script src="js/field.js"></script>
+<script src="js/ui.js"></script>
+</body>
+</html>
