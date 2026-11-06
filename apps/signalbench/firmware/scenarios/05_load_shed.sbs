@@ -1,0 +1,12 @@
+# Engine off on a weak battery: the scene light is shed first (priority
+# order), the MDT stays up, and starting the engine restores the load.
+@0      ignition on
+@0      soc 0.3
+@200    press scene
+@1000   expect scene.level > 0.5
+@7500   expect scene.level == 0
+@7500   expect mdt.on == 1
+@7500   expect uart "load shed mask 0x04"
+@8000   engine on
+@11000  expect scene.level > 0.5
+@11000  expect uart "load shed mask 0x00"

@@ -1,0 +1,271 @@
+// Boots the game in the browser: loads the content, maps and models, joins
+// the game server (or, with ?offline, picks up the local save), then builds
+// the 3D views and the UI around the world and runs the frame loop.
+//
+// The sim (src/sim/) knows nothing about any of this. Offline, each frame's
+// time goes into a GameLoop in this page, which runs whole 0.6s ticks.
+// Online, the server runs them and a NetLoop mirrors each one as it arrives.
+// Either way views read the World and interpolate between ticks with the
+// loop's alpha.
+
+import * as THREE from 'three';
+import { Content, CONTENT_FILES } from './sim/defs.js';
+import * as actions from './sim/actions.js';
+import { MapData } from './sim/map_data.js';
+import { World, DEFAULT_MAP } from './sim/world.js';
+import { ClientState } from './client/client_state.js';
+import { SimulatedLink } from './client/simulated_link.js';
+import { PlayerController } from './client/player_controller.js';
+import { SaveManager } from './client/save_manager.js';
+import { NetLink, join, savedName, askName } from './client/net_client.js';
+import { takeServerFromUrl, serverInfo } from './client/server_address.js';
+import { showStartScreen } from './ui/start_screen.js';
+import { savedLook } from './ui/look_editor.js';
+import { Models } from './view/models.js';
+import { WorldViews, modelFiles } from './view/world_views.js';
+import { CameraRig } from './view/camera_rig.js';
+import { ClickMarker } from './view/click_marker.js';
+import { DebugOverlay } from './view/debug_overlay.js';
+import { Environment } from './view/environment.js';
+import { Screen, el } from './ui/screen.js';
+import { HoverText } from './ui/hover_text.js';
+import { ContextMenu } from './ui/context_menu.js';
+import { InspectWindow } from './ui/inspect_window.js';
+import { CombatOverlay } from './ui/combat_overlay.js';
+import { XpDrops } from './ui/xp_drops.js';
+import { MessageLog } from './ui/message_log.js';
+import { PlayerPanel } from './ui/player_panel.js';
+import { SkillGuide } from './ui/skill_guide.js';
+import { CraftMenu } from './ui/craft_menu.js';
+import { StorageMenu } from './ui/storage_menu.js';
+import { ReconfigureWindow } from './ui/reconfigure_window.js';
+import { MechWindow, MechHud } from './ui/mech_window.js';
+import { ArenaWindow, BossBar } from './ui/arena_window.js';
+import { DebugHud } from './ui/debug_hud.js';
+import { BuildMode } from './ui/build_mode.js';
+import { BoardWindow } from './ui/board_window.js';
+import { DialogueBox } from './ui/dialogue_box.js';
+import { ScreenFade } from './ui/screen_fade.js';
+import { QuestJournal } from './ui/quest_journal.js';
+import { TradeWindow } from './ui/trade_window.js';
+import { Minimap } from './ui/minimap.js';
+
+/** Longest frame fed to the game, so a hidden tab doesn't come back to a burst of ticks. */
+const MAX_FRAME_SECONDS = 0.25;
+
+async function loadContent() {
+  const bundle = {};
+  await Promise.all(Object.entries(CONTENT_FILES).map(async ([kind, file]) => {
+    bundle[kind] = await fetchOk(`data/${file}.json`).then((r) => r.json());
+  }));
+  Content.load(bundle);
+  // The world layout, then every map it places.
+  const layoutText = await fetchOk(DEFAULT_MAP).then((r) => r.text());
+  MapData.register(DEFAULT_MAP, layoutText);
+  const maps = JSON.parse(layoutText).areas.map((area) => area.map);
+  await Promise.all(maps.map(async (path) => MapData.register(path, await fetchOk(path).then((r) => r.text()))));
+}
+
+async function fetchOk(url) {
+  const response = await fetch(url);
+  if (!response.ok) throw new Error(`Couldn't load ${url} (${response.status})`);
+  return response;
+}
+
+function makeRenderer(canvas) {
+  const renderer = new THREE.WebGLRenderer({ canvas, antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.outputColorSpace = THREE.SRGBColorSpace;
+  renderer.toneMapping = THREE.NoToneMapping;
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  return renderer;
+}
+
+/**
+ * Asks for a name if there isn't one, and joins [server] (null: the one this
+ * page came from); asks again if the server turns it away.
+ */
+async function joinServer(status, server) {
+  let name = savedName();
+  // A name in the URL joins straight away; otherwise the connect screen (name and look) shows first.
+  const quick = new URLSearchParams(window.location.search).has('name');
+  let error = '';
+  for (;;) {
+    if (!name || error || !quick) name = await askName(status, name, error, server);
+    status.textContent = `Joining as ${name}…`;
+    try {
+      return await join(name, DEFAULT_MAP, undefined, server);
+    } catch (e) {
+      console.error(e);
+      error = e.message || "Couldn't reach the game server.";
+    }
+  }
+}
+
+/** A red line at the top of the screen while the connection is down. */
+function watchConnection(room, ui) {
+  const banner = el('div', 'connection-banner', '', ui);
+  banner.style.display = 'none';
+  const show = (text) => {
+    banner.textContent = text;
+    banner.style.display = text ? '' : 'none';
+  };
+  room.onDrop(() => show('Connection lost. Reconnecting…'));
+  room.onReconnect(() => show(''));
+  room.onLeave(() => show('Disconnected from the server. Reload the page to rejoin.'));
+}
+
+async function main() {
+  const status = document.getElementById('loading');
+  takeServerFromUrl();
+  // ?offline plays alone; a page served by a game server joins it; anywhere
+  // else (a static copy, like the one on GitHub Pages) asks which.
+  let choice = { mode: 'offline' };
+  if (!new URLSearchParams(window.location.search).has('offline')) {
+    choice = (await serverInfo()) ? { mode: 'online', server: null } : await showStartScreen(status);
+    status.textContent = 'Loading…';
+  }
+  const offline = choice.mode === 'offline';
+  await loadContent();
+  status.textContent = 'Loading models…';
+  await Models.preload(modelFiles(Content));
+
+  let net = null;
+  if (offline) {
+    const { world, notice } = SaveManager.startingWorld(() => new World(DEFAULT_MAP));
+    ClientState.start(world);
+    ClientState.notice = notice;
+    const me = ClientState.localPlayer();
+    const look = savedLook();
+    if (look && me) me.look = look;
+  } else {
+    net = await joinServer(status, choice.server);
+    ClientState.online = true;
+    ClientState.start(net.loop.world, net.loop);
+    ClientState.localPlayerId = net.id;
+    ClientState.notice = `You're playing as ${ClientState.me().display_name}.`
+      + (net.xpRate !== 1 ? ` This server gives XP at ×${net.xpRate}.` : '');
+  }
+  const world = ClientState.world;
+  status.remove();
+
+  const canvas = document.getElementById('game');
+  const ui = document.getElementById('ui');
+  const renderer = makeRenderer(canvas);
+  const scene = new THREE.Scene();
+  const views = new WorldViews(scene, world);
+  const environment = new Environment(scene, views.backdrop);
+  Screen.groundMesh = views.groundMesh;
+  const rig = new CameraRig(canvas);
+  rig.target = views.playerView;
+  rig.snap();
+  Screen.camera = rig.camera;
+  Screen.layer = el('div', 'labels', '', ui);
+  new ScreenFade(ui);
+
+  const marker = new ClickMarker();
+  scene.add(marker);
+  const overlay = new DebugOverlay();
+  scene.add(overlay);
+
+  const link = net ? new NetLink(net.room) : new SimulatedLink();
+  const combat = new CombatOverlay(ui, views.entities);
+  const xpDrops = new XpDrops(views.playerView);
+  const messageLog = new MessageLog(ui, link);
+  const saves = net ? null : new SaveManager(messageLog);
+  if (net) {
+    watchConnection(net.room, ui);
+    net.room.onMessage('notice', ({ text }) => messageLog.push(text));
+    window.addEventListener('keydown', (e) => {
+      if ((e.ctrlKey || e.metaKey) && ['s', 'l'].includes(e.key.toLowerCase())) {
+        e.preventDefault();
+        messageLog.push('The server saves the world by itself every minute.');
+      }
+    });
+  }
+  const hover = new HoverText(ui);
+  const menu = new ContextMenu(ui);
+  const inspector = new InspectWindow(ui);
+  const guide = new SkillGuide(ui);
+  const build = new BuildMode(ui, link, views.ghost);
+  const panel = new PlayerPanel(ui, { link, menu, inspector, hover, guide, build, extraTabs: [new QuestJournal()] });
+  const dialogue = new DialogueBox(ui, link);
+  const craft = new CraftMenu(ui, link, { menu, inspector });
+  const storage = new StorageMenu(ui, link, menu);
+  new ReconfigureWindow(ui, link);
+  new MechWindow(ui, link);
+  const mechHud = new MechHud(ui, link);
+  new ArenaWindow(ui, link);
+  new BoardWindow(ui, link);
+  const bossBar = new BossBar(ui);
+  const trade = new TradeWindow(ui, link, menu);
+  const hud = new DebugHud(ui, { overlay, link, saves, messageLog, cheats: net ? net.debug : true });
+  const controller = new PlayerController(canvas, { link, marker, hover, menu, inspector, build });
+  const minimap = new Minimap(ui, { rig, views, controller });
+
+  // Through a hatch or a lift: the camera jumps with you instead of sweeping across the map.
+  ClientState.onTick(() => {
+    if (world.events.some((e) => e.type === 'teleport' && e.entity === ClientState.localPlayerId)) rig.snapNextFrame = true;
+  });
+
+  // The game has its own right-click menu.
+  window.addEventListener('contextmenu', (e) => e.preventDefault());
+
+  const resize = () => {
+    const w = window.innerWidth;
+    const h = window.innerHeight;
+    renderer.setSize(w, h, false);
+    rig.camera.aspect = w / h;
+    rig.camera.updateProjectionMatrix();
+    Screen.width = w;
+    Screen.height = h;
+  };
+  window.addEventListener('resize', resize);
+  resize();
+
+  let last = performance.now();
+  const frame = (now) => {
+    const real = Math.min((now - last) / 1000, MAX_FRAME_SECONDS);
+    last = now;
+    // Frame time scaled by the debug tick speed, like Godot's Engine.time_scale.
+    const delta = real * ClientState.speed;
+    link.update();
+    ClientState.loop.advance(delta);
+    views.update(delta);
+    marker.update(delta);
+    rig.update(real);
+    const me = ClientState.me();
+    environment.update(rig.camera, rig.position, me ? world.areaAt(me.tile) : null);
+    views.decorLights.update(rig.position);
+    overlay.update();
+    combat.update(delta);
+    xpDrops.update(delta);
+    controller.update();
+    inspector.update();
+    panel.update();
+    minimap.update();
+    craft.update();
+    storage.update();
+    trade.update();
+    dialogue.update();
+    hud.update();
+    mechHud.update();
+    bossBar.update();
+    renderer.render(scene, rig.camera);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+
+  // For poking at the game from the browser console.
+  window.mechscape = { ClientState, actions, Content, views, link, saves, rig, renderer, scene, build, minimap, room: net && net.room };
+}
+
+main().catch((error) => {
+  console.error(error);
+  const status = document.getElementById('loading');
+  if (status) {
+    status.textContent = `Couldn't start the game: ${error.message}`;
+    status.classList.add('error');
+  }
+});

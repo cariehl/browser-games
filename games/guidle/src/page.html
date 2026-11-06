@@ -1,0 +1,985 @@
+<title>GUIDle</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="description" content="Roll a random UUID and collect badges for the patterns hiding inside it.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500..800&family=Figtree:wght@400;500;600;700&family=Martian+Mono:wght@400;600;700&display=swap">
+<style>
+/* Layout: one roll "stage" up top (ID, score, roll lever), then history beside the badge collection. */
+:root {
+  --bg: #e9edfb; --surface: #ffffff; --surface-2: #f2f4fd; --ink: #121a44; --muted: #5a628f; --line: #d3d9f2;
+  --accent: #2443f0; --accent-ink: #ffffff; --accent-deep: #1529a8; --sun: #ffc23d;
+  --shadow: rgba(18, 26, 68, .12);
+  --t-common: #737ba3; --t-uncommon: #138a62; --t-rare: #1f74d8; --t-epic: #b02f96; --t-legendary: #c98200; --t-mythic: #d42a5b;
+  --display: "Bricolage Grotesque", "Avenir Next", "Segoe UI", system-ui, sans-serif;
+  --body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --mono: "Martian Mono", ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
+  --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
+  --shadow: rgba(0, 0, 0, .45);
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233; --t-mythic: #ff6b8f;
+  color-scheme: dark;
+} }
+:root[data-theme="dark"] {
+  --bg: #0b1033; --surface: #141b4a; --surface-2: #1b2358; --ink: #e7ebff; --muted: #9aa3d6; --line: #2a3470;
+  --accent: #7189ff; --accent-ink: #0b1033; --accent-deep: #3d55d6; --sun: #ffc94f;
+  --shadow: rgba(0, 0, 0, .45);
+  --t-common: #a1a9cf; --t-uncommon: #3ccb98; --t-rare: #5aa6ff; --t-epic: #e86bd0; --t-legendary: #ffc233; --t-mythic: #ff6b8f;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+body { background: var(--bg); color: var(--ink); font-family: var(--body); font-size: 15px; line-height: 1.45; }
+button { font: inherit; color: inherit; }
+:focus-visible { outline: 3px solid var(--sun); outline-offset: 2px; }
+
+.wrap { max-width: 1100px; margin: 0 auto; display: grid; gap: 20px;
+  padding-block: 18px 56px; padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 12px 24px; }
+.brand { display: flex; align-items: center; gap: 10px; }
+.brand h1 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 34px; letter-spacing: -.03em; line-height: 1; }
+.brand h1 span { color: var(--accent); }
+.brand .tag { font-size: 13px; color: var(--muted); max-width: 26ch; line-height: 1.3; }
+.stats { display: flex; flex-wrap: wrap; gap: 6px 18px; align-items: center; }
+.stat { display: grid; gap: 0; }
+.stat b { font-family: var(--display); font-size: 22px; font-weight: 700; font-variant-numeric: tabular-nums; line-height: 1.1; }
+.stat small { font-size: 11px; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); font-weight: 600; }
+.stat b small { font-size: 13px; font-weight: 600; color: var(--muted); letter-spacing: 0; text-transform: none; }
+.stat.pulse b { animation: statPulse .9s ease; color: var(--t-legendary); }
+@keyframes statPulse { 0% { transform: scale(1); } 30% { transform: scale(1.35); } 100% { transform: scale(1); } }
+.iconbtn { border: 1.5px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 12px; font-size: 13px; font-weight: 600; cursor: pointer; }
+.iconbtn:hover { border-color: var(--accent); }
+
+/* Stage */
+.stage { position: relative; background: var(--surface); border-radius: 22px; box-shadow: 0 1px 0 var(--line), 0 18px 40px -20px var(--shadow);
+  padding: 22px clamp(14px, 3vw, 32px) 26px; display: grid; gap: 16px; justify-items: center; overflow: hidden; isolation: isolate; }
+.stage::before { content: ""; position: absolute; inset: 0; z-index: -1; opacity: 0; transition: opacity .4s;
+  background: radial-gradient(120% 80% at 50% 0%, color-mix(in srgb, var(--glow, var(--accent)) 22%, transparent), transparent 70%); }
+.stage.glowing::before { opacity: 1; }
+.stage { transition: background-color 1.2s ease, box-shadow 1.2s ease; }
+.stage.rated { background-color: color-mix(in srgb, var(--rc) 16%, var(--surface)); box-shadow: 0 0 0 2px color-mix(in srgb, var(--rc) 45%, transparent), 0 18px 40px -20px var(--shadow); }
+.stage.shake { animation: shake .5s cubic-bezier(.36,.07,.19,.97); }
+@keyframes shake { 10%, 90% { transform: translateX(-2px); } 20%, 80% { transform: translateX(4px); } 30%, 50%, 70% { transform: translateX(-7px) rotate(-.3deg); } 40%, 60% { transform: translateX(7px) rotate(.3deg); } }
+.flash { position: absolute; inset: 0; background: var(--sun); opacity: 0; pointer-events: none; z-index: 3; }
+.flash.go { animation: flash .6s ease-out; }
+@keyframes flash { 0% { opacity: .55; } 100% { opacity: 0; } }
+
+.caption { font-size: 12px; text-transform: uppercase; letter-spacing: .12em; font-weight: 700; color: var(--muted); text-align: center; min-height: 1.4em; }
+.uuid { font-family: var(--mono); font-weight: 600; font-size: clamp(17px, 3.4vw, 36px); display: flex; flex-wrap: wrap; justify-content: center; gap: .1em 0; user-select: all; max-width: 100%; }
+.grp { display: inline-flex; white-space: nowrap; }
+.dash { color: var(--muted); opacity: .55; padding: 0 .08em; }
+.ch { display: inline-block; width: 1ch; text-align: center; border-radius: .18em; transition: background .3s, color .3s, box-shadow .3s; }
+.uuid.blank .ch { color: var(--muted); opacity: .5; }
+.ch.spin { color: var(--muted); opacity: .6; filter: blur(.4px); }
+.ch.lock { animation: lock .5s cubic-bezier(.2, 1.6, .4, 1); }
+@keyframes lock { 0% { transform: translateY(-.45em) scale(1.4); } 100% { transform: none; } }
+.ch.hit { background: color-mix(in srgb, var(--hc) 20%, transparent); color: var(--hc); box-shadow: inset 0 -.12em 0 var(--hc); }
+.ch.hit.pop, .ch.focus.pop { animation: hitPop .7s ease; }
+@keyframes hitPop { 0% { transform: scale(1); } 40% { transform: scale(1.35) translateY(-.08em); } 100% { transform: scale(1); } }
+.uuid.dim .ch:not(.focus), .uuid.dim .dash { opacity: .22; }
+.uuid.dim .ch.hit:not(.focus) { background: transparent; box-shadow: none; color: inherit; }
+.uuid .ch, .uuid .dash { transition: opacity .35s, background .3s, color .3s, box-shadow .3s; }
+.ch.focus { background: color-mix(in srgb, var(--hc, var(--accent)) 30%, transparent); color: var(--hc, var(--accent)); box-shadow: inset 0 -.14em 0 var(--hc, var(--accent)); }
+
+.scorerow { display: flex; align-items: baseline; gap: 12px; flex-wrap: wrap; justify-content: center; }
+.score { font-family: var(--display); font-weight: 800; font-size: clamp(56px, 11vw, 104px); line-height: .9; letter-spacing: -.04em; font-variant-numeric: tabular-nums; }
+.score.bump { animation: bump .45s ease; }
+@keyframes bump { 50% { transform: scale(1.08); } }
+.pts { font-family: var(--display); font-size: 20px; font-weight: 700; color: var(--muted); }
+
+.actions { display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; }
+.roll { position: relative; border: 0; cursor: pointer; background: var(--accent); color: var(--accent-ink); font-family: var(--display); font-weight: 800; font-size: 26px; letter-spacing: .01em;
+  padding: 14px 46px 16px; border-radius: 16px; box-shadow: 0 6px 0 var(--accent-deep), 0 14px 24px -10px var(--accent); transition: transform .08s, box-shadow .08s; }
+.roll:hover { transform: translateY(-2px); box-shadow: 0 8px 0 var(--accent-deep), 0 18px 28px -10px var(--accent); }
+.roll:active, .roll.pressed { transform: translateY(5px); box-shadow: 0 1px 0 var(--accent-deep), 0 6px 12px -8px var(--accent); }
+.roll.waiting { background: var(--surface-2); color: var(--ink); box-shadow: 0 6px 0 var(--line); cursor: default; font-size: 20px; font-variant-numeric: tabular-nums; }
+.roll.waiting:hover, .roll.waiting:active { transform: none; box-shadow: 0 6px 0 var(--line); }
+.rating { --tc: var(--t-common); display: flex; align-items: center; gap: 10px; flex-wrap: wrap; justify-content: center; }
+.rating[hidden] { display: none; }
+.rating .pill { display: inline-flex; align-items: center; gap: 8px; padding: 6px 14px 6px 8px; border-radius: 999px; background: color-mix(in srgb, var(--tc) 16%, var(--surface));
+  border: 2px solid var(--tc); color: var(--tc); font-family: var(--display); font-weight: 800; font-size: 18px; letter-spacing: .04em; text-transform: uppercase; }
+.rating .pill .gem { width: 24px; height: 21px; }
+.rating .top { font-family: var(--display); font-weight: 700; font-size: 18px; color: var(--ink); font-variant-numeric: tabular-nums; }
+.rating .top small { font-family: var(--body); font-weight: 500; font-size: 13px; color: var(--muted); }
+.rating.in { animation: ratingIn .9s cubic-bezier(.2, 1.7, .4, 1) both; }
+@keyframes ratingIn { 0% { transform: scale(2.6) rotate(-8deg); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.rating.in .gem { animation-delay: .9s; }
+.hrow .rt { font-weight: 700; color: var(--tc); }
+.roll kbd { display: block; font-family: var(--body); font-size: 11px; font-weight: 600; opacity: .75; letter-spacing: .06em; text-transform: uppercase; margin-top: 2px; }
+.ghost { border: 1.5px solid var(--line); background: transparent; border-radius: 12px; padding: 10px 14px; font-weight: 600; cursor: pointer; font-size: 14px; }
+.ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+.newbest { position: absolute; top: 14px; right: 14px; z-index: 4; pointer-events: none; background: var(--sun); color: #2a1d00; font-family: var(--display); font-weight: 800;
+  padding: 8px 14px 9px; border-radius: 10px; font-size: 18px; line-height: 1.05; text-align: center; transform: rotate(6deg) scale(0); box-shadow: 0 8px 20px -6px rgba(0,0,0,.35); }
+.newbest small { display: block; font-family: var(--body); font-size: 12px; font-weight: 700; }
+.newbest.show { animation: stamp 1s cubic-bezier(.2, 1.7, .4, 1) forwards; }
+@keyframes stamp { 0% { transform: rotate(-20deg) scale(3); opacity: 0; } 100% { transform: rotate(6deg) scale(1); opacity: 1; } }
+
+/* Badges */
+.results { width: 100%; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 230px), 1fr)); gap: 10px; }
+.badge { --tc: var(--t-common); display: grid; grid-template-columns: auto 1fr auto; gap: 10px; align-items: center; padding: 10px 12px; border-radius: 12px;
+  background: color-mix(in srgb, var(--tc) 11%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--tc) 45%, transparent); position: relative; min-width: 0; cursor: pointer; transition: box-shadow .25s, transform .25s; }
+.badge:hover, .badge.current, .badge.pinned { box-shadow: 0 0 0 3px var(--tc); }
+.badge.current { transform: translateY(-2px); }
+.badge .mt { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; margin-top: 5px; font-size: 11px; color: var(--muted); font-weight: 600; text-transform: uppercase; letter-spacing: .06em; }
+.badge .mt code { font-family: var(--mono); font-size: 12px; font-weight: 700; text-transform: none; letter-spacing: 0; color: var(--tc); background: color-mix(in srgb, var(--tc) 18%, transparent); padding: 1px 6px; border-radius: 5px; }
+.share-text { width: min(100%, 520px); font-family: var(--mono); font-size: 12.5px; padding: 10px 12px; border-radius: 10px; border: 1.5px solid var(--line); background: var(--surface-2); color: var(--ink); resize: none; }
+.hint { font-size: 12.5px; color: var(--muted); text-align: center; min-height: 1.2em; }
+.badge.in { animation: badgeIn .55s cubic-bezier(.2, 1.5, .4, 1) both; }
+@keyframes badgeIn { 0% { transform: translateY(14px) scale(.6); opacity: 0; } 100% { transform: none; opacity: 1; } }
+.badge .txt { min-width: 0; }
+.badge .nm { font-weight: 700; line-height: 1.2; }
+.badge .ds { font-size: 12.5px; color: var(--muted); line-height: 1.3; }
+.badge .ds em { font-style: normal; font-family: var(--mono); font-size: 11.5px; color: var(--tc); font-weight: 600; }
+.badge .pt { font-family: var(--display); font-weight: 800; color: var(--tc); font-variant-numeric: tabular-nums; text-align: right; line-height: 1.1; }
+.badge .pt small { display: block; font-family: var(--body); font-size: 10px; letter-spacing: .08em; text-transform: uppercase; font-weight: 700; }
+.badge .new { position: absolute; top: -8px; right: 10px; background: var(--sun); color: #2a1d00; font-size: 10px; font-weight: 800; letter-spacing: .1em; padding: 2px 6px; border-radius: 6px; }
+.t-common { --tc: var(--t-common); } .t-uncommon { --tc: var(--t-uncommon); } .t-rare { --tc: var(--t-rare); } .t-epic { --tc: var(--t-epic); } .t-legendary { --tc: var(--t-legendary); } .t-mythic { --tc: var(--t-mythic); }
+
+.gem { width: 30px; height: 27px; flex: none; clip-path: polygon(25% 2%, 75% 2%, 100% 50%, 75% 98%, 25% 98%, 0 50%); background: var(--tc);
+  display: grid; place-items: center; color: var(--surface); font-family: var(--mono); font-size: 10px; font-weight: 700; }
+.t-legendary .gem, .gem.t-legendary { background: linear-gradient(110deg, var(--t-legendary) 30%, #fff6d6 50%, var(--t-legendary) 70%); background-size: 250% 100%; animation: shimmer 2.2s linear infinite; }
+.t-epic .gem, .gem.t-epic { background: linear-gradient(110deg, var(--t-epic) 35%, color-mix(in srgb, var(--t-epic) 40%, #fff) 50%, var(--t-epic) 65%); background-size: 250% 100%; animation: shimmer 3s linear infinite; }
+.t-mythic .gem, .gem.t-mythic { background: linear-gradient(110deg, #ff5f6d, #ffc371, #47e891, #4facfe, #b06ab3, #ff5f6d); background-size: 300% 100%; animation: shimmer 1.6s linear infinite; }
+@keyframes shimmer { from { background-position: 100% 0; } to { background-position: -150% 0; } }
+
+/* Panels */
+.panels { display: grid; gap: 20px; align-items: start; }
+@media (min-width: 900px) { .panels { grid-template-columns: minmax(0, 1fr) minmax(0, 1.35fr); } }
+.panel { background: var(--surface); border-radius: 18px; padding: 18px; display: grid; gap: 12px; min-width: 0; box-shadow: 0 1px 0 var(--line); }
+.panel h2 { margin: 0; font-family: var(--display); font-weight: 800; font-size: 22px; letter-spacing: -.02em; text-wrap: balance; }
+.phead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.phead .sub { font-size: 13px; color: var(--muted); }
+
+.history { list-style: none; margin: 0; padding: 2px; display: grid; gap: 6px; max-height: 520px; overflow-y: auto; overscroll-behavior: contain; }
+.hrow { display: grid; grid-template-columns: auto minmax(0, 1fr) auto; gap: 10px; align-items: center; padding: 8px 10px; border-radius: 10px; cursor: pointer; border: 0; background: transparent; text-align: left; width: 100%; }
+.hrow { background: color-mix(in srgb, var(--tc) 9%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--tc) 35%, transparent); transition: box-shadow .2s; }
+.hrow:hover, .hrow.active { box-shadow: 0 0 0 2px var(--tc); }
+.hrow.masked { --tc: var(--line); }
+.hrow .gem { width: 24px; height: 21px; font-size: 9px; }
+.hrow .hid { font-family: var(--mono); font-size: 12px; overflow-wrap: anywhere; line-height: 1.35; }
+.hrow .hmeta { font-size: 11.5px; color: var(--muted); }
+.hrow .hs { font-family: var(--display); font-weight: 800; font-size: 18px; font-variant-numeric: tabular-nums; text-align: right; }
+.hrow .best { display: inline-block; background: var(--sun); color: #2a1d00; font-size: 10px; font-weight: 800; letter-spacing: .08em; border-radius: 5px; padding: 1px 5px; margin-left: 6px; vertical-align: 1px; }
+.empty { color: var(--muted); font-size: 14px; padding: 8px 2px; }
+.confirm { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; font-size: 13px; }
+.confirm button { padding: 6px 10px; font-size: 13px; border-radius: 8px; }
+.danger { border: 0; background: #c2362f; color: #fff; font-weight: 700; cursor: pointer; }
+
+.filters { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { border: 1.5px solid var(--line); background: transparent; border-radius: 999px; padding: 4px 10px; font-size: 12.5px; font-weight: 600; cursor: pointer; }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--surface); border-color: var(--ink); }
+.progress { height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--accent); border-radius: inherit; transition: width .6s cubic-bezier(.2,1,.3,1); }
+.collection { max-height: 560px; overflow-y: auto; overscroll-behavior: contain; padding: 4px 4px 4px 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 170px), 1fr)); gap: 8px; }
+.tile { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 4px 10px; padding: 10px; border-radius: 12px; background: color-mix(in srgb, var(--tc) 12%, var(--surface)); border: 1.5px solid color-mix(in srgb, var(--tc) 50%, transparent); align-content: start; }
+.tile .nm { color: var(--tc); }
+.tile.locked { background: var(--surface-2); border: 1.5px dashed color-mix(in srgb, var(--tc) 40%, transparent); }
+.tile .gem { grid-row: span 2; width: 26px; height: 23px; }
+.tile .nm { font-weight: 700; font-size: 14px; line-height: 1.2; }
+.tile .ds { grid-column: 1 / -1; font-size: 12px; color: var(--muted); line-height: 1.3; }
+.tile .ex { display: block; margin-top: 3px; font-size: 11px; font-weight: 700; color: var(--tc); }
+.tile .od { font-size: 11px; color: var(--tc); font-weight: 700; letter-spacing: .02em; font-variant-numeric: tabular-nums; }
+.tile.locked .gem { background: transparent; box-shadow: none; outline: 0; animation: none;
+  background-image: repeating-linear-gradient(45deg, color-mix(in srgb, var(--tc) 35%, transparent) 0 3px, transparent 3px 6px); }
+.tile.locked .nm { color: var(--muted); letter-spacing: .1em; }
+.tile.fresh { animation: tileFresh 1.6s ease; }
+@keyframes tileFresh { 0%, 40% { box-shadow: 0 0 0 3px var(--sun); } 100% { box-shadow: 0 0 0 0 transparent; } }
+
+.legend { display: flex; flex-wrap: wrap; gap: 6px 14px; font-size: 12px; color: var(--muted); }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend .gem { width: 14px; height: 12px; }
+footer { font-size: 12.5px; color: var(--muted); text-align: center; }
+footer a { color: inherit; }
+
+#fx { position: fixed; inset: 0; width: 100%; height: 100%; pointer-events: none; z-index: 50; }
+.toast { position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translate(-50%, 30px); opacity: 0; background: var(--ink); color: var(--surface);
+  padding: 8px 14px; border-radius: 10px; font-size: 13px; font-weight: 600; transition: .25s; z-index: 60; pointer-events: none; }
+.toast.show { opacity: 1; transform: translate(-50%, 0); }
+
+/* Site links (Back / Commentary): only on cariehl.github.io, or with ?site for a local preview */
+.site { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: -8px; }
+.site[hidden], .site [hidden] { display: none; }
+.site a.iconbtn { text-decoration: none; color: inherit; display: inline-flex; align-items: center; }
+dialog.commentary { border: 0; padding: 0; border-radius: 18px; background: var(--surface); color: var(--ink); width: min(800px, calc(100% - 32px)); max-height: calc(100% - 48px);
+  box-shadow: 0 24px 60px -20px var(--shadow); }
+dialog.commentary[open] { display: flex; flex-direction: column; }
+dialog.commentary::backdrop { background: rgba(8, 12, 40, .6); }
+.commentary .body { overflow-y: auto; padding: 24px 28px; font-size: 16px; line-height: 1.6; }
+.commentary .body > :first-child { margin-top: 0; }
+.commentary .body h1, .commentary .body h2, .commentary .body h3 { font-family: var(--display); line-height: 1.2; margin: 18px 0 6px; }
+.commentary .body a { color: var(--accent); }
+.commentary .body img { display: block; max-width: 100%; max-height: 70vh; margin: 12px auto; border-radius: 10px; }
+.commentary .body figure { margin: 16px 0; }
+.commentary .body figcaption { text-align: center; font-size: .9em; font-style: italic; color: var(--muted); }
+.commentary .body blockquote { margin: 10px 0; padding: 4px 14px; border-left: 3px solid var(--line); color: var(--muted); }
+.commentary .body code { font-family: var(--mono); font-size: .88em; background: var(--surface-2); padding: 1px 5px; border-radius: 4px; }
+.commentary .body pre { background: var(--surface-2); padding: 10px 12px; overflow-x: auto; border-radius: 8px; white-space: pre-wrap; }
+.commentary .foot { padding: 12px 28px 18px; display: flex; justify-content: flex-end; border-top: 1px solid var(--line); }
+@media (max-width: 520px) { .commentary .body { padding: 18px 16px; } .commentary .foot { padding: 10px 16px 14px; } }
+
+@media (max-width: 520px) {
+  .brand .tag { display: none; }
+  .roll { font-size: 22px; padding: 12px 34px 14px; }
+  .newbest { top: 6px; right: 6px; font-size: 13px; padding: 5px 9px 6px; }
+  .newbest small { font-size: 10px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
+}
+</style>
+
+<canvas id="fx" aria-hidden="true"></canvas>
+<div class="wrap">
+  <nav class="site" id="site" hidden aria-label="Site">
+    <a class="iconbtn" href="../" title="Back to cariehl.github.io">← Back</a>
+    <button class="iconbtn" id="btn-commentary" type="button" hidden>📝 Commentary</button>
+  </nav>
+  <header class="top">
+    <div class="brand">
+      <h1>GUID<span>le</span></h1>
+      <div class="tag">One random ID a day. Collect badges for the patterns hiding inside it.</div>
+    </div>
+    <div class="stats">
+      <div class="stat" id="st-rolls"><b>0</b><small>Days played</small></div>
+      <div class="stat" id="st-streak"><b>0</b><small>Streak</small></div>
+      <div class="stat" id="st-best"><b>–</b><small>High score</small></div>
+      <div class="stat" id="st-found"><b>0</b><small>Badges found</small></div>
+      <button class="iconbtn" id="mute" type="button" aria-pressed="false">Sound on</button>
+    </div>
+  </header>
+
+  <section class="stage" id="stage" aria-live="polite">
+    <div class="flash" id="flash"></div>
+    <div class="newbest" id="newbest">NEW HIGH SCORE<small id="newbest-sub"></small></div>
+    <div class="caption" id="caption">Example roll</div>
+    <div class="uuid" id="uuid" aria-label="Rolled ID"></div>
+    <div class="scorerow">
+      <div class="score" id="score">0</div><div class="pts">pts</div>
+    </div>
+    <div class="rating" id="rating" hidden><span class="pill"><span class="gem"></span><span id="rating-name"></span></span><span class="top" id="rating-top"></span></div>
+    <div class="actions">
+      <button class="roll" id="roll" type="button">Roll<kbd>Space</kbd></button>
+      <button class="ghost" id="copy" type="button">Share result</button>
+    </div>
+    <textarea class="share-text" id="share-text" rows="4" readonly hidden aria-label="Result to share"></textarea>
+    <div class="results" id="results"></div>
+    <div class="hint" id="hint">Hover or tap a badge to light up the characters it matched.</div>
+  </section>
+
+  <div class="panels">
+    <section class="panel">
+      <div class="phead">
+        <h2>Roll history</h2>
+        <span class="sub" id="hist-sub"></span>
+      </div>
+      <ol class="history" id="history"></ol>
+    </section>
+    <section class="panel">
+      <div class="phead">
+        <h2>Badge collection</h2>
+        <span class="sub" id="coll-sub"></span>
+      </div>
+      <div class="progress" aria-hidden="true"><i id="coll-bar" style="width:0"></i></div>
+      <div class="legend" id="legend"></div>
+      <div class="filters" id="filters" role="group" aria-label="Filter badges"></div>
+      <div class="collection" id="collection"></div>
+    </section>
+  </div>
+  <footer>Every roll is a random version 4 UUID from your browser. Badge odds are exact where the math allows and otherwise come from /*__ROLLS__*/ simulated rolls. A new roll unlocks at midnight your time. Your history stays in this browser.</footer>
+</div>
+<div class="toast" id="toast" role="status"></div>
+<dialog class="commentary" id="commentary" aria-label="Commentary"><div class="body" id="commentary-body"></div><div class="foot"><button class="iconbtn" id="commentary-close" type="button">Close</button></div></dialog>
+
+<script>
+/*__BADGES__*/
+</script>
+<script>
+GUIDLE.applyOdds(/*__ODDS__*/);
+(function () {
+  const G = GUIDLE;
+  const $ = s => document.querySelector(s);
+  const TIER_NAME = { common: 'Common', uncommon: 'Uncommon', rare: 'Rare', epic: 'Epic', legendary: 'Legendary', mythic: 'Mythic' };
+  const METHOD = { exact: 'exact odds', sim: 'simulated', estimate: 'estimated' };
+  const tierIdx = t => G.TIERS.indexOf(t);
+  const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const KEY = 'guidle:daily';
+  const SITE = 'https://cariehl.github.io/guidle/';
+  const rank = G.makeRanker(/*__SCORES__*/);
+  // GUIDle #0 is 2 November 2026 (launch day); days follow the player's local calendar.
+  const dayKey = d => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+  const dayNum = d => Math.round((new Date(d.getFullYear(), d.getMonth(), d.getDate()) - new Date(2026, 10, 2)) / 864e5);
+  const pctText = pct => (pct >= 10 ? Math.round(pct) : Number(pct.toPrecision(2)).toLocaleString('en-US', { maximumSignificantDigits: 2 })) + '%';
+  // Top X% for most rolls; past Top 70% it reads as Bottom (100 - X)%.
+  const topText = f => { const pct = f * 100; return pct > 70 ? 'Bottom ' + pctText(Math.max(100 - pct, 1)) : 'Top ' + pctText(pct); };
+  // Roll rating bands by Top %: Common above 33, Uncommon to 10, Rare to 3, Epic to 1, Legendary to 1 in a million, then Mythic.
+  const ratingOf = score => { const f = rank(score); return { f, tier: f > 0.33 ? 'common' : f > 0.10 ? 'uncommon' : f > 0.03 ? 'rare' : f > 0.01 ? 'epic' : f > 1e-6 ? 'legendary' : 'mythic', top: topText(f) }; };
+  const whenFmt = t => new Date(t).toLocaleString([], { weekday: 'short', month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' });
+  const HEXCH = '0123456789abcdef';
+  const fmt = n => n.toLocaleString('en-US');
+  const oddsText = b => (b.method === 'estimate' ? '≈ ' : '') + '1 in ' + fmt(Math.max(1, Math.round(b.odds)));
+  const wait = ms => new Promise(r => setTimeout(r, ms));
+  const PACE = 1.33; // stretches the ID reel and the build-up to the rating; the badge reveal keeps its own pace
+
+  // ---------- state ----------
+  // history: newest first, one entry per day: { u: uuid, s: score, t: timestamp, d: day key, n: day number }
+  let S = { v: 1, best: null, counts: {}, history: [], muted: false };
+  try { const raw = localStorage.getItem(KEY); if (raw) S = Object.assign(S, JSON.parse(raw)); } catch (e) {}
+  const save = () => { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) {} };
+  // Day numbers are derived from each roll's date, so renumbering (launch day became #0) fixes old saves.
+  const fromKey = k => { const [y, m, d] = k.split('-').map(Number); return new Date(y, m - 1, d); };
+  // Scores are recomputed from each saved ID too, so scoring changes apply to old rolls.
+  for (const r of S.history) { if (r.d) r.n = dayNum(fromKey(r.d)); r.s = G.scoreOf(G.evaluate(r.u)).total; }
+  if (S.history.length) S.best = S.history.reduce((b, r) => (!b || r.s > b.s ? { u: r.u, s: r.s, n: r.n, t: r.t } : b), null);
+  const rolledToday = () => S.history.length > 0 && S.history[0].d === dayKey(new Date());
+  function streak() {
+    let n = 0; const d = new Date(); if (!rolledToday()) d.setDate(d.getDate() - 1);
+    for (const r of S.history) { if (r.d !== dayKey(d)) break; n++; d.setDate(d.getDate() - 1); }
+    return n;
+  }
+
+  // ---------- audio ----------
+  let ac = null;
+  function actx() { if (!ac) { try { ac = new (window.AudioContext || window.webkitAudioContext)(); } catch (e) {} } if (ac && ac.state === 'suspended') ac.resume(); return ac; }
+  function tone(freq, dur = .08, type = 'square', vol = .04, delay = 0, slide = 0) {
+    if (S.muted) return; const c = actx(); if (!c) return;
+    const t = c.currentTime + delay, o = c.createOscillator(), g = c.createGain();
+    o.type = type; o.frequency.setValueAtTime(freq, t); if (slide) o.frequency.exponentialRampToValueAtTime(freq * slide, t + dur);
+    g.gain.setValueAtTime(.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + .006); g.gain.exponentialRampToValueAtTime(.0001, t + dur);
+    o.connect(g).connect(c.destination); o.start(t); o.stop(t + dur + .03);
+  }
+  // Payoff sounds: a lock-in hit when the ID finishes rolling, then a crowd that reacts to the rating.
+  // Everything is synthesized from noise and oscillators and goes through one bus, so muting cuts it off mid-cheer.
+  let busIn = null, noiseBuf = null;
+  function bus(c) {
+    if (!busIn) {
+      busIn = c.createGain(); const comp = c.createDynamicsCompressor();
+      comp.threshold.value = -18; comp.knee.value = 12; comp.ratio.value = 6;
+      busIn.connect(comp).connect(c.destination);
+    }
+    busIn.gain.setValueAtTime(S.muted ? 0 : 1, c.currentTime);
+    return busIn;
+  }
+  function noiseSrc(c) {
+    if (!noiseBuf) { const n = c.sampleRate * 2; noiseBuf = c.createBuffer(1, n, c.sampleRate); const d = noiseBuf.getChannelData(0); for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1; }
+    const s = c.createBufferSource(); s.buffer = noiseBuf; s.loop = true; return s;
+  }
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  // Routes a node to the bus, panned when the browser supports it.
+  function toBus(c, node, pan = 0) {
+    if (pan && c.createStereoPanner) { const p = c.createStereoPanner(); p.pan.value = pan; node.connect(p).connect(bus(c)); }
+    else node.connect(bus(c));
+  }
+  // One hand clap: filtered noise with a few quick re-strikes, the way a real clap smears.
+  function clap(c, t, vol, pan, freq, soft) {
+    const s = noiseSrc(c), f = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.frequency.value = freq; f.Q.value = soft ? 1.6 : 0.9;
+    g.gain.setValueAtTime(0.0001, t);
+    for (let k = 0; k < 3; k++) { const tk = t + k * 0.007; g.gain.setValueAtTime(vol * (k === 2 ? 1 : 0.6), tk); g.gain.exponentialRampToValueAtTime(vol * 0.12, tk + 0.006); }
+    g.gain.setValueAtTime(vol, t + 0.021); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.021 + (soft ? 0.05 : 0.09));
+    s.connect(f).connect(g); toBus(c, g, pan);
+    s.start(t, Math.random() * 1.5); s.stop(t + 0.16);
+  }
+  // A crowd clapping: each person joins a little late, claps at their own pace, and the last few trail off.
+  function applause(c, t, dur, people, vol, opt = {}) {
+    const rate = opt.rate || [3.6, 5.4];
+    for (let p = 0; p < people; p++) {
+      const hz = rnd(rate[0], rate[1]), pan = rnd(-0.8, 0.8), freq = rnd(opt.lo || 900, opt.hi || 2200), pv = vol * rnd(0.5, 1);
+      const start = t + rnd(0, opt.join ?? 0.35), end = t + dur - rnd(0, dur * 0.35);
+      for (let tc = start; tc < end; tc += (1 / hz) * rnd(0.88, 1.12)) {
+        const fade = Math.min(1, (tc - t) / 0.25, (t + dur - tc) / (dur * 0.45));
+        clap(c, tc, pv * Math.max(0.08, fade), pan, freq, opt.soft);
+      }
+    }
+  }
+  // The roar under a cheering crowd: band-passed noise that swells in and dies away.
+  function roar(c, t, dur, vol, freq = 650) {
+    const s = noiseSrc(c), f = c.createBiquadFilter(), f2 = c.createBiquadFilter(), g = c.createGain();
+    f.type = 'bandpass'; f.frequency.setValueAtTime(freq * 0.8, t); f.frequency.linearRampToValueAtTime(freq * 1.3, t + dur * 0.4); f.frequency.linearRampToValueAtTime(freq, t + dur); f.Q.value = 0.8;
+    f2.type = 'lowpass'; f2.frequency.value = 2600;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.35); g.gain.setValueAtTime(vol, t + dur * 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    s.connect(f).connect(f2).connect(g); toBus(c, g);
+    s.start(t, Math.random()); s.stop(t + dur + 0.05);
+  }
+  // A "woo!": a buzzy voice that slides up and back down through vowel formants.
+  function woo(c, t, vol, pitch, pan) {
+    const dur = rnd(0.55, 0.9), o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain();
+    o.type = 'sawtooth';
+    o.frequency.setValueAtTime(pitch * 0.75, t); o.frequency.exponentialRampToValueAtTime(pitch * 1.3, t + dur * 0.35); o.frequency.exponentialRampToValueAtTime(pitch * 0.85, t + dur);
+    lfo.frequency.value = rnd(5, 7); lg.gain.value = pitch * 0.03; lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.06); g.gain.setValueAtTime(vol, t + dur * 0.6); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    for (const [fq, q, a] of [[rnd(380, 520), 6, 1], [rnd(900, 1200), 8, 0.5], [2600, 10, 0.15]]) {
+      const bp = c.createBiquadFilter(), ag = c.createGain(); bp.type = 'bandpass'; bp.frequency.value = fq; bp.Q.value = q; ag.gain.value = a;
+      o.connect(bp).connect(ag).connect(g);
+    }
+    toBus(c, g, pan);
+    o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+  }
+  // A two-finger stadium whistle.
+  function whistle(c, t, vol, pan) {
+    const o = c.createOscillator(), lfo = c.createOscillator(), lg = c.createGain(), g = c.createGain(), base = rnd(2000, 2600), dur = rnd(0.5, 0.8);
+    o.type = 'sine'; o.frequency.setValueAtTime(base * 0.7, t); o.frequency.exponentialRampToValueAtTime(base * 1.2, t + 0.12); o.frequency.exponentialRampToValueAtTime(base, t + dur);
+    lfo.frequency.value = 9; lg.gain.value = 40; lfo.connect(lg).connect(o.frequency);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(vol, t + 0.04); g.gain.setValueAtTime(vol, t + dur * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+    o.connect(g); toBus(c, g, pan); o.start(t); lfo.start(t); o.stop(t + dur + 0.05); lfo.stop(t + dur + 0.05);
+  }
+  // One cricket: bursts of three or four fast pulses on a high, pure tone.
+  function cricket(c, t, dur, freq, vol, pan, every) {
+    const o = c.createOscillator(), g = c.createGain(); o.type = 'sine'; o.frequency.value = freq;
+    g.gain.setValueAtTime(0.0001, t);
+    for (let tc = t; tc < t + dur; tc += every * rnd(0.9, 1.1)) {
+      for (let k = 0; k < 4; k++) { const tp = tc + k * 0.032; g.gain.setValueAtTime(0.0001, tp); g.gain.exponentialRampToValueAtTime(vol, tp + 0.004); g.gain.exponentialRampToValueAtTime(0.0001, tp + 0.022); }
+    }
+    o.connect(g); toBus(c, g, pan); o.start(t); o.stop(t + dur + 0.2);
+  }
+  // Someone in the back clears their throat.
+  function cough(c, t, vol) {
+    for (const [dt, v] of [[0, 1], [0.2, 0.7]]) {
+      const s = noiseSrc(c), f = c.createBiquadFilter(), g = c.createGain(), tt = t + dt;
+      f.type = 'bandpass'; f.frequency.value = 450; f.Q.value = 1.2;
+      g.gain.setValueAtTime(0.0001, tt); g.gain.exponentialRampToValueAtTime(vol * v, tt + 0.015); g.gain.exponentialRampToValueAtTime(0.0001, tt + 0.16);
+      s.connect(f).connect(g); toBus(c, g, -0.4); s.start(tt, Math.random()); s.stop(tt + 0.2);
+    }
+  }
+  // How the crowd reacts to each rating. Bottom rolls (the ones shown as "Bottom X%") get crickets.
+  const CROWD = {
+    bottom:    { crickets: true },
+    common:    { people: 4,  dur: 2.4, vol: 0.13, golf: true },
+    uncommon:  { people: 10, dur: 2.8, vol: 0.11 },
+    rare:      { people: 16, dur: 3.2, vol: 0.10, roar: 0.05, woos: 2 },
+    epic:      { people: 22, dur: 3.8, vol: 0.10, roar: 0.09, woos: 5, whistles: 1 },
+    legendary: { people: 28, dur: 4.6, vol: 0.11, roar: 0.14, woos: 9, whistles: 3 },
+    mythic:    { people: 34, dur: 6.0, vol: 0.12, roar: 0.20, woos: 14, whistles: 5 },
+  };
+  function crowd(kind) {
+    if (S.muted) return; const c = actx(); if (!c) return;
+    const r = CROWD[kind]; if (!r) return; const t = c.currentTime + 0.05;
+    if (r.crickets) {
+      cricket(c, t + 0.3, 2.6, 4400, 0.035, -0.5, 0.55);
+      cricket(c, t + 0.55, 2.2, 4750, 0.025, 0.6, 0.62);
+      cough(c, t + 2.2, 0.12);
+      return;
+    }
+    if (r.golf) applause(c, t + 0.15, r.dur, r.people, r.vol, { rate: [2.1, 2.7], lo: 1800, hi: 2600, soft: true, join: 0.6 });
+    else applause(c, t, r.dur, r.people, r.vol);
+    if (r.roar) roar(c, t, r.dur, r.roar);
+    for (let i = 0; i < (r.woos || 0); i++) woo(c, t + rnd(0.1, r.dur * 0.6), rnd(0.05, 0.09), rnd(220, 520), rnd(-0.8, 0.8));
+    for (let i = 0; i < (r.whistles || 0); i++) whistle(c, t + rnd(0.2, r.dur * 0.5), 0.035, rnd(-0.7, 0.7));
+  }
+  // A soft snare roll under the spinning ID: a looped two-stroke buffer (one stroke per hand) that slowly swells.
+  // Returns a stop function so the roll ends the instant the last character locks.
+  let strokeBuf = null;
+  function drumroll() {
+    if (S.muted) return () => {}; const c = actx(); if (!c) return () => {};
+    if (!strokeBuf) {
+      const hz = 15, len = Math.round(c.sampleRate * 2 / hz); strokeBuf = c.createBuffer(1, len, c.sampleRate); const d = strokeBuf.getChannelData(0);
+      for (let i = 0; i < len; i++) { const half = i < len / 2, tt = (half ? i : i - len / 2) / c.sampleRate; d[i] = (Math.random() * 2 - 1) * Math.exp(-tt / 0.02) * (half ? 1 : 0.8); }
+    }
+    const t = c.currentTime, s = c.createBufferSource(), hp = c.createBiquadFilter(), bp = c.createBiquadFilter(), g = c.createGain(), out = c.createGain();
+    s.buffer = strokeBuf; s.loop = true;
+    hp.type = 'highpass'; hp.frequency.value = 350; bp.type = 'peaking'; bp.frequency.value = 2400; bp.gain.value = 6;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.006, t + 0.4); g.gain.linearRampToValueAtTime(0.02, t + 5);
+    s.connect(hp).connect(bp).connect(g).connect(out); toBus(c, out); s.start(t);
+    // The swell stays on `g`; the quick fade-out goes on its own node so it never fights the swell's automation.
+    return () => { const n = c.currentTime; out.gain.setValueAtTime(1, n); out.gain.linearRampToValueAtTime(0, n + 0.03); s.stop(n + 0.05); };
+  }
+  // The roll's finish: one hard snare hit with a cymbal crash ringing out over it.
+  function crash() {
+    if (S.muted) return; const c = actx(); if (!c) return; const t = c.currentTime;
+    const s = noiseSrc(c), bp = c.createBiquadFilter(), g = c.createGain();
+    bp.type = 'bandpass'; bp.frequency.value = 1900; bp.Q.value = 0.6;
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.18, t + 0.003); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.2);
+    s.connect(bp).connect(g); toBus(c, g); s.start(t, Math.random()); s.stop(t + 0.25);
+    const o = c.createOscillator(), og = c.createGain(); o.type = 'triangle'; o.frequency.setValueAtTime(220, t); o.frequency.exponentialRampToValueAtTime(150, t + 0.1);
+    og.gain.setValueAtTime(0.0001, t); og.gain.exponentialRampToValueAtTime(0.12, t + 0.003); og.gain.exponentialRampToValueAtTime(0.0001, t + 0.12);
+    o.connect(og); toBus(c, og); o.start(t); o.stop(t + 0.15);
+    const cs = noiseSrc(c), hp = c.createBiquadFilter(), pk = c.createBiquadFilter(), cg = c.createGain();
+    hp.type = 'highpass'; hp.frequency.value = 4500; pk.type = 'peaking'; pk.frequency.value = 7500; pk.gain.value = 5;
+    cg.gain.setValueAtTime(0.0001, t); cg.gain.exponentialRampToValueAtTime(0.09, t + 0.005); cg.gain.exponentialRampToValueAtTime(0.03, t + 0.35); cg.gain.exponentialRampToValueAtTime(0.0001, t + 1.8);
+    cs.connect(hp).connect(pk).connect(cg); toBus(c, cg, 0.3); cs.start(t, Math.random()); cs.stop(t + 1.9);
+  }
+  // The ID is in: a low thump, a snap, and a bright chord. Bigger when the reel teased a big roll.
+  function lockIn(big) {
+    if (S.muted) return; const c = actx(); if (!c) return; const t = c.currentTime;
+    const o = c.createOscillator(), g = c.createGain();
+    o.type = 'sine'; o.frequency.setValueAtTime(170, t); o.frequency.exponentialRampToValueAtTime(48, t + 0.22);
+    g.gain.setValueAtTime(0.0001, t); g.gain.exponentialRampToValueAtTime(0.35, t + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, t + 0.3);
+    o.connect(g); toBus(c, g); o.start(t); o.stop(t + 0.35);
+    const s = noiseSrc(c), f = c.createBiquadFilter(), sg = c.createGain();
+    f.type = 'highpass'; f.frequency.value = 2500;
+    sg.gain.setValueAtTime(0.0001, t); sg.gain.exponentialRampToValueAtTime(0.12, t + 0.003); sg.gain.exponentialRampToValueAtTime(0.0001, t + 0.07);
+    s.connect(f).connect(sg); toBus(c, sg); s.start(t); s.stop(t + 0.1);
+    [523.25, 659.25, 783.99, 1046.5].forEach((n, i) => { tone(n, 0.45, 'triangle', 0.045, 0.02 + i * 0.035); tone(n * 2, 0.3, 'sine', 0.012, 0.02 + i * 0.035); });
+    if (big) [1318.5, 1568, 2093].forEach((n, i) => tone(n, 0.6, 'sine', 0.03, 0.18 + i * 0.06));
+  }
+
+  const NOTES = [523.25, 587.33, 659.25, 783.99, 880, 1046.5, 1174.66, 1318.5, 1568];
+  const TIER_NOTE = [0, 2, 3, 5, 7, 8]; // common C5 … mythic G6
+  const sfx = {
+    tick: k => tone(260 + k * 16, .035, 'square', .045),
+    // Each rarity has its own note, so a badge sounds the same however many came before it.
+    badge: tier => { const ti = tierIdx(tier), n = NOTES[TIER_NOTE[ti]];
+      tone(n, .14, 'triangle', .07); tone(n * 1.5, .12, 'sine', .03, .03);
+      if (ti >= 2) { tone(n * 2, .2, 'triangle', .04, .07); }
+      if (ti >= 3) { tone(n * 2.5, .3, 'sine', .04, .12); tone(n * 3, .35, 'sine', .03, .18); } },
+    chime: () => { tone(392, .09, 'square', .03); tone(523, .09, 'square', .03, .07); tone(784, .18, 'square', .035, .14); },
+    fanfare: () => { [523.25, 659.25, 783.99, 1046.5].forEach((n, i) => tone(n, .22, 'square', .04, i * .11));
+      [1046.5, 1318.5, 1568].forEach(n => tone(n, .7, 'triangle', .035, .5)); tone(130.8, .8, 'sawtooth', .025, .5); },
+    whoosh: () => tone(180, .25, 'sawtooth', .02, 0, 3),
+    lockIn, crowd, drumroll, crash,
+  };
+
+  // ---------- particles ----------
+  const cv = $('#fx'), cx = cv.getContext('2d'); let parts = [], raf = 0;
+  function sizeCanvas() { const d = Math.min(2, devicePixelRatio || 1); cv.width = innerWidth * d; cv.height = innerHeight * d; cx.setTransform(d, 0, 0, d, 0, 0); }
+  sizeCanvas(); addEventListener('resize', sizeCanvas);
+  const css = n => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  function burst(x, y, n, colors, opt = {}) {
+    if (reduced) n = Math.ceil(n / 5);
+    const sp = opt.speed || 7, up = opt.up ?? 0, spread = opt.spread ?? Math.PI * 2, dir = opt.dir ?? -Math.PI / 2;
+    for (let i = 0; i < n; i++) {
+      const a = dir + (Math.random() - .5) * spread, v = sp * (.4 + Math.random() * .8);
+      parts.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v - up, r: Math.random() * 6.28, vr: (Math.random() - .5) * .3,
+        s: opt.size ? opt.size * (.6 + Math.random() * .8) : 4 + Math.random() * 6, c: colors[i % colors.length], life: 1, decay: opt.decay || (.006 + Math.random() * .01),
+        shape: opt.shape || (Math.random() < .35 ? 'hex' : 'rect'), g: opt.gravity ?? .18 });
+    }
+    if (!raf) raf = requestAnimationFrame(tickFx);
+  }
+  function hexPath(s) { cx.beginPath(); for (let i = 0; i < 6; i++) { const a = Math.PI / 3 * i; cx.lineTo(Math.cos(a) * s / 2, Math.sin(a) * s / 2); } cx.closePath(); }
+  function tickFx() {
+    cx.clearRect(0, 0, innerWidth, innerHeight);
+    parts = parts.filter(p => p.life > 0 && p.y < innerHeight + 40);
+    for (const p of parts) {
+      p.vy += p.g; p.vx *= .985; p.vy *= .985; p.x += p.vx; p.y += p.vy; p.r += p.vr; p.life -= p.decay;
+      cx.save(); cx.globalAlpha = Math.max(0, Math.min(1, p.life * 1.6)); cx.translate(p.x, p.y); cx.rotate(p.r); cx.fillStyle = p.c;
+      if (p.shape === 'hex') { hexPath(p.s); cx.fill(); } else if (p.shape === 'spark') { cx.fillRect(-p.s / 2, -1, p.s, 2); cx.fillRect(-1, -p.s / 2, 2, p.s); }
+      else cx.fillRect(-p.s / 2, -p.s / 4, p.s, p.s / 2);
+      cx.restore();
+    }
+    raf = parts.length ? requestAnimationFrame(tickFx) : 0;
+  }
+  const rectOf = el => el.getBoundingClientRect();
+  const tierColors = () => ['--t-mythic', '--t-legendary', '--t-epic', '--t-rare', '--t-uncommon', '--accent', '--sun'].map(css);
+  function confetti(big) {
+    const cols = tierColors();
+    const waves = big ? 3 : 1;
+    for (let w = 0; w < waves; w++) setTimeout(() => {
+      burst(0, innerHeight * .7, big ? 90 : 40, cols, { dir: -Math.PI / 3, spread: .9, speed: 17, decay: .006 });
+      burst(innerWidth, innerHeight * .7, big ? 90 : 40, cols, { dir: -Math.PI * 2 / 3, spread: .9, speed: 17, decay: .006 });
+      if (big) burst(innerWidth / 2, innerHeight * .25, 70, cols, { speed: 11, decay: .007 });
+    }, w * 380);
+  }
+
+  // ---------- UUID rendering ----------
+  const uuidEl = $('#uuid'); let chEls = [];
+  function buildUUID(u) {
+    uuidEl.textContent = ''; chEls = new Array(36).fill(null);
+    let grp = document.createElement('span'); grp.className = 'grp';
+    for (let i = 0; i < 36; i++) {
+      if (u[i] === '-') { uuidEl.appendChild(grp); const d = document.createElement('span'); d.className = 'dash'; d.textContent = '-'; grp = document.createElement('span'); grp.className = 'grp'; grp.appendChild(d); continue; }
+      const s = document.createElement('span'); s.className = 'ch'; s.textContent = u[i]; grp.appendChild(s); chEls[i] = s;
+    }
+    uuidEl.appendChild(grp);
+  }
+  function highlight(res, animate) {
+    const tierAt = {};
+    for (const h of res) for (const i of h.idx) if (!(i in tierAt) || tierIdx(h.b.tier) > tierIdx(tierAt[i])) tierAt[i] = h.b.tier;
+    chEls.forEach((el, i) => { if (!el) return; el.classList.remove('hit', 'pop');
+      if (i in tierAt) { el.style.setProperty('--hc', `var(--t-${tierAt[i]})`); el.classList.add('hit'); if (animate) { void el.offsetWidth; el.style.animationDelay = (i * 12) + 'ms'; el.classList.add('pop'); } } });
+  }
+  function focusChars(idx, tier) {
+    if (!idx || !idx.length) { uuidEl.classList.remove('dim'); chEls.forEach(el => el && el.classList.remove('focus')); return; }
+    uuidEl.classList.add('dim'); const set = new Set(idx);
+    chEls.forEach((el, i) => { if (!el) return; el.classList.toggle('focus', set.has(i)); if (set.has(i)) el.style.setProperty('--hc', `var(--t-${tier})`); });
+  }
+
+  // ---------- badge cards ----------
+  const resultsEl = $('#results');
+  function badgeCard(h, isNew, animate) {
+    const b = h.b, d = document.createElement('div');
+    d.className = `badge t-${b.tier}` + (animate ? ' in' : ''); d.tabIndex = 0;
+    d.innerHTML = `<div class="gem"></div><div class="txt"><div class="nm"></div><div class="ds"></div></div><div class="pt">+${fmt(b.points)}<small>${TIER_NAME[b.tier]}</small></div>` + (isNew ? '<span class="new">NEW</span>' : '');
+    d.querySelector('.nm').textContent = b.name;
+    const ds = d.querySelector('.ds'); ds.textContent = b.desc + ' ';
+    if (h.detail) { const em = document.createElement('em'); em.textContent = h.detail; ds.prepend(em, ' '); }
+    const mt = document.createElement('div'); mt.className = 'mt';
+    const segs = current ? matchSegments(current.u, h.idx) : null;
+    if (segs) { mt.append('Matched'); for (const sg of segs) { const c = document.createElement('code'); c.textContent = sg; mt.append(c); } }
+    else mt.textContent = 'Matched the whole ID';
+    d.querySelector('.txt').appendChild(mt);
+    d.title = `${TIER_NAME[b.tier]} · ${oddsText(b)} (${METHOD[b.method]})` + (b.ext ? ` · extends ${G.BY_ID[b.ext].name}` : '');
+    d._h = h;
+    const on = () => { if (!revealing) focusChars(h.idx, b.tier); };
+    const off = () => { if (!revealing) focusChars(pinned ? pinned._h.idx : null, pinned ? pinned._h.b.tier : null); };
+    d.addEventListener('mouseenter', on); d.addEventListener('mouseleave', off); d.addEventListener('focus', on); d.addEventListener('blur', off);
+    d.addEventListener('click', () => { if (revealing) return; setPinned(pinned === d ? null : d); });
+    d.addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); e.stopPropagation(); d.click(); } });
+    return d;
+  }
+  let pinned = null, revealing = false;
+  function setPinned(d) {
+    if (pinned) pinned.classList.remove('pinned');
+    pinned = d;
+    if (d) { d.classList.add('pinned'); focusChars(d._h.idx, d._h.b.tier); } else focusChars(null);
+  }
+  // Groups matched positions into readable chunks, e.g. ["b404"] or ["0ff", "0ff"]. Null when the badge is about the whole ID.
+  function matchSegments(u, idx) {
+    if (!idx || !idx.length) return null;
+    const segs = []; let cur = null;
+    for (const i of [...idx].sort((a, b) => a - b)) {
+      if (cur && i === cur.end + 1) { cur.s += u[i]; cur.end = i; }
+      else if (cur && i === cur.end + 2 && u[cur.end + 1] === '-') { cur.s += '-' + u[i]; cur.end = i; }
+      else { cur = { s: u[i], end: i }; segs.push(cur); }
+    }
+    if (segs.length > 3 || idx.length > 14) return null;
+    return segs.map(x => x.s);
+  }
+  const sortByTier = res => [...res].sort((a, b) => tierIdx(a.b.tier) - tierIdx(b.b.tier) || a.b.points - b.b.points);
+
+  // ---------- score ----------
+  const scoreEl = $('#score'); let shown = 0, tweenRaf = 0;
+  function setScore(n, animate) {
+    cancelAnimationFrame(tweenRaf);
+    if (!animate || reduced) { shown = n; scoreEl.textContent = fmt(n); return; }
+    const from = shown, t0 = performance.now(), dur = Math.min(1500, 500 + Math.log10(Math.max(10, n - from)) * 220);
+    scoreEl.classList.remove('bump'); void scoreEl.offsetWidth; scoreEl.classList.add('bump');
+    const step = now => { const k = Math.min(1, (now - t0) / dur), e = 1 - Math.pow(1 - k, 3); shown = Math.round(from + (n - from) * e); scoreEl.textContent = fmt(shown); if (k < 1) tweenRaf = requestAnimationFrame(step); };
+    tweenRaf = requestAnimationFrame(step);
+  }
+
+  // ---------- static display (example / replay) ----------
+  let current = null; // { u, res, sc, n }
+  function showStatic(u, captionText, n) {
+    const res = G.evaluate(u), sc = G.scoreOf(res);
+    current = { u, res, sc, n }; revealing = false; pinned = null;
+    buildUUID(u); uuidEl.classList.remove('blank'); $('#hint').hidden = false; highlight(res, false); setScore(sc.total, false); showRating(sc.total, false);
+    resultsEl.textContent = ''; for (const h of sortByTier(res)) resultsEl.appendChild(badgeCard(h, false, false));
+    $('#caption').textContent = captionText;
+    const top = sortByTier(res).pop().b.tier; stage.style.setProperty('--glow', `var(--t-${top})`); stage.classList.toggle('glowing', tierIdx(top) >= 3);
+  }
+
+  function showRating(score, animate) {
+    const el = $('#rating'), r = ratingOf(score);
+    el.style.setProperty('--tc', `var(--t-${r.tier})`); el.querySelector('.gem').className = `gem t-${r.tier}`;
+    $('#rating-name').textContent = `${r.tier} roll`;
+    $('#rating-top').textContent = `${r.top} of rolls`;
+    el.hidden = false; el.classList.remove('in'); if (animate) { void el.offsetWidth; el.classList.add('in'); }
+    stage.style.setProperty('--rc', `var(--t-${r.tier})`); stage.classList.add('rated');
+    return r;
+  }
+
+  // Before today's roll: an unrevealed ID of question marks, no score or badges.
+  function showBlank() {
+    current = null; revealing = false; pinned = null;
+    buildUUID('????????-????-????-????-????????????'); uuidEl.classList.add('blank'); focusChars(null);
+    setScore(0, false); scoreEl.textContent = '?';
+    resultsEl.textContent = ''; $('#rating').hidden = true; $('#hint').hidden = true; $('#newbest').classList.remove('show');
+    stage.classList.remove('glowing', 'rated');
+    $('#caption').textContent = `GUIDle #${dayNum(new Date())} · your roll for today is ready`;
+  }
+
+  // ---------- daily gate ----------
+  function untilMidnight() { const now = new Date(), m = new Date(now); m.setHours(24, 0, 0, 0); return m - now; }
+  const hms = ms => { const t = Math.ceil(ms / 1000), h = Math.floor(t / 3600), m = Math.floor(t % 3600 / 60), s = t % 60; return `${h}:${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`; };
+  let wasRolled = null;
+  function updateRollBtn() {
+    const done = rolledToday();
+    if (done && !reeling) { rollBtn.classList.add('waiting'); rollBtn.innerHTML = `Next roll in ${hms(untilMidnight())}<kbd>Come back tomorrow</kbd>`; }
+    else if (!done) { rollBtn.classList.remove('waiting'); rollBtn.innerHTML = `Roll GUIDle #${dayNum(new Date())}<kbd>Space</kbd>`; }
+    if (wasRolled === true && !done) { showBlank(); renderAll(); }
+    wasRolled = done;
+  }
+  setInterval(updateRollBtn, 1000);
+
+  // ---------- rolling ----------
+  const stage = $('#stage'), rollBtn = $('#roll');
+  let rollToken = 0, reeling = false, skipReel = false;
+
+  function newUUID() {
+    if (crypto.randomUUID) return crypto.randomUUID();
+    const b = crypto.getRandomValues(new Uint8Array(16)); b[6] = (b[6] & 15) | 64; b[8] = (b[8] & 63) | 128;
+    const h = [...b].map(x => x.toString(16).padStart(2, '0')).join('');
+    return `${h.slice(0, 8)}-${h.slice(8, 12)}-${h.slice(12, 16)}-${h.slice(16, 20)}-${h.slice(20)}`;
+  }
+
+  function reel(u, tease) {
+    return new Promise(resolve => {
+      buildUUID(u.replace(/[0-9a-f]/g, () => HEXCH[Math.random() * 16 | 0]));
+      const order = []; for (let i = 0; i < 36; i++) if (chEls[i]) { order.push(i); chEls[i].classList.add('spin'); }
+      // Each group locks in as a quick sweep, with a pause at every dash. A big roll holds longer before the last group.
+      const base = reduced ? 80 : 900 * PACE, step = reduced ? 5 : 45 * PACE, gap = reduced ? 20 : 650 * PACE;
+      const lockAt = order.map((p, k) => {
+        const g = (u.slice(0, p).match(/-/g) || []).length;
+        let t = base + k * step + g * gap;
+        if (tease && g === 4 && !reduced) t += (1400 + (k - 20) * 40) * PACE;
+        return t;
+      });
+      const done = new Array(order.length).fill(false); let left = order.length, last = 0; const t0 = performance.now();
+      function frame(now) {
+        const el = now - t0, scramble = now - last > 70; if (scramble) last = now;
+        let ticked = false;
+        order.forEach((p, k) => {
+          if (done[k]) return; const c = chEls[p];
+          if (skipReel || el >= lockAt[k]) { done[k] = true; left--; c.textContent = u[p]; c.classList.remove('spin'); c.classList.add('lock'); if (!ticked) { sfx.tick(k); ticked = true; } }
+          else if (scramble) c.textContent = HEXCH[Math.random() * 16 | 0];
+        });
+        if (left > 0) requestAnimationFrame(frame); else resolve();
+      }
+      requestAnimationFrame(frame);
+    });
+  }
+
+  async function roll() {
+    actx();
+    if (reeling) { skipReel = true; return; }
+    if (rolledToday()) {
+      if (!revealing) toast(`You've rolled today. Next roll in ${hms(untilMidnight())}.`);
+      return;
+    }
+    const token = ++rollToken;
+    rollBtn.classList.add('pressed'); setTimeout(() => rollBtn.classList.remove('pressed'), 120);
+    const u = newUUID(), res = G.evaluate(u), sc = G.scoreOf(res);
+    const prevBest = S.best ? S.best.s : null;
+    const newIds = new Set(res.map(h => h.b.id).filter(id => !S.counts[id]));
+    const now = new Date(), n = dayNum(now);
+    for (const h of res) S.counts[h.b.id] = (S.counts[h.b.id] || 0) + 1;
+    const isBest = prevBest === null || sc.total > prevBest;
+    if (isBest) S.best = { u, s: sc.total, n, t: now.getTime() };
+    S.history.unshift({ u, s: sc.total, t: now.getTime(), d: dayKey(now), n });
+    save();
+    current = { u, res, sc, n };
+
+    // reset stage
+    resultsEl.textContent = ''; setScore(0, false); uuidEl.classList.remove('blank'); $('#hint').hidden = false; $('#newbest').classList.remove('show'); $('#rating').hidden = true; pinned = null; revealing = true;
+    stage.classList.remove('glowing', 'shake', 'rated'); focusChars(null);
+    $('#caption').textContent = `GUIDle #${n} · ${whenFmt(now)}`;
+    renderHistory(true);
+    const sorted = sortByTier(res), top = sorted[sorted.length - 1].b.tier, topI = tierIdx(top);
+    stage.style.setProperty('--glow', `var(--t-${top})`);
+    if (topI >= 3) { stage.classList.add('glowing'); sfx.whoosh(); }
+
+    reeling = true; skipReel = false; rollBtn.innerHTML = 'Rolling…<kbd>Press again to skip</kbd>';
+    const stopRoll = sfx.drumroll();
+    await reel(u, topI >= 3);
+    stopRoll();
+    if (token !== rollToken) return;
+    sfx.crash();
+    await wait(reduced ? 30 : 450); // a beat of silence before the ID lands
+    if (token !== rollToken) return;
+    // The button flips to the countdown on the same beat as the landing sound.
+    reeling = false; updateRollBtn(); sfx.lockIn(topI >= 3);
+    await wait(reduced ? 30 : 1300);
+    if (token !== rollToken) return;
+
+    // One badge at a time: spotlight its characters, then show the card that explains them.
+    let running = 0, prevCard = null;
+    for (let i = 0; i < sorted.length; i++) {
+      if (i) await wait(reduced ? 30 : 875);
+      if (token !== rollToken) return;
+      const h = sorted[i], card = badgeCard(h, newIds.has(h.b.id), true);
+      if (prevCard) prevCard.classList.remove('current');
+      card.classList.add('current'); prevCard = card;
+      focusChars(h.idx, h.b.tier);
+      for (const p of h.idx) { const el = chEls[p]; if (el) { el.classList.remove('pop'); void el.offsetWidth; el.style.animationDelay = '0ms'; el.classList.add('pop'); } }
+      resultsEl.appendChild(card);
+      running += h.b.points; setScore(running, true); sfx.badge(h.b.tier);
+      const ti = tierIdx(h.b.tier);
+      requestAnimationFrame(() => { const r = rectOf(card); const col = css(`--t-${h.b.tier}`);
+        burst(r.left + 24, r.top + r.height / 2, 6 + ti * 10, [col, css('--sun')], { speed: 3 + ti * 1.5, size: 5, decay: .03, gravity: .05, shape: ti >= 2 ? 'spark' : 'hex' }); });
+      if (ti >= 3) { stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake'); flash(); }
+    }
+    await wait(reduced ? 30 : 910);
+    if (token !== rollToken) return;
+    if (prevCard) prevCard.classList.remove('current');
+    revealing = false; focusChars(null); highlight(res, true); setScore(sc.total, true);
+    await wait(reduced ? 30 : 1100 * PACE);
+    if (token !== rollToken) return;
+    const rt = showRating(sc.total, true); const rti = tierIdx(rt.tier);
+    const low = rt.f > 0.70; // the rolls shown as "Bottom X%"
+    if (!low) sfx.badge(rt.tier);
+    sfx.crowd(low ? 'bottom' : rt.tier);
+    if (rti >= 3) { flash(); confetti(rti >= 4); }
+
+    await wait(reduced ? 30 : 1400 * PACE);
+    if (token !== rollToken) return;
+    if (isBest && prevBest !== null) {
+      $('#newbest-sub').textContent = `+${fmt(sc.total - prevBest)} over ${fmt(prevBest)}`;
+      $('#newbest').classList.add('show'); sfx.fanfare(); confetti(true); flash();
+      stage.classList.remove('shake'); void stage.offsetWidth; stage.classList.add('shake');
+      const b = $('#st-best'); b.classList.remove('pulse'); void b.offsetWidth; b.classList.add('pulse');
+    } else if (isBest) {
+      $('#newbest-sub').textContent = 'Your first roll sets the bar';
+      $('#newbest').classList.add('show'); sfx.chime(); confetti(false);
+    }
+    renderStats(); renderHistory(false); renderCollection(newIds);
+  }
+  function flash() { const f = $('#flash'); f.classList.remove('go'); void f.offsetWidth; f.classList.add('go'); }
+
+  // ---------- side panels ----------
+  function renderStats() {
+    $('#st-rolls b').textContent = fmt(S.history.length);
+    const st = streak(); $('#st-streak b').innerHTML = `${st}<small> ${st === 1 ? 'day' : 'days'}</small>`;
+    $('#st-best b').textContent = S.best ? fmt(S.best.s) : '–';
+    const found = G.BADGES.filter(b => S.counts[b.id]).length;
+    $('#st-found b').textContent = `${found}/${G.BADGES.length}`;
+    $('#mute').textContent = S.muted ? 'Sound off' : 'Sound on'; $('#mute').setAttribute('aria-pressed', String(S.muted));
+  }
+  function renderHistory(skipFirstReveal) {
+    const ol = $('#history'); ol.textContent = '';
+    $('#hist-sub').textContent = S.history.length ? `${S.history.length} ${S.history.length === 1 ? 'day' : 'days'}` : '';
+    if (!S.history.length) { const li = document.createElement('li'); li.className = 'empty'; li.textContent = 'No rolls yet. Each day’s roll will show up here with its date and time.'; ol.appendChild(li); return; }
+    S.history.forEach((r, i) => {
+      const li = document.createElement('li'), btn = document.createElement('button');
+      btn.type = 'button'; btn.className = 'hrow' + (current && current.n === r.n && current.u === r.u ? ' active' : '');
+      const res = G.evaluate(r.u), rt = ratingOf(r.s), top = rt.tier;
+      const masked = i === 0 && skipFirstReveal; // don't spoil the roll that's still revealing
+      btn.classList.add(masked ? 'masked' : `t-${top}`);
+      btn.innerHTML = `<span class="gem t-${masked ? 'common' : top}"></span><span><div class="hmeta"></div><div class="hid"></div><div class="hmeta hrt"></div></span><span class="hs"></span>`;
+      btn.querySelector('.hid').textContent = r.u;
+      btn.querySelector('.hmeta').textContent = `GUIDle #${r.n} · ${whenFmt(r.t)}`;
+      const hrt = btn.querySelector('.hrt');
+      if (masked) hrt.textContent = 'Rolling…';
+      else { const b = document.createElement('span'); b.className = `rt t-${top}`; b.textContent = top[0].toUpperCase() + top.slice(1); hrt.append(b, ` · ${rt.top} · ${res.length} ${res.length === 1 ? 'badge' : 'badges'}`); }
+      const hs = btn.querySelector('.hs'); hs.textContent = masked ? '…' : fmt(r.s);
+      if (!masked && S.best && S.best.u === r.u) { const b = document.createElement('span'); b.className = 'best'; b.textContent = 'BEST'; hs.appendChild(b); }
+      if (!masked) btn.querySelector('.gem').style.setProperty('--tc', `var(--t-${top})`);
+      btn.addEventListener('click', () => { rollToken++; reeling = false; skipReel = true; showStatic(r.u, `GUIDle #${r.n} · ${whenFmt(r.t)}`, r.n); updateRollBtn(); $('#newbest').classList.remove('show'); renderHistory(false); stage.scrollIntoView({ behavior: reduced ? 'auto' : 'smooth', block: 'start' }); });
+      li.appendChild(btn); ol.appendChild(li);
+    });
+  }
+
+  let filter = 'found';
+  function renderCollection(fresh) {
+    const found = G.BADGES.filter(b => S.counts[b.id]).length;
+    $('#coll-sub').textContent = `${found} of ${G.BADGES.length} found`;
+    $('#coll-bar').style.width = (100 * found / G.BADGES.length) + '%';
+    const box = $('#collection'); box.textContent = '';
+    const list = [...G.BADGES].sort((a, b) => b.p - a.p).filter(b => filter === 'all' || (filter === 'found' ? S.counts[b.id] : filter === 'missing' ? !S.counts[b.id] : b.tier === filter));
+    for (const b of list) {
+      const got = S.counts[b.id] || 0, d = document.createElement('div');
+      d.className = `tile t-${b.tier}` + (got ? '' : ' locked') + (fresh && fresh.has(b.id) ? ' fresh' : '');
+      d.innerHTML = `<div class="gem"></div><div class="nm"></div><div class="od"></div><div class="ds"></div>`;
+      d.querySelector('.nm').textContent = got ? b.name : '? ? ?';
+      d.querySelector('.od').textContent = `${oddsText(b)} · ${METHOD[b.method]}` + (got ? ` · ×${fmt(got)}` : '');
+      d.title = `${TIER_NAME[b.tier]} · worth ${fmt(b.points)} pts`;
+      d.querySelector('.ds').textContent = b.desc;
+      if (b.ext) { const ex = document.createElement('span'); ex.className = 'ex'; ex.textContent = `Extends ${G.BY_ID[b.ext].name}`; d.querySelector('.ds').appendChild(ex); }
+      box.appendChild(d);
+    }
+    if (!list.length) { const e = document.createElement('div'); e.className = 'empty'; e.textContent = filter === 'found' ? 'No badges yet. Roll to start your collection, or pick All to see every badge.' : 'Nothing here yet.'; box.appendChild(e); }
+  }
+  function renderFilters() {
+    const f = $('#filters'); f.textContent = '';
+    for (const [k, label] of [['all', 'All'], ['found', 'Found'], ['missing', 'Missing'], ...G.TIERS.map(t => [t, TIER_NAME[t]])]) {
+      const c = document.createElement('button'); c.type = 'button'; c.className = 'chip'; c.textContent = label; c.setAttribute('aria-pressed', String(filter === k));
+      c.addEventListener('click', () => { filter = k; renderFilters(); renderCollection(); }); f.appendChild(c);
+    }
+    const lg = $('#legend'); lg.textContent = '';
+    let lo = 1;
+    for (const t of G.TIERS) { const hi = G.TIER_MAX_N[t], s = document.createElement('span');
+      s.innerHTML = `<i class="gem t-${t}" style="--tc:var(--t-${t})"></i>${TIER_NAME[t]} ${hi === Infinity ? fmt(lo) + '+' : fmt(lo) + '–' + fmt(hi)}`; lg.appendChild(s); lo = hi; }
+    const note = document.createElement('span'); note.textContent = 'A badge that happens 1 in N rolls is worth about N points.'; lg.appendChild(note);
+  }
+
+  // ---------- controls ----------
+  rollBtn.addEventListener('click', roll);
+  document.addEventListener('keydown', e => {
+    if ((e.code === 'Space' || e.key === 'Enter') && !e.repeat) {
+      const tag = (e.target.tagName || '').toLowerCase();
+      if ($('#commentary').open) return;
+      if (tag === 'button' || tag === 'input' || tag === 'textarea' || e.target.isContentEditable) return;
+      e.preventDefault(); roll();
+    }
+  });
+  $('#mute').addEventListener('click', () => { S.muted = !S.muted; save(); renderStats(); if (ac && busIn) busIn.gain.setValueAtTime(S.muted ? 0 : 1, ac.currentTime); if (!S.muted) sfx.chime(); });
+  function toast(msg) { const t = $('#toast'); t.textContent = msg; t.classList.add('show'); clearTimeout(toast.h); toast.h = setTimeout(() => t.classList.remove('show'), 1800); }
+  const SQUARE = { common: '⬜', uncommon: '🟩', rare: '🟦', epic: '🟪', legendary: '🟨', mythic: '🟥' };
+  // Map ASCII letters and digits to Unicode Mathematical Sans-Serif Bold / Monospace.
+  const restyle = (str, upper, lower, digit) => [...str].map(ch => {
+    const c = ch.codePointAt(0);
+    if (c >= 65 && c <= 90) return String.fromCodePoint(upper + c - 65);
+    if (c >= 97 && c <= 122) return String.fromCodePoint(lower + c - 97);
+    if (c >= 48 && c <= 57) return String.fromCodePoint(digit + c - 48);
+    return ch;
+  }).join('');
+  const bold = str => restyle(str, 0x1D5D4, 0x1D5EE, 0x1D7EC);
+  const mono = str => restyle(str, 0x1D670, 0x1D68A, 0x1D7F6);
+  $('#copy').addEventListener('click', () => {
+    if (!current) { toast('Roll first, then share your result.'); return; } // day #0 is a real day, so test for a roll, not a truthy number
+    const rt = ratingOf(current.sc.total), best = sortByTier(current.res).pop().b;
+    const tierName = rt.tier[0].toUpperCase() + rt.tier.slice(1);
+    // Plain text can't carry color, so the share uses colored squares (one per badge, by rarity)
+    // and Unicode bold / monospace letters for emphasis.
+    const n = current.res.length;
+    const text = [
+      `${bold('GUIDle #' + current.n)} ${SQUARE[rt.tier]} ${bold(tierName + ' roll')} · ${rt.top}`,
+      mono(current.u),
+      sortByTier(current.res).map(h => SQUARE[h.b.tier]).join(''),
+      `✨ ${bold(fmt(current.sc.total))} pts from ${n} ${n === 1 ? 'badge' : 'badges'}`,
+      `🏅 Best: ${best.name} (${oddsText(best)})`,
+      '',
+      SITE,
+    ].join('\n');
+    const box = $('#share-text');
+    const fallback = () => {
+      box.value = text; box.hidden = false; box.focus(); box.select();
+      let ok = false; try { ok = document.execCommand('copy'); } catch (e) {}
+      if (ok) { box.hidden = true; toast('Copied to clipboard'); } else toast('Copy the text below to share it.');
+    };
+    try { navigator.clipboard.writeText(text).then(() => { box.hidden = true; toast('Copied to clipboard'); }, fallback); } catch (e) { fallback(); }
+  });
+  function renderAll() { renderStats(); renderHistory(false); renderCollection(); }
+
+  // ---------- site links ----------
+  // Back and Commentary show only when hosted on cariehl.github.io (or with ?site for a local preview).
+  // The commentary file lives outside the game folder, so its button only shows while the file exists.
+  const ON_SITE = /^https?:$/.test(location.protocol) && (/(^|\.)github\.io$/.test(location.hostname) || /[?&]site\b/.test(location.search));
+  if (ON_SITE) {
+    const COMMENTARY_URL = new URL('../commentary/guidle.md', location.href);
+    const MARKED_URL = 'https://cdn.jsdelivr.net/npm/marked@15.0.12/marked.min.js';
+    const dlg = $('#commentary');
+    const loadMarked = () => window.marked ? Promise.resolve() : new Promise(res => {
+      const sc = document.createElement('script'); sc.src = MARKED_URL; sc.onload = sc.onerror = () => res(); document.head.appendChild(sc);
+    });
+    const escHtml = t => t.replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' })[c]);
+    function renderCommentary(md) {
+      const t = document.createElement('template');
+      t.innerHTML = window.marked ? window.marked.parse(md, { async: false }) : `<pre>${escHtml(md)}</pre>`;
+      // image and link paths are relative to the commentary file
+      for (const [sel, attr] of [['img[src]', 'src'], ['a[href]', 'href']]) t.content.querySelectorAll(sel).forEach(el => {
+        const v = el.getAttribute(attr); if (!v.startsWith('#')) el.setAttribute(attr, new URL(v, COMMENTARY_URL).href);
+      });
+      // ![alt](pic.jpg "Caption") -> figure with a caption
+      t.content.querySelectorAll('img[title]').forEach(img => {
+        const fig = document.createElement('figure'), cap = document.createElement('figcaption');
+        cap.textContent = img.getAttribute('title'); img.removeAttribute('title');
+        const p = img.parentElement;
+        (p && p.tagName === 'P' && p.childNodes.length === 1 ? p : img).replaceWith(fig);
+        fig.append(img, cap);
+      });
+      t.content.querySelectorAll('a[href^="http"]').forEach(a => { a.target = '_blank'; a.rel = 'noopener'; });
+      return t.innerHTML;
+    }
+    $('#site').hidden = false;
+    fetch(COMMENTARY_URL, { cache: 'no-cache' })
+      .then(async r => (r.ok && !(r.headers.get('content-type') || '').includes('text/html') && (await r.text()).trim()) || null)
+      .catch(() => null)
+      .then(md => {
+        if (!md) return;
+        const b = $('#btn-commentary'); b.hidden = false;
+        b.addEventListener('click', () => loadMarked().then(() => { $('#commentary-body').innerHTML = renderCommentary(md); dlg.showModal(); $('#commentary-body').scrollTop = 0; }));
+      });
+    $('#commentary-close').addEventListener('click', () => dlg.close());
+    dlg.addEventListener('click', e => { if (e.target === dlg) dlg.close(); }); // click on the backdrop
+  }
+
+  // ---------- boot ----------
+  renderFilters();
+  if (rolledToday()) { const r = S.history[0]; showStatic(r.u, `GUIDle #${r.n} · ${whenFmt(r.t)}`, r.n); }
+  else showBlank();
+  renderAll(); updateRollBtn();
+})();
+</script>

@@ -1,0 +1,16 @@
+# Arm deploys to its limit switch in PARK, and auto-stows when shifted out.
+@0      ignition on
+@0      park on
+@300    press arm
+@1500   expect arm.angle > 10
+@6000   expect arm.angle >= 89
+@6000   expect arm.current < 0.5            # motor off at the limit
+@6000   expect pdm.3.duty == 0              # supply released when idle
+@6000   expect uart "arm: deploying -> deployed"
+@6100   park off                            # driver shifts into gear
+@12000  expect arm.angle < 1
+@12000  expect uart "deployed -> stowing"
+@12000  expect uart "stowing -> stowed"
+@12100  press arm                           # deploy refused while driving
+@13000  expect arm.angle < 1
+@13000  expect fw.resets == 0

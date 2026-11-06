@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>SignalBench</title>
+  </head>
+  <body>
+    <div id="app">
+      <header class="topbar">
+        <div class="brand">
+          <svg viewBox="0 0 40 40" aria-hidden="true">
+            <rect x="2" y="13" width="36" height="14" rx="3" fill="none" stroke="currentColor" stroke-width="2" />
+            <circle cx="10" cy="20" r="3.4" fill="#e5484d" />
+            <circle cx="20" cy="20" r="3.4" fill="#f2b134" />
+            <circle cx="30" cy="20" r="3.4" fill="#3e8bff" />
+          </svg>
+          <div>
+            <h1>SignalBench</h1>
+            <p>SB-CTRL virtual bench</p>
+          </div>
+        </div>
+
+        <div class="group" aria-label="Firmware">
+          <label class="field">
+            <span>Firmware</span>
+            <select id="fw-target" title="CMake target to build and flash">
+              <option value="app">app (reference controller)</option>
+              <option value="blinky">blinky</option>
+              <option value="pdm_hello">pdm_hello</option>
+            </select>
+          </label>
+          <button id="btn-flash" class="primary" title="Build with CMake and start it on the virtual MCU">Build &amp; flash</button>
+          <button id="btn-reset" title="Pulse the MCU reset line">Reset MCU</button>
+          <button id="btn-stop" title="Stop the firmware process">Stop</button>
+          <span id="fw-pill" class="pill" data-state="disconnected">No firmware</span>
+        </div>
+
+        <div class="group" aria-label="Simulation time">
+          <button id="btn-pause" title="Pause / resume simulated time">Pause</button>
+          <div class="seg" title="Single-step simulated time">
+            <button data-step="1">+1 ms</button><button data-step="10">+10</button><button data-step="100">+100</button>
+          </div>
+          <label class="field">
+            <span>Speed</span>
+            <select id="speed">
+              <option value="0.1">0.1×</option>
+              <option value="0.25">0.25×</option>
+              <option value="0.5">0.5×</option>
+              <option value="1" selected>1×</option>
+              <option value="2">2×</option>
+              <option value="5">5×</option>
+            </select>
+          </label>
+          <label class="check" title="Like a debugger halting timers: the world waits while the MCU is stopped">
+            <input type="checkbox" id="debug-freeze" /> Freeze world when MCU halts
+          </label>
+          <button id="btn-mute" class="icon" title="Mute siren audio">Sound on</button>
+        </div>
+      </header>
+
+      <main class="workspace">
+        <section class="viewport" id="viewport">
+          <nav class="views" aria-label="Camera">
+            <button data-view="overview">Bench</button>
+            <button data-view="board">Control board</button>
+            <button data-view="lightbar">Lightbar</button>
+            <button data-view="arm">Light arm</button>
+          </nav>
+
+          <div class="keypad" id="keypad" aria-label="Keypad (keys 1-8)"></div>
+
+          <table class="titleblock" id="titleblock" aria-label="Bench status">
+            <tr><td colspan="2" class="tb-title">SB-CTRL lighting &amp; power bench</td><td id="tb-fw">fw —</td></tr>
+            <tr><td><small>Battery</small><span id="tb-vbat">—</span></td><td><small>Load</small><span id="tb-load">—</span></td><td><small>CAN bus</small><span id="tb-can">—</span></td></tr>
+            <tr><td><small>MCU</small><span id="tb-mcu">—</span></td><td><small>Watchdog</small><span id="tb-wdt">—</span></td><td><small>Sim time</small><span id="tb-time">—</span></td></tr>
+          </table>
+        </section>
+
+        <aside class="side">
+          <div class="tabs" role="tablist" data-tabs="side">
+            <button role="tab" data-tab="vehicle" aria-selected="true">Vehicle</button>
+            <button role="tab" data-tab="faults">Faults</button>
+            <button role="tab" data-tab="pdm">PDM</button>
+            <button role="tab" data-tab="io">MCU pins</button>
+          </div>
+          <div class="tabpanels">
+            <section data-panel="vehicle" class="panel active" id="panel-vehicle"></section>
+            <section data-panel="faults" class="panel" id="panel-faults"></section>
+            <section data-panel="pdm" class="panel" id="panel-pdm"></section>
+            <section data-panel="io" class="panel" id="panel-io"></section>
+          </div>
+        </aside>
+
+        <section class="dock">
+          <div class="tabs" role="tablist" data-tabs="dock">
+            <button role="tab" data-tab="uart" aria-selected="true">UART console</button>
+            <button role="tab" data-tab="can">CAN trace</button>
+            <button role="tab" data-tab="scope">Scope</button>
+            <button role="tab" data-tab="events">Events &amp; build</button>
+          </div>
+          <div class="tabpanels">
+            <section data-panel="uart" class="panel active">
+              <pre id="uart-out" class="term"></pre>
+              <form id="uart-form" class="term-input">
+                <input id="uart-in" autocomplete="off" spellcheck="false" placeholder="Type a command for the firmware CLI, e.g. status" />
+                <div class="chips">
+                  <button type="button" data-cmd="help">help</button>
+                  <button type="button" data-cmd="status">status</button>
+                  <button type="button" data-cmd="pdm">pdm</button>
+                  <button type="button" data-cmd="tasks">tasks</button>
+                  <button type="button" data-cmd="hang" title="Trigger a deliberate stuck loop to watch the watchdog recover">hang</button>
+                </div>
+              </form>
+            </section>
+            <section data-panel="can" class="panel">
+              <div class="toolbar">
+                <span id="can-stats">—</span>
+                <input id="can-filter" placeholder="Filter: id, name or node" spellcheck="false" />
+                <label class="check"><input type="checkbox" id="can-hide-status" /> Hide periodic status</label>
+                <button id="can-pause">Pause trace</button>
+              </div>
+              <div class="tablewrap" id="can-wrap">
+                <table class="trace">
+                  <thead><tr><th>Time</th><th>Node</th><th>ID</th><th>Message</th><th>Data</th><th>Decoded</th></tr></thead>
+                  <tbody id="can-body"></tbody>
+                </table>
+              </div>
+            </section>
+            <section data-panel="scope" class="panel">
+              <div class="toolbar" id="scope-toolbar"></div>
+              <canvas id="scope"></canvas>
+            </section>
+            <section data-panel="events" class="panel">
+              <div class="toolbar">
+                <label class="field">Scenario
+                  <select id="scenario"><option value="">No scenarios found</option></select>
+                </label>
+                <button id="scenario-run" title="Play the same script the CI SIL tests run, live on the bench">Play scenario</button>
+                <button id="scenario-stop">Stop</button>
+                <span class="note" style="margin:0">Each expectation is reported as PASS or FAIL below.</span>
+              </div>
+              <pre id="events-out" class="term"></pre>
+            </section>
+          </div>
+        </section>
+      </main>
+    </div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

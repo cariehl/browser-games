@@ -1,0 +1,23 @@
+{
+  "name": "raid-game",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node --watch-path=server --watch-path=shared server/index.js",
+    "vendor": "node tools/vendor.js",
+    "test": "node --test tests/*.test.js"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.18.23",
+    "@colyseus/schema": "^5.0.42",
+    "@colyseus/ws-transport": "^0.18.4"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.18.8",
+    "three": "^0.186.1"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}

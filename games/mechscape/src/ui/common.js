@@ -1,0 +1,100 @@
+// Small pieces the UI shares: colours, number formatting, the option format
+// menus and hover text use, and Esc handling.
+
+import { cssColor } from '../view/tile_math.js';
+
+export const NPC_COLOR = cssColor([1, 0.85, 0.25]);
+export const OBJECT_COLOR = cssColor([0.4, 0.85, 1]);
+export const ITEM_COLOR = cssColor([1, 0.6, 0.3]);
+export const PLAYER_COLOR = cssColor([1, 1, 1]);
+export const MUTED = cssColor([0.72, 0.75, 0.8]);
+
+/** Debug view settings the debug window toggles. showIds: menus and hover text name things' ids too. */
+export const DebugView = { showIds: false };
+
+/** [options] with [id] after each target's name, when the debug window's "Ids" is on. */
+export function withIds(options, id) {
+  if (!DebugView.showIds || !id) return options;
+  return options.map((o) => (o.target ? { ...o, target: `${o.target} [${id}]` } : o));
+}
+
+/**
+ * An option, OSRS-style: { verb, target, color, action }. The verb in white,
+ * the target in its colour. action may be null (Cancel).
+ */
+export function optionHtml(option) {
+  const verb = escapeHtml(option.verb || '');
+  if (!option.target) return verb;
+  let html = `${verb} <span style="color:${option.color || '#fff'}">${escapeHtml(option.target)}</span>`;
+  if (option.level) html += `  <span style="color:${option.level.color}">(level-${option.level.value})</span>`;
+  return html.trim();
+}
+
+/**
+ * An option's combat level tag, { value, color }: coloured against yours like
+ * OSRS, green for weaker, yellow for an even fight, red for stronger.
+ */
+export function levelTag(theirs, mine) {
+  return { value: theirs, color: levelColor(theirs - (mine || theirs)) };
+}
+
+/** [diff]: their level minus yours. Fades from yellow to green or red over ten levels. */
+export function levelColor(diff) {
+  const t = Math.min(Math.abs(diff), 10) / 10;
+  if (diff > 0) return cssColor([1, 1 - 0.75 * t, 0.15 * (1 - t)]);
+  if (diff < 0) return cssColor([1 - 0.75 * t, 1, 0.15 * (1 - t)]);
+  return cssColor([1, 1, 0.15]);
+}
+
+export function escapeHtml(text) {
+  return String(text).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+}
+
+export function commas(value) {
+  return Math.trunc(value).toLocaleString('en-US');
+}
+
+/** Compact stack counts, like OSRS: 999, 12K, 3M. */
+export function short(value) {
+  if (value >= 10000000) return `${Math.floor(value / 1000000)}M`;
+  if (value >= 100000) return `${Math.floor(value / 1000)}K`;
+  return String(value);
+}
+
+/** "4 ticks (2.4s)" */
+export function ticks(n) {
+  n = Math.max(n, 0);
+  return `${n} tick${n === 1 ? '' : 's'} (${(n * 0.6).toFixed(1)}s)`;
+}
+
+export function capitalize(text) {
+  return text ? text[0].toUpperCase() + text.slice(1) : text;
+}
+
+/**
+ * Esc closes the topmost open window. Windows register a check and a close,
+ * highest priority first (the right-click menu, then popups, then menus).
+ */
+const closers = [];
+export function onEscape(priority, isOpen, close) {
+  closers.push({ priority, isOpen, close });
+  closers.sort((a, b) => b.priority - a.priority);
+}
+window.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  for (const c of closers) {
+    if (c.isOpen()) {
+      c.close();
+      e.preventDefault();
+      return;
+    }
+  }
+});
+
+/** Keeps a box of [width]×[height] on screen next to a point. */
+export function clampToScreen(x, y, width, height, margin = 4) {
+  return {
+    x: Math.min(Math.max(x, margin), window.innerWidth - width - margin),
+    y: Math.min(Math.max(y, margin), window.innerHeight - height - margin),
+  };
+}

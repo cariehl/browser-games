@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Hexbound Tactics</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@600;800&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+  <section id="menu" class="screen on"></section>
+  <section id="builder" class="screen"></section>
+  <section id="select" class="screen"></section>
+  <section id="campaign" class="screen"></section>
+  <section id="record" class="screen"></section>
+  <section id="battle" class="screen">
+    <div id="battle-view"></div>
+    <div id="battle-hud"></div>
+  </section>
+  <noscript>This prototype needs JavaScript and WebGL.</noscript>
+  <script src="vendor/three.min.js"></script>
+  <script src="vendor/marked.umd.js"></script>
+  <script src="js/hex.js"></script>
+  <script src="js/keywords.js"></script>
+  <script src="js/data/items.js"></script>
+  <script src="js/data/gear.js"></script>
+  <script src="js/engine.js"></script>
+  <script src="js/data/classes.js"></script>
+  <script src="js/data/monsters.js"></script>
+  <script src="js/data/scenarios.js"></script>
+  <script src="js/data/encounters.js"></script>
+  <script src="js/data/events.js"></script>
+  <script src="js/campaign.js"></script>
+  <script src="js/ai.js"></script>
+  <script src="js/audio.js"></script>
+  <script src="js/render.js"></script>
+  <script src="js/menu-bg.js"></script>
+  <script src="js/ui.js"></script>
+  <script src="js/builder.js"></script>
+  <script src="js/campaign-ui.js"></script>
+  <script src="js/game.js"></script>
+  <script>G.Game.init();</script>
+</body>
+</html>

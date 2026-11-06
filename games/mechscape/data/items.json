@@ -1,0 +1,1782 @@
+{
+ "alloy_blade": {
+  "id": "alloy_blade",
+  "display_name": "Alloy blade",
+  "description": "A blade pressed from alloy plating. Holds an edge far better than scrap.",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.68,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "A.Blade",
+  "weapon_type": "blade",
+  "accuracy": 28,
+  "power": 26,
+  "equip_level": 10
+ },
+ "alloy_chestplate": {
+  "id": "alloy_chestplate",
+  "display_name": "Alloy chestplate",
+  "description": "Alloy plating shaped to a pilot's chest. Solid.",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "A.Chest",
+  "armor_slot": "torso",
+  "defence_bonus": 21,
+  "equip_level": 10
+ },
+ "alloy_gauntlets": {
+  "id": "alloy_gauntlets",
+  "display_name": "Alloy gauntlets",
+  "description": "Alloy gauntlets. Heavy, but my hands are worth it.",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "A.Gaunts",
+  "armor_slot": "arms",
+  "defence_bonus": 7,
+  "equip_level": 10
+ },
+ "alloy_greaves": {
+  "id": "alloy_greaves",
+  "display_name": "Alloy greaves",
+  "description": "Alloy leg plates. They clank with every step.",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "A.Greaves",
+  "armor_slot": "legs",
+  "defence_bonus": 14,
+  "equip_level": 10
+ },
+ "alloy_helmet": {
+  "id": "alloy_helmet",
+  "display_name": "Alloy helmet",
+  "description": "An alloy helmet. It dents so my head doesn't.",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.7,
+   0.82,
+   1.0
+  ],
+  "abbreviation": "A.Helm",
+  "armor_slot": "head",
+  "defence_bonus": 10,
+  "equip_level": 10
+ },
+ "alloy_pistol": {
+  "id": "alloy_pistol",
+  "display_name": "Alloy pistol",
+  "description": "An alloy-framed pistol that fires gas cartridges. Steadier than a pipe.",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.63,
+   0.72,
+   1.0
+  ],
+  "abbreviation": "A.Pistol",
+  "weapon_type": "pistol",
+  "accuracy": 38,
+  "power": 24,
+  "ammo": "gas_cartridge",
+  "equip_level": 10
+ },
+ "alloy_plating": {
+  "id": "alloy_plating",
+  "display_name": "Alloy plating",
+  "description": "Thick plating stripped from old hulls. Armor, weapons and walkers all start here.",
+  "color": [
+   0.42,
+   0.55,
+   0.68,
+   1.0
+  ],
+  "abbreviation": "Alloy",
+  "craft_xp": 25.0
+ },
+ "breacher_plate": {
+  "id": "breacher_plate",
+  "display_name": "Breacher plate",
+  "description": "A breacher's armor, cut down to fit a pilot. Very heavy, and very worth it.",
+  "stackable": false,
+  "color": [
+   0.66,
+   0.56,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "BPlate",
+  "armor_slot": "torso",
+  "defence_bonus": 28,
+  "equip_level": 15
+ },
+ "canister": {
+  "id": "canister",
+  "display_name": "Canister",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.6,
+   0.58,
+   1.0
+  ],
+  "abbreviation": "Can",
+  "description": "A metal canister. Holds gas, ichor or coolant, and a faint smell of all three."
+ },
+ "coolant": {
+  "id": "coolant",
+  "display_name": "Coolant",
+  "description": "Cold, blue, and very good at keeping machines from cooking.",
+  "color": [
+   0.35,
+   0.75,
+   0.95,
+   1.0
+  ],
+  "abbreviation": "Cool",
+  "stackable": true,
+  "container": "canister",
+  "capacity": 50,
+  "craft_xp": 2.0
+ },
+ "deadeye_injector": {
+  "id": "deadeye_injector",
+  "display_name": "Deadeye injector",
+  "description": "Steadies the aim for a while. A firearms boost in a needle.",
+  "stackable": false,
+  "color": [
+   0.35,
+   0.6,
+   1.0,
+   1.0
+  ],
+  "abbreviation": "Dead",
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector",
+  "boost_skill": "firearms",
+  "boost_base": 3,
+  "boost_percent": 10,
+  "boost_ticks": 500
+ },
+ "edge_injector": {
+  "id": "edge_injector",
+  "display_name": "Edge injector",
+  "description": "A rush of fighting focus in a needle. Hits land harder for a while.",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.35,
+   0.3,
+   1.0
+  ],
+  "abbreviation": "Edge",
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector",
+  "boost_skill": "melee",
+  "boost_base": 2,
+  "boost_percent": 10,
+  "boost_ticks": 500
+ },
+ "empty_injector": {
+  "id": "empty_injector",
+  "display_name": "Empty injector",
+  "description": "Empty. The bio-still can fill it again.",
+  "stackable": false,
+  "color": [
+   0.62,
+   0.68,
+   0.74,
+   1.0
+  ],
+  "abbreviation": "Inj"
+ },
+ "gas_cartridge": {
+  "id": "gas_cartridge",
+  "display_name": "Gas cartridge",
+  "description": "Compressed vent gas, ready to be fired out of a pistol.",
+  "stackable": true,
+  "color": [
+   0.62,
+   0.78,
+   0.38,
+   1.0
+  ],
+  "abbreviation": "Ammo"
+ },
+ "glowroot": {
+  "id": "glowroot",
+  "display_name": "Glowroot",
+  "description": "A root that glows with the ichor it drank. Splicers love it.",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.95,
+   0.5,
+   1.0
+  ],
+  "abbreviation": "Groot",
+  "craft_xp": 34.0
+ },
+ "healing_injector": {
+  "id": "healing_injector",
+  "display_name": "Healing injector",
+  "description": "Patches a pilot up in a hurry. A small hurry.",
+  "stackable": false,
+  "color": [
+   0.92,
+   0.32,
+   0.42,
+   1.0
+  ],
+  "abbreviation": "Heal",
+  "heal": 3,
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector"
+ },
+ "ichor": {
+  "id": "ichor",
+  "display_name": "Ichor",
+  "description": "Warm, glowing and faintly sticky. Splicers brew with it; nobody's sure what it is.",
+  "stackable": true,
+  "color": [
+   0.72,
+   0.3,
+   0.9,
+   1.0
+  ],
+  "abbreviation": "Ich",
+  "container": "canister",
+  "capacity": 50,
+  "craft_xp": 1.0
+ },
+ "pipe_pistol": {
+  "id": "pipe_pistol",
+  "display_name": "Pipe pistol",
+  "description": "A length of pipe that fires gas cartridges. It mostly points the right way.",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.46,
+   0.4,
+   1.0
+  ],
+  "abbreviation": "Pistol",
+  "weapon_type": "pistol",
+  "weapon_look": "pipe",
+  "accuracy": 16,
+  "power": 12,
+  "ammo": "gas_cartridge"
+ },
+ "relic_blade": {
+  "id": "relic_blade",
+  "display_name": "Relic blade",
+  "description": "A blade in the old fleet pattern. It still hums faintly.",
+  "stackable": false,
+  "color": [
+   0.78,
+   0.45,
+   0.38,
+   1.0
+  ],
+  "abbreviation": "R.Blade",
+  "weapon_type": "blade",
+  "accuracy": 20,
+  "power": 19,
+  "equip_level": 5
+ },
+ "relic_chestplate": {
+  "id": "relic_chestplate",
+  "display_name": "Relic chestplate",
+  "description": "A chestplate in the old fleet pattern, wired with relic circuitry.",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Chest",
+  "armor_slot": "torso",
+  "defence_bonus": 15,
+  "equip_level": 5
+ },
+ "relic_circuitry": {
+  "id": "relic_circuitry",
+  "display_name": "Relic circuitry",
+  "description": "Circuit boards from the fleet's day. Nobody makes these any more; we just take them.",
+  "stackable": false,
+  "color": [
+   0.82,
+   0.36,
+   0.3,
+   1.0
+  ],
+  "abbreviation": "Relic",
+  "craft_xp": 15.0
+ },
+ "relic_gauntlets": {
+  "id": "relic_gauntlets",
+  "display_name": "Relic gauntlets",
+  "description": "Gauntlets in the old fleet pattern. They fit like they were printed for me.",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Gaunt",
+  "armor_slot": "arms",
+  "defence_bonus": 5,
+  "equip_level": 5
+ },
+ "relic_greaves": {
+  "id": "relic_greaves",
+  "display_name": "Relic greaves",
+  "description": "Greaves in the old fleet pattern. Light, and quieter than scrap.",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Grv",
+  "armor_slot": "legs",
+  "defence_bonus": 10,
+  "equip_level": 5
+ },
+ "relic_helmet": {
+  "id": "relic_helmet",
+  "display_name": "Relic helmet",
+  "description": "A helmet in the old fleet pattern. Its visor still flickers on.",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.4,
+   0.36,
+   1.0
+  ],
+  "abbreviation": "Helm",
+  "armor_slot": "head",
+  "defence_bonus": 6,
+  "equip_level": 5
+ },
+ "relic_pistol": {
+  "id": "relic_pistol",
+  "display_name": "Relic pistol",
+  "description": "A fleet-pattern sidearm. Better than a pipe, and it knows it.",
+  "stackable": false,
+  "color": [
+   0.78,
+   0.5,
+   0.42,
+   1.0
+  ],
+  "abbreviation": "R.Pistol",
+  "weapon_type": "pistol",
+  "accuracy": 28,
+  "power": 18,
+  "ammo": "gas_cartridge",
+  "equip_level": 5
+ },
+ "rustcap": {
+  "id": "rustcap",
+  "display_name": "Rustcap",
+  "description": "A mushroom that eats rust. Tastes like a bolt, I imagine.",
+  "stackable": false,
+  "color": [
+   0.78,
+   0.42,
+   0.22,
+   1.0
+  ],
+  "abbreviation": "Rcap",
+  "craft_xp": 26.0
+ },
+ "scrap_blade": {
+  "id": "scrap_blade",
+  "display_name": "Scrap blade",
+  "description": "Sharpened scrap with a grip. It'll do.",
+  "stackable": false,
+  "color": [
+   0.72,
+   0.7,
+   0.64,
+   1.0
+  ],
+  "abbreviation": "Blade",
+  "weapon_type": "blade",
+  "accuracy": 10,
+  "power": 12
+ },
+ "scrap_chestplate": {
+  "id": "scrap_chestplate",
+  "display_name": "Scrap chestplate",
+  "description": "Scrap bolted into a chestplate. Better than nothing, just.",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Chest",
+  "armor_slot": "torso",
+  "defence_bonus": 9
+ },
+ "scrap_gauntlets": {
+  "id": "scrap_gauntlets",
+  "display_name": "Scrap gauntlets",
+  "description": "Scrap gauntlets. They pinch.",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Gaunt",
+  "armor_slot": "arms",
+  "defence_bonus": 3
+ },
+ "scrap_greaves": {
+  "id": "scrap_greaves",
+  "display_name": "Scrap greaves",
+  "description": "Scrap strapped round my legs. Officially armor.",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Grvs",
+  "armor_slot": "legs",
+  "defence_bonus": 6
+ },
+ "scrap_helmet": {
+  "id": "scrap_helmet",
+  "display_name": "Scrap helmet",
+  "description": "A helmet made from a bucket. Probably a bucket.",
+  "stackable": false,
+  "color": [
+   0.58,
+   0.52,
+   0.46,
+   1.0
+  ],
+  "abbreviation": "Helm",
+  "armor_slot": "head",
+  "defence_bonus": 4
+ },
+ "scrap_metal": {
+  "id": "scrap_metal",
+  "display_name": "Scrap metal",
+  "description": "Twisted metal from the yard. Where everything starts.",
+  "color": [
+   0.58,
+   0.56,
+   0.52,
+   1.0
+  ],
+  "abbreviation": "Scrap",
+  "craft_xp": 7.0
+ },
+ "seep_moss": {
+  "id": "seep_moss",
+  "display_name": "Seep moss",
+  "description": "Moss from an ichor seep. Damp, always.",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.4,
+   0.75,
+   1.0
+  ],
+  "abbreviation": "Moss",
+  "craft_xp": 18.0
+ },
+ "servo_actuator": {
+  "id": "servo_actuator",
+  "display_name": "Servo actuator",
+  "description": "A heavy servo from a breacher's joint. Walkers need strong knees.",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.75,
+   0.3,
+   1.0
+  ],
+  "abbreviation": "Servo",
+  "craft_xp": 40.0
+ },
+ "servo_blade": {
+  "id": "servo_blade",
+  "display_name": "Servo blade",
+  "description": "A blade on a servo arm, which swings it harder than I can.",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.72,
+   0.35,
+   1.0
+  ],
+  "abbreviation": "S.Blade",
+  "weapon_type": "blade",
+  "accuracy": 36,
+  "power": 32,
+  "equip_level": 15
+ },
+ "servo_grease": {
+  "id": "servo_grease",
+  "display_name": "Servo grease",
+  "description": "Thick grease for servo joints. It gets everywhere.",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.27,
+   0.2,
+   1.0
+  ],
+  "abbreviation": "Grease",
+  "craft_xp": 12.0
+ },
+ "servo_pistol": {
+  "id": "servo_pistol",
+  "display_name": "Servo pistol",
+  "description": "A pistol with a servo-driven action. Fast, heavy and loud.",
+  "stackable": false,
+  "color": [
+   0.88,
+   0.7,
+   0.4,
+   1.0
+  ],
+  "abbreviation": "S.Pistol",
+  "weapon_type": "pistol",
+  "accuracy": 46,
+  "power": 29,
+  "ammo": "gas_cartridge",
+  "equip_level": 15
+ },
+ "surge_injector": {
+  "id": "surge_injector",
+  "display_name": "Surge injector",
+  "description": "A big dose of repair gel, for when a healing injector won't cut it.",
+  "stackable": false,
+  "color": [
+   1.0,
+   0.55,
+   0.4,
+   1.0
+  ],
+  "abbreviation": "Surge",
+  "heal": 7,
+  "use_verb": "Inject",
+  "use_delay_ticks": 3,
+  "leaves": "empty_injector"
+ },
+ "vent_gas": {
+  "id": "vent_gas",
+  "display_name": "Vent gas",
+  "description": "Pressurised gas from a vent. Ammo, fuel, and a bad smell.",
+  "stackable": true,
+  "color": [
+   0.36,
+   0.72,
+   0.45,
+   1.0
+  ],
+  "abbreviation": "Gas",
+  "container": "canister",
+  "capacity": 50,
+  "craft_xp": 1.0
+ },
+ "vent_salt": {
+  "id": "vent_salt",
+  "display_name": "Vent salt",
+  "description": "Salt crusted round a ventbloom's roots. Splicers use it to set a brew.",
+  "stackable": true,
+  "color": [
+   0.9,
+   0.88,
+   0.75,
+   1.0
+  ],
+  "abbreviation": "Salt",
+  "craft_xp": 8.0
+ },
+ "ventbloom": {
+  "id": "ventbloom",
+  "display_name": "Ventbloom",
+  "description": "A flower grown on vent gas. It smells like the vent, too.",
+  "stackable": false,
+  "color": [
+   0.45,
+   0.85,
+   0.78,
+   1.0
+  ],
+  "abbreviation": "Vb",
+  "craft_xp": 10.0
+ },
+ "bent_bolt": {
+  "id": "bent_bolt",
+  "display_name": "Bent bolt",
+  "stackable": true,
+  "color": [
+   0.55,
+   0.55,
+   0.58,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "Bent past saving. The metal press can still use it.",
+  "craft_xp": 2
+ },
+ "dead_battery": {
+  "id": "dead_battery",
+  "display_name": "Dead battery",
+  "stackable": true,
+  "color": [
+   0.35,
+   0.4,
+   0.3,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "Flat. It rattles when you shake it.",
+  "craft_xp": 2
+ },
+ "burnt_chip": {
+  "id": "burnt_chip",
+  "display_name": "Burnt chip",
+  "stackable": true,
+  "color": [
+   0.25,
+   0.22,
+   0.2,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "A circuit board that smells of smoke. Some of the traces are still good.",
+  "craft_xp": 2
+ },
+ "frayed_wire": {
+  "id": "frayed_wire",
+  "display_name": "Frayed wire",
+  "stackable": true,
+  "color": [
+   0.65,
+   0.45,
+   0.3,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "A tangle of copper. Good for nothing but the press.",
+  "craft_xp": 2
+ },
+ "cracked_lens": {
+  "id": "cracked_lens",
+  "display_name": "Cracked lens",
+  "stackable": true,
+  "color": [
+   0.55,
+   0.7,
+   0.8,
+   1.0
+  ],
+  "kind": "junk",
+  "description": "A sensor lens with a crack right across it.",
+  "craft_xp": 2
+ },
+ "tin_pilot": {
+  "id": "tin_pilot",
+  "display_name": "Tin pilot",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.6,
+   0.35,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "A little tin figure of a pilot in an old flight suit. Human, by the look of it."
+ },
+ "rubber_duck": {
+  "id": "rubber_duck",
+  "display_name": "Rubber duck",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.8,
+   0.2,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "Somebody carried this a very long way."
+ },
+ "lucky_cog": {
+  "id": "lucky_cog",
+  "display_name": "Lucky cog",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.6,
+   0.3,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "Polished smooth by a thumb that isn't yours."
+ },
+ "snow_globe": {
+  "id": "snow_globe",
+  "display_name": "Snow globe",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.85,
+   0.95,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "A tiny city under glass. Nobody here has seen a city."
+ },
+ "cracked_photo": {
+  "id": "cracked_photo",
+  "display_name": "Cracked photo",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.55,
+   0.5,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "A crew of five in front of a gantry, grinning. One of them is a loader."
+ },
+ "music_chip": {
+  "id": "music_chip",
+  "display_name": "Music chip",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.6,
+   0.5,
+   1.0
+  ],
+  "kind": "trinket",
+  "description": "Plays the first four notes of a song, then stops."
+ },
+ "lore_shard_1": {
+  "id": "lore_shard_1",
+  "display_name": "Data shard: the yard",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A data shard with a yard tally etched on the case: forty-one hulls, then the scratches stop.",
+  "lore": "LOG 1, yard tally, shift foreman's copy. Hull 2207 down the wall rails at dawn, stripped by noon. Hull 2208 overdue. Hull 2209 overdue. Told the loaders to keep the bays clear for them anyway. They're good about that. They'll keep them clear forever if nobody tells them otherwise."
+ },
+ "lore_shard_2": {
+  "id": "lore_shard_2",
+  "display_name": "Data shard: the pilots",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A data shard someone has written \"MINE\" on in grease pencil. Not anymore.",
+  "lore": "LOG 2, personal. Got printed again today. Third time this month. The tech says the pattern's fine, it's just me being careless. Funny thing: I remember the fall, and I remember waking up, and there's a gap between them the exact shape of a person. Going to stop counting."
+ },
+ "lore_shard_3": {
+  "id": "lore_shard_3",
+  "display_name": "Data shard: Hold",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A data shard with a relay stamp. Most of the header has been read so many times it's worn away.",
+  "lore": "LOG 3, relay traffic, inbound. Message body: HOLD. Sender field corrupted. Timestamp corrupted. Repeat count: 1. Every unit on the yard acknowledged within the second. Nobody here thought to ask what we were holding, or for how long."
+ },
+ "lore_shard_4": {
+  "id": "lore_shard_4",
+  "display_name": "Data shard: the Undercroft",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A data shard, warm to the touch. It was kept close to something that ran hot.",
+  "lore": "LOG 4, foundry handover. Last walker frame is off the line. Blueprint sealed in the vault. Warden instructed to release it to a returning crew and nobody else. It will want some proof you're crew. In my experience it accepts being knocked flat on its back as proof."
+ },
+ "lore_shard_5": {
+  "id": "lore_shard_5",
+  "display_name": "Data shard: the press",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A data shard spattered pink. The pink does not come off.",
+  "lore": "LOG 5, maintenance ticket, never closed. The paint press in hall C is still running its colour test. The test calls for a target. There is no target. It has decided that anything standing still is close enough. Recommend nobody stands still."
+ },
+ "lore_shard_6": {
+  "id": "lore_shard_6",
+  "display_name": "Data shard: the colossus",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.75,
+   0.85,
+   1.0
+  ],
+  "kind": "lore",
+  "description": "A data shard with a crack straight through it, like it was stepped on by something heavy.",
+  "lore": "LOG 6, perimeter watch, Deadfields. Seismic again tonight. Not a quake; it has a rhythm. Left, right. Sent a sentry pair out to look. One came back. It won't stop facing east. Requesting the walker programme be moved up, and a lot more ammunition."
+ },
+ "traffic_cone": {
+  "id": "traffic_cone",
+  "display_name": "Traffic cone",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.45,
+   0.1,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "cone",
+  "description": "It fits your head perfectly. Suspiciously perfectly."
+ },
+ "antenna_hat": {
+  "id": "antenna_hat",
+  "display_name": "Antenna rig",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.55,
+   0.6,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "antenna",
+  "description": "Picks up nothing, but looks like it should."
+ },
+ "crown_of_bolts": {
+  "id": "crown_of_bolts",
+  "display_name": "Crown of bolts",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.7,
+   0.25,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "crown",
+  "description": "Bolted together by someone with time on their hands."
+ },
+ "flame_decal": {
+  "id": "flame_decal",
+  "display_name": "Flame visor decal",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.4,
+   0.15,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "decal",
+  "cosmetic_look": "flames",
+  "description": "Makes you faster. It does not make you faster."
+ },
+ "hazard_paint": {
+  "id": "hazard_paint",
+  "display_name": "Hazard paint job",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.8,
+   0.1,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "paint",
+  "cosmetic_look": "hazard",
+  "description": "Yellow and black stripes. Stand back."
+ },
+ "chrome_paint": {
+  "id": "chrome_paint",
+  "display_name": "Chrome paint job",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.87,
+   0.9,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "paint",
+  "cosmetic_look": "chrome",
+  "description": "You can see yourself in it. You look great."
+ },
+ "rust_paint": {
+  "id": "rust_paint",
+  "display_name": "Rust paint job",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.32,
+   0.18,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "paint",
+  "cosmetic_look": "rust",
+  "description": "Distressed, deliberately."
+ },
+ "scuttle_drone_pet": {
+  "id": "scuttle_drone_pet",
+  "display_name": "Scuttle drone",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.55,
+   0.6,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_scuttle_drone",
+  "description": "A tiny drone that has decided you are its home."
+ },
+ "loader_pup_pet": {
+  "id": "loader_pup_pet",
+  "display_name": "Loader pup",
+  "stackable": false,
+  "color": [
+   0.7,
+   0.55,
+   0.25,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_loader_pup",
+  "description": "A loader barely bigger than a crate. It wants to carry things for you."
+ },
+ "mini_press_pet": {
+  "id": "mini_press_pet",
+  "display_name": "Mini press",
+  "stackable": false,
+  "color": [
+   0.8,
+   0.35,
+   0.65,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_mini_press",
+  "description": "A pocket Splatterpress. It only paints the floor."
+ },
+ "sentry_eye": {
+  "id": "sentry_eye",
+  "display_name": "Sentry eye",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.25,
+   0.2,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "A relic sentry's eye, still in one piece. It's still looking at you.",
+  "trophy_skill": "firearms"
+ },
+ "loader_horn": {
+  "id": "loader_horn",
+  "display_name": "Loader horn",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.6,
+   0.3,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "The warning horn off a loader mech. HONK.",
+  "trophy_skill": "melee"
+ },
+ "warden_core": {
+  "id": "warden_core",
+  "display_name": "Warden core",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.5,
+   0.9,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "The Undercroft warden's heart, humming quietly.",
+  "trophy_skill": "endurance"
+ },
+ "press_core": {
+  "id": "press_core",
+  "display_name": "Press core",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.35,
+   0.7,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "The Splatterpress's control core, still dripping.",
+  "trophy_skill": "splicing"
+ },
+ "colossus_heart": {
+  "id": "colossus_heart",
+  "display_name": "Colossus heart",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.5,
+   0.2,
+   1.0
+  ],
+  "kind": "trophy",
+  "description": "Warm, heavy, and much bigger than a heart should be.",
+  "trophy_skill": "engineering"
+ },
+ "mech_blueprint": {
+  "id": "mech_blueprint",
+  "display_name": "Mech blueprint",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.5,
+   0.85,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "Rolled plans for a two-seat walker, stamped with the foundry's seal. The foreman will want this."
+ },
+ "coolant_bloom": {
+  "id": "coolant_bloom",
+  "display_name": "Coolant bloom",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.85,
+   0.9,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "A ventbloom grown in coolant instead of ichor. It glows a cold blue and is very slightly cold to the touch."
+ },
+ "paint_reservoir": {
+  "id": "paint_reservoir",
+  "display_name": "Paint reservoir",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.3,
+   0.65,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "The Splatterpress's paint tank. It sloshes. Every colour at once."
+ },
+ "pilot_wings": {
+  "id": "pilot_wings",
+  "display_name": "Pilot wings decal",
+  "stackable": false,
+  "color": [
+   0.9,
+   0.8,
+   0.4,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "decal",
+  "cosmetic_look": "wings",
+  "description": "Given to the crew that first powered up the mech."
+ },
+ "surveyor_hat": {
+  "id": "surveyor_hat",
+  "display_name": "Surveyor's hat",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.45,
+   0.3,
+   1.0
+  ],
+  "kind": "cosmetic",
+  "cosmetic_part": "hat",
+  "cosmetic_look": "surveyor",
+  "description": "Wide-brimmed, for squinting at horizons."
+ },
+ "survey_drone_pet": {
+  "id": "survey_drone_pet",
+  "display_name": "Survey drone",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.7,
+   0.6,
+   1.0
+  ],
+  "kind": "pet",
+  "pet_npc": "pet_survey_drone",
+  "description": "Pell's little survey drone. It has opinions about everything you find."
+ },
+ "glowcap_specimen": {
+  "id": "glowcap_specimen",
+  "display_name": "Glowcap specimen",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.9,
+   0.7,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "A glowing cap from the fungal cavern, sealed in a sample jar."
+ },
+ "skyfern_specimen": {
+  "id": "skyfern_specimen",
+  "display_name": "Skyfern specimen",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.8,
+   0.4,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "A fern that only grows where it can see the sky."
+ },
+ "ruin_orchid_specimen": {
+  "id": "ruin_orchid_specimen",
+  "display_name": "Ruin orchid specimen",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.5,
+   0.8,
+   1.0
+  ],
+  "kind": "quest",
+  "description": "An orchid growing out of a crack in a wall older than the yard."
+ },
+ "paintball_cannon": {
+  "id": "paintball_cannon",
+  "display_name": "Paintball cannon",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.35,
+   0.7,
+   1.0
+  ],
+  "weapon_type": "cannon",
+  "accuracy": 40,
+  "power": 0,
+  "ammo": "paint_pellets",
+  "equip_level": 1,
+  "fun_effect": "paint",
+  "description": "Does no damage at all. Splats paint on whatever it hits, players included. Nobody minds. Much."
+ },
+ "paint_pellets": {
+  "id": "paint_pellets",
+  "display_name": "Paint pellets",
+  "stackable": true,
+  "color": [
+   0.9,
+   0.4,
+   0.6,
+   1.0
+  ],
+  "description": "Every colour, one at a time."
+ },
+ "confetti_blade": {
+  "id": "confetti_blade",
+  "display_name": "Confetti blade",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.75,
+   0.3,
+   1.0
+  ],
+  "weapon_type": "blade",
+  "accuracy": 30,
+  "power": 0,
+  "equip_level": 1,
+  "fun_effect": "confetti",
+  "kind": "trinket",
+  "description": "A party in a sword. Hits for nothing, every time, and celebrates it."
+ },
+ "refined_metal": {
+  "id": "refined_metal",
+  "display_name": "Refined metal",
+  "stackable": false,
+  "color": [
+   0.66,
+   0.68,
+   0.72,
+   1
+  ],
+  "abbreviation": "Refined",
+  "craft_xp": 45,
+  "description": "Ten pieces of scrap pressed and pressed again until only the good metal is left."
+ },
+ "control_board": {
+  "id": "control_board",
+  "display_name": "Control board",
+  "stackable": false,
+  "color": [
+   0.3,
+   0.62,
+   0.45,
+   1
+  ],
+  "abbreviation": "Board",
+  "craft_xp": 70,
+  "description": "Three relic circuits soldered to a refined-metal backplate. A mech's nerves."
+ },
+ "servo_assembly": {
+  "id": "servo_assembly",
+  "display_name": "Servo assembly",
+  "stackable": false,
+  "color": [
+   0.86,
+   0.68,
+   0.32,
+   1
+  ],
+  "abbreviation": "S.Assy",
+  "craft_xp": 90,
+  "description": "A servo actuator in a refined-metal housing, strong enough to swing a walker's knee."
+ },
+ "mech_frame": {
+  "id": "mech_frame",
+  "display_name": "Mech frame",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.52,
+   0.56,
+   1
+  ],
+  "abbreviation": "Frame",
+  "kind": "component",
+  "description": "The walker's spine and hips: refined girders around a control board."
+ },
+ "mech_leg": {
+  "id": "mech_leg",
+  "display_name": "Mech leg",
+  "stackable": false,
+  "color": [
+   0.46,
+   0.5,
+   0.55,
+   1
+  ],
+  "abbreviation": "Leg",
+  "kind": "component",
+  "description": "One of a walker's two legs, swung by a servo assembly in the knee."
+ },
+ "power_core": {
+  "id": "power_core",
+  "display_name": "Power core",
+  "stackable": false,
+  "color": [
+   0.36,
+   0.8,
+   0.5,
+   1
+  ],
+  "abbreviation": "Core",
+  "kind": "component",
+  "description": "A canister reactor packed with vent gas and run by a control board. It hums when you hold it."
+ },
+ "cockpit_shell": {
+  "id": "cockpit_shell",
+  "display_name": "Cockpit shell",
+  "stackable": false,
+  "color": [
+   0.62,
+   0.4,
+   0.5,
+   1
+  ],
+  "abbreviation": "Shell",
+  "kind": "component",
+  "description": "A sealed, coolant-jacketed pod for two pilots."
+ },
+ "cockpit_interior": {
+  "id": "cockpit_interior",
+  "display_name": "Cockpit interior",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.6,
+   0.38,
+   1
+  ],
+  "abbreviation": "Seats",
+  "kind": "component",
+  "description": "Two seats, a console and a trophy for luck. Fitted out in the hab."
+ },
+ "weapon_mount": {
+  "id": "weapon_mount",
+  "display_name": "Weapon mount",
+  "stackable": false,
+  "color": [
+   0.68,
+   0.45,
+   0.32,
+   1
+  ],
+  "abbreviation": "Gun",
+  "kind": "component",
+  "description": "A relic pistol scaled up into a walker's cannon, fed with gas cartridges."
+ },
+ "armor_plate": {
+  "id": "armor_plate",
+  "display_name": "Armor plate",
+  "stackable": false,
+  "color": [
+   0.42,
+   0.55,
+   0.68,
+   1
+  ],
+  "abbreviation": "Plate",
+  "kind": "component",
+  "description": "A thick alloy plate for a walker's hull. Each one makes it tougher."
+ },
+ "crate_stack": {
+  "id": "crate_stack",
+  "display_name": "Crate stack",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.42,
+   0.28,
+   1
+  ],
+  "kind": "piece",
+  "description": "Somewhere to put things. Mostly other crates.",
+  "piece": {
+   "shape": "crates",
+   "blocks": true,
+   "comfort": 1,
+   "set": "workshop",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "work_lamp": {
+  "id": "work_lamp",
+  "display_name": "Work lamp",
+  "stackable": false,
+  "color": [
+   0.95,
+   0.8,
+   0.4,
+   1
+  ],
+  "kind": "piece",
+  "description": "A bright lamp on a stand. Good light makes good work.",
+  "piece": {
+   "shape": "lamp",
+   "blocks": false,
+   "comfort": 2,
+   "set": "workshop",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "tool_wall": {
+  "id": "tool_wall",
+  "display_name": "Tool wall",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.52,
+   0.56,
+   1
+  ],
+  "kind": "piece",
+  "description": "Every tool on its hook. Engineering at the hab workbench goes faster while one hangs in the hab.",
+  "piece": {
+   "shape": "tool_wall",
+   "blocks": true,
+   "comfort": 1,
+   "set": "workshop",
+   "effect": "craft_speed",
+   "skill": "engineering",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "coolant_rack": {
+  "id": "coolant_rack",
+  "display_name": "Coolant rack",
+  "stackable": false,
+  "color": [
+   0.35,
+   0.75,
+   0.95,
+   1
+  ],
+  "kind": "piece",
+  "description": "Chilled racks for the bio-bench. Splicing in the hab sometimes saves its ichor and coolant.",
+  "piece": {
+   "shape": "rack",
+   "blocks": true,
+   "comfort": 1,
+   "set": "greenhouse",
+   "effect": "save_liquid",
+   "skill": "splicing",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "grow_bed": {
+  "id": "grow_bed",
+  "display_name": "Grow bed",
+  "stackable": false,
+  "color": [
+   0.4,
+   0.32,
+   0.22,
+   1
+  ],
+  "kind": "piece",
+  "description": "A planter for seeds from the Quiet Reach. Water it with ichor or coolant and it grows Xenobiology plants.",
+  "piece": {
+   "shape": "grow_bed",
+   "blocks": true,
+   "comfort": 1,
+   "set": "greenhouse",
+   "effect": "grow_bed",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "potted_glowroot": {
+  "id": "potted_glowroot",
+  "display_name": "Potted glowroot",
+  "stackable": false,
+  "color": [
+   0.6,
+   0.95,
+   0.5,
+   1
+  ],
+  "kind": "piece",
+  "description": "A glowroot in a pot. It hums a little at night.",
+  "piece": {
+   "shape": "pot",
+   "blocks": false,
+   "comfort": 2,
+   "set": "greenhouse",
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "bunk": {
+  "id": "bunk",
+  "display_name": "Bunk",
+  "stackable": false,
+  "color": [
+   0.45,
+   0.5,
+   0.6,
+   1
+  ],
+  "kind": "piece",
+  "description": "A bunk with a real mattress. Pilots sleep in shifts.",
+  "piece": {
+   "shape": "bunk",
+   "blocks": true,
+   "comfort": 3,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "lounge_chair": {
+  "id": "lounge_chair",
+  "display_name": "Lounge chair",
+  "stackable": false,
+  "color": [
+   0.75,
+   0.45,
+   0.3,
+   1
+  ],
+  "kind": "piece",
+  "description": "For watching other people work.",
+  "piece": {
+   "shape": "chair",
+   "blocks": false,
+   "comfort": 3,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "moss_rug": {
+  "id": "moss_rug",
+  "display_name": "Moss rug",
+  "stackable": false,
+  "color": [
+   0.55,
+   0.4,
+   0.75,
+   1
+  ],
+  "kind": "piece",
+  "description": "Woven seep moss. Soft, and only slightly damp.",
+  "piece": {
+   "shape": "rug",
+   "blocks": false,
+   "comfort": 2,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "hab_banner": {
+  "id": "hab_banner",
+  "display_name": "Crew banner",
+  "stackable": false,
+  "color": [
+   0.85,
+   0.3,
+   0.3,
+   1
+  ],
+  "kind": "piece",
+  "description": "Your crew's colours, painted in ichor.",
+  "piece": {
+   "shape": "banner",
+   "blocks": false,
+   "comfort": 1,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "specimen_case": {
+  "id": "specimen_case",
+  "display_name": "Specimen case",
+  "stackable": false,
+  "color": [
+   0.5,
+   0.85,
+   0.8,
+   1
+  ],
+  "kind": "piece",
+  "description": "A glowing case for a specimen from the Quiet Reach. Visitors stare.",
+  "piece": {
+   "shape": "case",
+   "blocks": true,
+   "comfort": 4,
+   "colors": [
+    "#c7ccd1",
+    "#d98c40",
+    "#4f9fd8",
+    "#5cbf6a",
+    "#d95454",
+    "#c86fd0",
+    "#e0c040",
+    "#5a5e66"
+   ]
+  }
+ },
+ "glowroot_seed": {
+  "id": "glowroot_seed",
+  "display_name": "Glowroot seed",
+  "stackable": true,
+  "color": [
+   0.55,
+   0.85,
+   0.45,
+   1
+  ],
+  "kind": "seed",
+  "grows": "glowroot",
+  "grow_ticks": 150,
+  "grow_count": [
+   3,
+   5
+  ],
+  "grow_xp": 30,
+  "description": "A seed that's glowing already, a bit too keen. Plant it in a hab grow bed and water it with ichor or coolant."
+ },
+ "ventbloom_seed": {
+  "id": "ventbloom_seed",
+  "display_name": "Ventbloom seed",
+  "stackable": true,
+  "color": [
+   0.4,
+   0.8,
+   0.7,
+   1
+  ],
+  "kind": "seed",
+  "grows": "ventbloom",
+  "grow_ticks": 100,
+  "grow_count": [
+   3,
+   5
+  ],
+  "grow_xp": 30,
+  "description": "It smells of vent gas, even as a seed. Plant it in a hab grow bed and water it with ichor or coolant."
+ },
+ "rustcap_spores": {
+  "id": "rustcap_spores",
+  "display_name": "Rustcap spore",
+  "stackable": true,
+  "color": [
+   0.75,
+   0.45,
+   0.25,
+   1
+  ],
+  "kind": "seed",
+  "grows": "rustcap",
+  "grow_ticks": 130,
+  "grow_count": [
+   3,
+   5
+  ],
+  "grow_xp": 30,
+  "description": "A pinch of rust-red dust that is very much alive. Plant it in a hab grow bed and water it with ichor or coolant."
+ }
+}

@@ -1,0 +1,20 @@
+# Warning stages drive the lightbar over CAN; siren is interlocked to lights.
+@0      ignition on
+@200    press siren                         # refused: lights are off
+@700    expect siren.sounding == 0
+@800    press lights                        # stage 1
+@1500   expect lightbar.alive == 1
+@1500   expect pdm.0.current > 0.2
+@1600   press lights                        # stage 2
+@1900   press lights                        # stage 3
+@2300   press siren                         # wail
+@2800   expect siren.sounding == 1
+@2800   expect siren.freq >= 500
+@2800   expect siren.freq <= 1500
+@2900   hold horn
+@3100   expect siren.freq == 290            # air horn overrides
+@3200   release horn
+@3400   expect siren.freq >= 500
+@3500   press lights                        # back to stage 0 -> siren off
+@4200   expect siren.sounding == 0
+@4200   expect lightbar.alive == 0
