@@ -20,7 +20,7 @@ scenarios you watch in the app are the software-in-the-loop tests CI runs.
 | Bare-metal super-loop + cooperative time-triggered scheduler | `firmware/app/main.c`, `scheduler.c` |
 | Fault handling: eFuse trip retry with back-off and lock-out, CAN-loss failsafe, stall and encoder plausibility, load shedding with hysteresis, watchdog recovery | scenarios in `firmware/scenarios/` |
 | Unit testing (Unity, link-seam fakes for I²C) | `firmware/tests/` |
-| Software-in-the-loop integration tests and CI | `sim/core/src/script.rs`, `.github/workflows/ci.yml` |
+| Software-in-the-loop integration tests and CI | `sim/core/src/script.rs`, [`.github/workflows/signalbench.yml`](../../.github/workflows/signalbench.yml) (repo root) |
 | Debugging tools: CAN trace with decode, 1 kHz multi-lane scope, UART CLI, single-step time, "freeze world when MCU halts" | the desktop app |
 
 ## The bench
