@@ -6,7 +6,7 @@
 <title>Overcharge</title>
 <meta name="description" content="A third-person round-based roguelite shooter.">
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Saira+Semi+Condensed:wght@400;600;800&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Chakra+Petch:ital,wght@0,500;0,700;1,700&family=Permanent+Marker&family=Saira+Semi+Condensed:wght@400;600;800&display=swap">
 <style>
 /* Layout: full-bleed WebGL stage; round + points top-left, radar top-right, health bottom-left, ability bar bottom-center. Single dusk-neon look by design. */
 :root {
@@ -21,6 +21,7 @@
   --round: #ff3b3b;
   --display: "Chakra Petch", "Arial Narrow", system-ui, sans-serif;
   --ui: "Saira Semi Condensed", "Arial Narrow", system-ui, sans-serif;
+  --hand: "Permanent Marker", "Comic Sans MS", cursive;
   color-scheme: dark;
 }
 [hidden] { display: none !important; }
@@ -79,6 +80,7 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--ink); 
 #toasts { position: absolute; left: 50%; bottom: 120px; transform: translateX(-50%); display: flex; flex-direction: column-reverse; align-items: center; gap: 6px; }
 .toast { background: var(--panel); border: 1px solid var(--c); padding: 6px 16px; font-weight: 600; font-size: 15px; text-align: center; animation: tin .25s ease-out; white-space: nowrap; }
 .toast b { color: var(--c); font-family: var(--display); }
+.toast i { display: block; font-family: var(--hand); font-style: normal; font-size: 13px; color: var(--dim); margin-top: 1px; }
 @keyframes tin { from { transform: translateY(12px); opacity: 0; } }
 #dmgLayer div { position: absolute; left: 0; top: 0; font-family: var(--display); font-weight: 700; font-size: 16px; color: #fff; text-shadow: 0 2px 0 #000; white-space: nowrap; will-change: transform; }
 #dmgLayer div.crit { color: var(--gold); font-size: 23px; }
@@ -95,6 +97,8 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--ink); 
 .card .kind { font-size: 12px; font-weight: 600; letter-spacing: .1em; text-transform: uppercase; color: var(--dim); }
 .card h3 { margin: 0; font-family: var(--display); font-size: 24px; line-height: 1.05; text-wrap: balance; }
 .card p { margin: 0; font-size: 15px; line-height: 1.35; color: #e4d9f7; }
+.card .fl { margin: 0; font-family: var(--hand); font-size: 14px; line-height: 1.3; color: var(--dim); transform: rotate(-1.2deg); transform-origin: left; }
+.card:nth-child(2) .fl { transform: rotate(.8deg); }
 .card .delta { margin-top: auto; font-size: 14px; font-weight: 600; color: var(--c); line-height: 1.4; }
 .hint { margin: 0; color: var(--dim); font-size: 14px; letter-spacing: .06em; text-align: center; }
 .overlay { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; background: radial-gradient(ellipse at 50% 40%, rgba(58,20,80,.55), rgba(10,5,18,.92)); padding-inline: max(16px, env(safe-area-inset-left, 0px)) max(16px, env(safe-area-inset-right, 0px)); overflow-y: auto; }
@@ -114,7 +118,14 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--ink); 
 .statgrid span { font-size: 12px; letter-spacing: .14em; text-transform: uppercase; color: var(--dim); }
 .big { font-family: var(--display); font-style: italic; font-weight: 700; font-size: clamp(40px, 8vw, 76px); margin: 0; line-height: 1; }
 .note { font-size: 13px; color: var(--dim); margin: 0; }
-@media (max-width: 760px) { #loadout { display: none; } #radar { width: 90px; height: 90px; } .card { width: 100%; min-height: 0; } .ab { width: 58px; height: 58px; } .ab .nm { font-size: 9px; } #hpwrap { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); width: 50vw; } }
+.ver { position: fixed; right: max(16px, env(safe-area-inset-right, 0px)); bottom: calc(12px + env(safe-area-inset-bottom, 0px)); font-family: var(--hand); font-size: 14px; color: var(--dim); opacity: .7; transform: rotate(-3deg); }
+.logo-wrap { position: relative; }
+.logo-wrap .scrawl { position: absolute; right: -6px; bottom: -14px; font-family: var(--hand); font-size: clamp(14px, 2.4vw, 20px); color: var(--cyan); transform: rotate(-7deg); white-space: nowrap; text-shadow: 0 2px 0 #000; }
+.cause { font-family: var(--hand); font-size: 20px; color: var(--fg); margin: 0; transform: rotate(-1deg); }
+#radio { position: absolute; left: max(16px, env(safe-area-inset-left, 0px)); bottom: calc(62px + env(safe-area-inset-bottom, 0px)); max-width: min(420px, 60vw); background: var(--panel); border-left: 3px solid var(--cyan); padding: 6px 12px 7px; font-size: 15px; font-weight: 600; line-height: 1.3; opacity: 0; transform: translateY(6px); transition: opacity .2s, transform .2s; }
+#radio.on { opacity: 1; transform: none; }
+#radio b { font-family: var(--hand); font-weight: 400; color: var(--cyan); margin-right: 8px; letter-spacing: .04em; }
+@media (max-width: 760px) { #loadout { display: none; } #radio { bottom: calc(130px + env(safe-area-inset-bottom, 0px)); max-width: 80vw; } #radar { width: 90px; height: 90px; } .card { width: 100%; min-height: 0; } .ab { width: 58px; height: 58px; } .ab .nm { font-size: 9px; } #hpwrap { bottom: calc(92px + env(safe-area-inset-bottom, 0px)); width: 50vw; } }
 @media (prefers-reduced-motion: reduce) { .card, .toast, #pointsPop span { animation: none; } }
 /* site corner (Back / Commentary) and commentary modal */
 .site-corner { position: fixed; top: calc(14px + env(safe-area-inset-top, 0px)); left: max(16px, env(safe-area-inset-left, 0px)); display: flex; gap: 8px; z-index: 20; }
@@ -157,10 +168,12 @@ html, body { height: 100%; margin: 0; overflow: hidden; background: var(--ink); 
   <div id="hpwrap"><div id="hpbar"><b id="hpFill"></b><b id="shFill"></b><span id="hpText">100 / 100</span></div></div>
   <div id="abilities"></div>
   <div id="toasts"></div>
+  <div id="radio"><b>DOT</b><span id="radioText"></span></div>
   <div id="dmgLayer"></div>
 </div>
 <div id="draft" hidden><h2 id="draftTitle">ROUND CLEARED</h2><div id="cards"></div><p class="hint">Press 1, 2 or 3, or click a card</p></div>
 <div id="screen" class="overlay"></div>
+
 <div class="site-corner" id="siteCorner" hidden></div>
 <div id="commentary" hidden><div class="box" role="dialog" aria-modal="true" aria-label="Commentary"><div class="body" id="commentaryBody"></div><div class="foot"><button class="btn alt" id="commentaryClose">Close</button></div></div></div>
 
@@ -383,6 +396,11 @@ const SFX = {
   power() { [0, 7, 12, 19].forEach((s, i) => tone(660 * Math.pow(2, s / 12), 0.15, 'square', 0.05, null, i * 0.05)); },
   roar() { tone(70, 1.2, 'sawtooth', 0.18, 35); noise(1.0, 0.12, 300); },
   slam() { tone(60, 0.5, 'sine', 0.22, 30); noise(0.5, 0.18, 500); },
+  // Dot's radio: a two-note chirp and a puff of static
+  chirp() { noise(0.09, 0.05, 2600, 'bandpass'); tone(1180, 0.05, 'square', 0.025); tone(880, 0.06, 'square', 0.025, null, 0.06); },
+  squeak() { if (can('squeak', 0.15)) { tone(rand(820, 900), 0.07, 'sine', 0.09, 1500); tone(1400, 0.1, 'sine', 0.06, 700, 0.07); } },
+  // the lost radio plays a little tune, badly
+  radio() { noise(0.5, 0.06, 3000, 'bandpass'); [72, 76, 79, 76, 74, 72, 67, 72].forEach((m, i) => tone(mtof(m) * (1 + rand(-0.008, 0.008)), 0.2, 'triangle', 0.07, null, 0.45 + i * 0.17 + (i % 2 ? 0.03 : 0))); },
 };
 const music = { step: 0, next: 0, on: false };
 const BASS = [45, 45, 57, 45, 48, 48, 60, 48, 43, 43, 55, 43, 40, 40, 52, 47];
@@ -393,11 +411,12 @@ function musicTick() {
   const spb = 60 / 120 / 4;
   if (music.next < AC.currentTime) music.next = AC.currentTime + 0.05;
   while (music.next < AC.currentTime + 0.12) {
-    const s = music.step % 16, bar = Math.floor(music.step / 16), d = music.next - AC.currentTime;
+    const s = music.step % 16, bar = Math.floor(music.step / 16), d = music.next - AC.currentTime + (s % 2 ? spb * 0.14 : 0); // a little swing on the off-beats
     const fighting = G && G.phase === 'fight', inten = G ? G.round : 1;
     if (fighting) {
       if (s % 4 === 0) tone(150, 0.18, 'sine', 0.5, 40, d, musicGain);
-      if (s % 4 === 2) noise(0.04, 0.12, 8000, 'highpass', d, musicGain);
+      if (s % 4 === 2) noise(0.04, rand(0.08, 0.13), 8000, 'highpass', d, musicGain);
+      if (bar % 8 === 7 && s >= 12) noise(0.06, 0.1, 1800, 'bandpass', d, musicGain); // fill into the next phrase
       if (inten >= 4 && s % 2 === 1) noise(0.02, 0.05, 9000, 'highpass', d, musicGain);
       if (inten >= 7 && s % 2 === 0) tone(mtof(LEAD[(s / 2 + bar) % 8]), spb * 1.5, 'triangle', 0.05, null, d, musicGain);
     }
@@ -418,64 +437,64 @@ const RARITY = [
 // Ability slots: move (Shift), sec (Q), util (E), spec (R). Each slot has interchangeable variants.
 const SLOTS = { move: { key: 'Shift', label: 'Movement', color: '#4ff3ff' }, sec: { key: 'Q', label: 'Secondary', color: '#ff9a3d' }, util: { key: 'E', label: 'Utility', color: '#5ef08a' }, spec: { key: 'R', label: 'Special', color: '#ff7ad9' } };
 const ABILITIES = {
-  roll: { slot: 'move', name: 'Combat Roll', cd: 4, desc: 'Roll in your move direction. You cannot be hit mid-roll.', up: 'Rolls farther and recover faster' },
-  blink: { slot: 'move', name: 'Phase Step', cd: 5, desc: 'Teleport forward and stun everything where you land.', up: 'Longer step, bigger stun' },
-  leap: { slot: 'move', name: 'Jet Leap', cd: 6, desc: 'Blast off into the air, knocking back enemies around you.', up: 'Higher leap, bigger blast' },
-  phase: { slot: 'sec', name: 'Phase Round', cd: 3, dmg: 45, desc: 'A heavy round that pierces everything and hits harder for each enemy it passes through.', up: '+30% damage' },
-  frag: { slot: 'sec', name: 'Frag Grenade', cd: 5, dmg: 80, desc: 'Throw a grenade that bounces once, then explodes.', up: '+30% damage and radius' },
-  rail: { slot: 'sec', name: 'Rail Shot', cd: 6, dmg: 150, desc: 'An instant piercing beam. Headshots deal triple damage.', up: '+30% damage' },
-  shock: { slot: 'util', name: 'Shock Field', cd: 8, dmg: 25, desc: 'Stun every enemy within 9m for 2 seconds.', up: 'Longer stun, wider field' },
-  turret: { slot: 'util', name: 'Sentry Drop', cd: 14, dmg: 9, desc: 'Deploy an auto-turret that fires at nearby enemies for 12 seconds.', up: 'Turret lasts longer and hits harder' },
-  shield: { slot: 'util', name: 'Bulwark', cd: 12, desc: 'Gain an overshield worth 50% of your max health for 6 seconds.', up: 'Bigger shield' },
-  suppress: { slot: 'spec', name: 'Suppressive Fire', cd: 9, dmg: 20, desc: 'Fire 8 rapid stunning shots where you aim.', up: '+3 shots' },
-  orbital: { slot: 'spec', name: 'Orbital Lance', cd: 16, dmg: 260, desc: 'Mark a spot. A beam from orbit hits it a second later.', up: '+30% damage and radius' },
-  overdrive: { slot: 'spec', name: 'Overdrive', cd: 18, desc: 'For 6 seconds: triple fire rate, perfect accuracy, +30% speed.', up: 'Lasts 2 seconds longer' },
+  roll: { slot: 'move', name: 'Tuck & Roll', cd: 4, desc: 'Roll in your move direction. Nothing can touch you mid-roll.', up: 'Rolls farther and recovers faster', fl: 'Your knees will file a complaint later.' },
+  blink: { slot: 'move', name: 'Phase Step', cd: 5, desc: 'Teleport forward and stun everything where you land.', up: 'Longer step, bigger stun', fl: 'Leaves a smell like a burnt toaster.' },
+  leap: { slot: 'move', name: 'Boot Rockets', cd: 6, desc: 'Blast off into the air and knock back anything near you.', up: 'Higher leap, bigger blast', fl: 'Not rated for indoor use.' },
+  phase: { slot: 'sec', name: 'Long Nail', cd: 3, dmg: 45, desc: 'A heavy slug that pierces everything and hits harder for each body it goes through.', up: '+30% damage', fl: 'One bullet. Very committed.' },
+  frag: { slot: 'sec', name: 'Bouncy Frag', cd: 5, dmg: 80, desc: 'A grenade that bounces once, then goes off.', up: '+30% damage and radius', fl: 'Bounces once. Then it is everyone\'s problem.' },
+  rail: { slot: 'sec', name: 'Rail Spike', cd: 6, dmg: 150, desc: 'An instant piercing beam. Headshots deal triple damage.', up: '+30% damage', fl: 'You aim for the head. It aims for the horizon.' },
+  shock: { slot: 'util', name: 'Ground Fault', cd: 8, dmg: 25, desc: 'Stun everything within 9m for 2 seconds.', up: 'Longer stun, wider field', fl: 'Every lineman\'s favourite accident.' },
+  turret: { slot: 'util', name: 'Deploy Gary', cd: 14, dmg: 9, desc: 'Drop Gary, an auto-turret, who shoots nearby enemies for 12 seconds.', up: 'Gary stays longer and hits harder', fl: 'Gary doesn\'t talk. Gary just helps.' },
+  shield: { slot: 'util', name: 'Hard Hat', cd: 12, desc: 'Gain an overshield worth half your max health for 6 seconds.', up: 'Bigger shield', fl: 'Safety first. Safety also second.' },
+  suppress: { slot: 'spec', name: 'Mag Dump', cd: 9, dmg: 20, desc: 'Fire 8 fast stunning shots where you aim.', up: '+3 shots', fl: 'Eight bullets, zero patience.' },
+  orbital: { slot: 'spec', name: 'Call It In', cd: 16, dmg: 260, desc: 'Mark a spot. A beam from orbit hits it a second later.', up: '+30% damage and radius', fl: 'Dot has a satellite. Don\'t ask Dot how.' },
+  overdrive: { slot: 'spec', name: 'Overdrive', cd: 18, desc: 'For 6 seconds: triple fire rate, perfect accuracy, +30% speed.', up: 'Lasts 2 seconds longer', fl: 'Voids the warranty. Worth it.' },
 };
 const PASSIVES = [
-  { id: 'dmg', name: 'Hot Rounds', base: 0.12, fmt: v => `+${Math.round(v * 100)}% damage`, apply: v => S.dmg += v },
-  { id: 'rate', name: 'Hair Trigger', base: 0.10, fmt: v => `+${Math.round(v * 100)}% fire rate`, apply: v => S.rate += v },
-  { id: 'cdr', name: 'Capacitor', base: 0.08, fmt: v => `Abilities recharge ${Math.round(v * 100)}% faster`, apply: v => S.cdr += v },
-  { id: 'speed', name: 'Servo Legs', base: 0.06, fmt: v => `+${Math.round(v * 100)}% move speed`, apply: v => S.speed += v },
-  { id: 'hp', name: 'Thick Plating', base: 20, fmt: v => `+${Math.round(v)} max HP`, apply: v => { S.maxHp += Math.round(v); G.hp += Math.round(v); } },
-  { id: 'regen', name: 'Nanites', base: 0.6, fmt: v => `+${v.toFixed(1)} HP per second`, apply: v => S.regen += v },
-  { id: 'crit', name: 'Keen Optics', base: 0.06, fmt: v => `+${Math.round(v * 100)}% crit chance`, apply: v => S.crit += v },
-  { id: 'head', name: 'Deadeye', base: 0.25, fmt: v => `+${Math.round(v * 100)}% headshot damage`, apply: v => S.headMult += v },
-  { id: 'armor', name: 'Ablative Shell', base: 5, fmt: v => `+${Math.round(v)} armor`, apply: v => S.armor += Math.round(v) },
-  { id: 'pts', name: 'Bounty Chip', base: 0.12, fmt: v => `+${Math.round(v * 100)}% points`, apply: v => S.ptsMul += v },
+  { id: 'dmg', name: 'Hot Rounds', base: 0.12, fl: 'Kept next to the coffee maker.', fmt: v => `+${Math.round(v * 100)}% damage`, apply: v => S.dmg += v },
+  { id: 'rate', name: 'Hair Trigger', base: 0.10, fl: 'Sneezing is now a firearms incident.', fmt: v => `+${Math.round(v * 100)}% fire rate`, apply: v => S.rate += v },
+  { id: 'cdr', name: 'Spare Capacitor', base: 0.08, fl: 'Pulled out of a microwave. It\'s fine.', fmt: v => `Abilities recharge ${Math.round(v * 100)}% faster`, apply: v => S.cdr += v },
+  { id: 'speed', name: 'Good Boots', base: 0.06, fl: 'Broken in by somebody else.', fmt: v => `+${Math.round(v * 100)}% move speed`, apply: v => S.speed += v },
+  { id: 'hp', name: 'Second Vest', base: 20, fl: 'Nobody said you couldn\'t wear two.', fmt: v => `+${Math.round(v)} max HP`, apply: v => { S.maxHp += Math.round(v); G.hp += Math.round(v); } },
+  { id: 'regen', name: 'Thermos of Soup', base: 0.6, fl: 'Dot\'s recipe. Do not ask what\'s in it.', fmt: v => `+${v.toFixed(1)} HP per second`, apply: v => S.regen += v },
+  { id: 'crit', name: 'Clean Glasses', base: 0.06, fl: 'Turns out you could see the whole time.', fmt: v => `+${Math.round(v * 100)}% crit chance`, apply: v => S.crit += v },
+  { id: 'head', name: 'Visor Hunter', base: 0.25, fl: 'The glowy bit is the soft bit.', fmt: v => `+${Math.round(v * 100)}% headshot damage`, apply: v => S.headMult += v },
+  { id: 'armor', name: 'Duct Tape', base: 5, fl: 'It holds the island together. Why not you?', fmt: v => `+${Math.round(v)} armor`, apply: v => S.armor += Math.round(v) },
+  { id: 'pts', name: 'Overtime', base: 0.12, fl: 'Time and a half for hazardous conditions.', fmt: v => `+${Math.round(v * 100)}% points`, apply: v => S.ptsMul += v },
 ];
 const ITEMS = [
-  { id: 'spring', name: 'Spring Coil', r: 2, desc: '+1 mid-air jump', apply: () => S.jumps++ },
-  { id: 'static', name: 'Static Charm', r: 2, desc: '10% chance on hit to chain lightning', apply: () => S.staticP += 0.1 },
-  { id: 'ember', name: 'Ember Core', r: 2, desc: 'Kills explode for 40 damage', apply: () => S.ember++ },
-  { id: 'leech', name: 'Leech Gland', r: 1, desc: 'Heal 0.6 HP on hit', apply: () => S.leech += 0.6 },
-  { id: 'lens', name: 'Cracked Lens', r: 1, desc: '+8% crit chance', apply: () => S.crit += 0.08 },
-  { id: 'heart', name: 'Spare Heart', r: 1, desc: '+30 max HP', apply: () => { S.maxHp += 30; G.hp += 30; } },
-  { id: 'treads', name: 'Jet Treads', r: 1, desc: '+10% move speed', apply: () => S.speed += 0.1 },
-  { id: 'chip', name: 'Trigger Chip', r: 1, desc: '+12% fire rate', apply: () => S.rate += 0.12 },
-  { id: 'cap', name: 'Spare Cell', r: 2, desc: 'Abilities recharge 12% faster', apply: () => S.cdr += 0.12 },
-  { id: 'warhead', name: 'Volatile Warhead', r: 3, desc: 'Crits explode for 60% damage', apply: () => S.warhead++ },
-  { id: 'barrel', name: 'Split Barrel', r: 3, desc: 'Primary fires +1 bullet', apply: () => S.pellets++ },
-  { id: 'scope', name: 'Hunter Scope', r: 2, desc: '+40% damage while zoomed', apply: () => S.zoomDmg += 0.4 },
-  { id: 'dud', name: 'Rubber Duck', r: 0, desc: 'It squeaks. That is all.', apply: () => {} },
+  { id: 'spring', name: 'Mattress Spring', r: 2, desc: '+1 mid-air jump', fl: 'Don\'t think about where it came from.', apply: () => S.jumps++ },
+  { id: 'static', name: 'Wool Sock', r: 2, desc: '10% chance on hit to chain lightning', fl: 'Rubbed on the carpet for an hour.', apply: () => S.staticP += 0.1 },
+  { id: 'ember', name: 'Ember Core', r: 2, desc: 'Kills explode for 40 damage', fl: 'Warm to the touch. Very warm.', apply: () => S.ember++ },
+  { id: 'leech', name: 'Leech in a Jar', r: 1, desc: 'Heal 0.6 HP on hit', fl: 'His name is Lenny.', apply: () => S.leech += 0.6 },
+  { id: 'lens', name: 'Cracked Lens', r: 1, desc: '+8% crit chance', fl: 'Somehow better than the uncracked one.', apply: () => S.crit += 0.08 },
+  { id: 'heart', name: 'Spare Heart', r: 1, desc: '+30 max HP', fl: 'Still under warranty.', apply: () => { S.maxHp += 30; G.hp += 30; } },
+  { id: 'treads', name: 'Squeaky Treads', r: 1, desc: '+10% move speed', fl: 'Loud on tile. Fast everywhere.', apply: () => S.speed += 0.1 },
+  { id: 'chip', name: 'Trigger Chip', r: 1, desc: '+12% fire rate', fl: 'Overclocked by a teenager.', apply: () => S.rate += 0.12 },
+  { id: 'cap', name: 'AA Battery', r: 2, desc: 'Abilities recharge 12% faster', fl: 'Says DO NOT RECHARGE. You recharged it.', apply: () => S.cdr += 0.12 },
+  { id: 'warhead', name: 'Volatile Warhead', r: 3, desc: 'Crits explode for 60% damage', fl: 'Handle with oven mitts.', apply: () => S.warhead++ },
+  { id: 'barrel', name: 'Split Barrel', r: 3, desc: 'Primary fires +1 bullet', fl: 'Two holes are better than one.', apply: () => S.pellets++ },
+  { id: 'scope', name: 'Birdwatching Scope', r: 2, desc: '+40% damage while zoomed', fl: 'You will never see a bird out here.', apply: () => S.zoomDmg += 0.4 },
+  { id: 'dud', name: 'Rubber Duck', r: 0, desc: 'It squeaks. That is all.', fl: 'That is all.', apply: () => duckCheck() },
 ];
 const PERKS = [
-  { id: 'iron', name: 'Ironhide', cost: 2000, color: 0xff3d6e, desc: '+60 max HP and +5 armor', apply: () => { S.maxHp += 60; G.hp += 60; S.armor += 5; } },
-  { id: 'quick', name: 'Quickhands', cost: 2500, color: 0x4ff3ff, desc: '+25% fire rate, abilities recharge 15% faster', apply: () => { S.rate += 0.25; S.cdr += 0.15; } },
-  { id: 'fleet', name: 'Fleetfoot', cost: 1500, color: 0x5ef08a, desc: '+15% speed and +1 mid-air jump', apply: () => { S.speed += 0.15; S.jumps++; } },
-  { id: 'stand', name: 'Last Stand', cost: 3000, color: 0xffd23f, desc: 'Revive once at half HP', apply: () => { S.revives++; }, rebuy: true },
+  { id: 'iron', name: 'Big Lunch', cost: 2000, color: 0xff3d6e, desc: '+60 max HP and +5 armor', fl: 'Two sandwiches. Technically one big one.', apply: () => { S.maxHp += 60; G.hp += 60; S.armor += 5; } },
+  { id: 'quick', name: 'Jitter Cola', cost: 2500, color: 0x4ff3ff, desc: '+25% fire rate, abilities recharge 15% faster', fl: 'Now with 40% more jitter.', apply: () => { S.rate += 0.25; S.cdr += 0.15; } },
+  { id: 'fleet', name: 'Hop Soda', cost: 1500, color: 0x5ef08a, desc: '+15% speed and +1 mid-air jump', fl: 'Tastes like grape and bad decisions.', apply: () => { S.speed += 0.15; S.jumps++; } },
+  { id: 'stand', name: 'Second Shift', cost: 3000, color: 0xffd23f, desc: 'Get back up once at half HP', fl: 'You are not clocking out yet.', apply: () => { S.revives++; }, rebuy: true },
 ];
 const POWERUPS = {
-  double: { name: 'Double Points', color: '#ffd23f', hex: 0xffd23f, dur: 20 },
-  oneshot: { name: 'One Shot', color: '#ff3b3b', hex: 0xff3b3b, dur: 15 },
-  wipe: { name: 'Wipe', color: '#ffffff', hex: 0xffffff, dur: 0 },
-  refill: { name: 'Recharge', color: '#4ff3ff', hex: 0x4ff3ff, dur: 0 },
+  double: { name: 'Double Time', color: '#ffd23f', hex: 0xffd23f, dur: 20, sub: 'every point counts twice' },
+  oneshot: { name: 'Brittle', color: '#ff3b3b', hex: 0xff3b3b, dur: 15, sub: 'everything dies in one hit' },
+  wipe: { name: 'Blackout', color: '#ffffff', hex: 0xffffff, dur: 0, sub: 'lights out for all of them' },
+  refill: { name: 'Full Battery', color: '#4ff3ff', hex: 0x4ff3ff, dur: 0, sub: 'every ability is ready' },
 };
 
 const ETYPES = {
   grunt: { name: 'Husk', hp: 30, speed: 3.6, dmg: 12, r: 0.8, h: 1.6, yoff: 0.8, pts: 60, color: 0xff4040, cap: 200, geo: () => new THREE.BoxGeometry(1.4, 1.6, 1.4) },
   runner: { name: 'Skitter', hp: 16, speed: 7.5, dmg: 8, r: 0.55, h: 1.2, yoff: 0.65, pts: 50, color: 0xff9a2e, cap: 150, geo: () => flatGeo(new THREE.ConeGeometry(0.7, 1.4, 4)) },
-  brute: { name: 'Brute', hp: 220, speed: 2.8, dmg: 25, r: 1.5, h: 3, yoff: 1.5, pts: 150, color: 0xff2e9a, cap: 40, geo: () => new THREE.DodecahedronGeometry(1.5, 0) },
-  spitter: { name: 'Spitter', hp: 45, speed: 3.2, dmg: 10, r: 0.85, h: 1.8, yoff: 1.7, pts: 90, color: 0xb04dff, cap: 50, ranged: true, geo: () => new THREE.OctahedronGeometry(0.95, 0) },
+  brute: { name: 'Lugnut', hp: 220, speed: 2.8, dmg: 25, r: 1.5, h: 3, yoff: 1.5, pts: 150, color: 0xff2e9a, cap: 40, geo: () => new THREE.DodecahedronGeometry(1.5, 0) },
+  spitter: { name: 'Gargler', hp: 45, speed: 3.2, dmg: 10, r: 0.85, h: 1.8, yoff: 1.7, pts: 90, color: 0xb04dff, cap: 50, ranged: true, geo: () => new THREE.OctahedronGeometry(0.95, 0) },
   boss: { name: 'Voltmaw', hp: 9000, speed: 3.8, dmg: 30, r: 4.2, h: 8, yoff: 4.4, pts: 2000, color: 0x9a3cff, cap: 1 },
 };
 const meshes = {};
@@ -546,6 +565,15 @@ const heroParts = {};
   const visor = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.1, 0.04), glow); visor.position.set(0, 1.0, -0.19);
   const hips = new THREE.Mesh(new THREE.BoxGeometry(0.56, 0.18, 0.32), dark); hips.position.y = 0.02;
   heroBody.add(torso, vest, pack, packGlow, head, visor, hips);
+  const antenna = new THREE.Mesh(new THREE.BoxGeometry(0.025, 0.55, 0.025), dark); antenna.position.set(0.15, 0.92, 0.3); antenna.rotation.x = 0.18;
+  const tip = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.06), new THREE.MeshBasicMaterial({ color: 0xff3b3b })); tip.position.set(0.15, 1.2, 0.35);
+  heroBody.add(antenna, tip); heroParts.tip = tip;
+  const yellow = new THREE.MeshLambertMaterial({ color: 0xffd23f });
+  const duck = new THREE.Group();
+  const db = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.15, 0.32), yellow); db.position.y = 0;
+  const dh = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.15, 0.15), yellow); dh.position.set(0, 0.13, -0.1);
+  const bk = new THREE.Mesh(new THREE.BoxGeometry(0.09, 0.04, 0.09), accent); bk.position.set(0, 0.11, -0.21);
+  duck.add(db, dh, bk); duck.position.y = 1.24; duck.visible = false; heroBody.add(duck); heroParts.duck = duck;
   const mkLeg = sx => { const g = new THREE.Group(); g.position.set(sx, 0, 0); const l = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.9, 0.24), dark); l.position.y = -0.45; const boot = new THREE.Mesh(new THREE.BoxGeometry(0.24, 0.14, 0.34), accent); boot.position.set(0, -0.88, -0.04); g.add(l, boot); heroBody.add(g); return g; };
   heroParts.legL = mkLeg(-0.16); heroParts.legR = mkLeg(0.16);
   const mkArm = sx => {
@@ -596,6 +624,64 @@ function placeStation(st, x, z) {
 })();
 const CRATE_SPOTS = [[9, -9], [-40, -30], [45, 35], [-25, 50], [55, -40], [0, 62]];
 
+// ---------------------------------------------------------------- hand-painted signs
+// Drawn on canvases in the marker font; redrawn once the font arrives.
+const signs = [];
+function paintSign(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h;
+  const tex = new THREE.CanvasTexture(c); tex.colorSpace = THREE.SRGBColorSpace; tex.anisotropy = 4;
+  const sg = { c, tex, draw: () => { const x = c.getContext('2d'); x.clearRect(0, 0, w, h); draw(x, w, h); tex.needsUpdate = true; } };
+  sg.draw(); signs.push(sg); return tex;
+}
+if (document.fonts && document.fonts.load) document.fonts.load('40px "Permanent Marker"').then(() => signs.forEach(sg => sg.draw())).catch(() => {});
+const HAND = '"Permanent Marker", "Comic Sans MS", cursive';
+function stationLabel(text, color) {
+  const tex = paintSign(512, 128, (x, w, h) => {
+    x.save(); x.translate(w / 2, h / 2); x.rotate(-0.03 + Math.random() * 0.02);
+    x.fillStyle = 'rgba(18,9,32,.82)'; x.fillRect(-w / 2 + 14, -h / 2 + 18, w - 28, h - 36);
+    x.font = `52px ${HAND}`; x.textAlign = 'center'; x.textBaseline = 'middle';
+    x.fillStyle = color; x.fillText(text, 0, 4);
+    x.restore();
+  });
+  const sp = new THREE.Sprite(new THREE.SpriteMaterial({ map: tex, transparent: true, depthWrite: false }));
+  sp.scale.set(3.2, 0.8, 1); return sp;
+}
+stations.forEach(st => {
+  const name = st.kind === 'perk' ? st.perk.name : st.kind === 'crate' ? 'Mystery Crate' : 'Calibrator';
+  const col = st.kind === 'perk' ? '#' + new THREE.Color(st.perk.color).getHexString() : st.kind === 'crate' ? '#c86bff' : '#ff9a3d';
+  const sp = stationLabel(name, col); sp.position.y = (st.kind === 'perk' ? 2.2 : st.kind === 'crate' ? 1.0 : 1.4) + 1.1; st.mesh.add(sp);
+});
+(function spawnSign() {
+  const tex = paintSign(512, 256, (x, w, h) => {
+    x.fillStyle = '#e9dcc0'; x.fillRect(0, 0, w, h);
+    x.fillStyle = 'rgba(80,50,30,.08)'; for (let i = 0; i < 9; i++) x.fillRect(0, i * 29 + 6, w, 2);
+    x.textAlign = 'center'; x.fillStyle = '#2a1a2e';
+    x.font = `44px ${HAND}`; x.fillText('SUBSTATION 9', w / 2, 66);
+    x.font = `30px ${HAND}`; x.fillText('DAYS WITHOUT', w / 2 + 34, 140); x.fillText('AN INCIDENT', w / 2 + 34, 182);
+    x.fillStyle = '#d0262f'; x.font = `110px ${HAND}`; x.fillText('0', 96, 196);
+    x.strokeStyle = '#2a1a2e'; x.lineWidth = 3; x.beginPath(); x.moveTo(60, 214); x.lineTo(135, 208); x.stroke(); // where the old numbers were wiped off
+  });
+  const g = new THREE.Group();
+  const wood = new THREE.MeshLambertMaterial({ color: 0x5a3b2e });
+  for (const sx of [-1.15, 1.15]) { const p = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.6, 0.14), wood); p.position.set(sx, 1.3, 0); g.add(p); }
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(2.8, 1.4), new THREE.MeshLambertMaterial({ map: tex, side: THREE.DoubleSide }));
+  board.position.set(0, 1.95, 0.08); board.rotation.z = 0.035; g.add(board);
+  const x = -6.5, z = -7; g.position.set(x, groundY(x, z) - 0.1, z); g.rotation.y = Math.atan2(0 - x, 4 - z); scene.add(g);
+})();
+// Somebody left a radio on the tallest pillar. Shoot it.
+const lostRadio = (function () {
+  const top = rocks.reduce((a, b) => (b.top > a.top ? b : a), rocks[0]);
+  const g = new THREE.Group();
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.62, 0.38, 0.24), new THREE.MeshLambertMaterial({ color: 0xd9822b }));
+  const grille = new THREE.Mesh(new THREE.BoxGeometry(0.3, 0.26, 0.02), new THREE.MeshLambertMaterial({ color: 0x2a2140 })); grille.position.set(-0.12, 0, 0.13);
+  const ant = new THREE.Mesh(new THREE.BoxGeometry(0.02, 0.7, 0.02), new THREE.MeshLambertMaterial({ color: 0xcccccc })); ant.position.set(0.22, 0.5, 0); ant.rotation.z = -0.35;
+  const led = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, 0.02), new THREE.MeshBasicMaterial({ color: 0xff3b3b })); led.position.set(0.16, 0.06, 0.13);
+  g.add(box, grille, ant, led);
+  const px = top.x + top.r * 0.3, pz = top.z - top.r * 0.2;
+  g.position.set(px, top.top + 0.19, pz); g.rotation.y = 0.7; scene.add(g);
+  return { g, led, x: px, y: top.top + 0.19, z: pz };
+})();
+
 // ---------------------------------------------------------------- run state
 let G = null, S = null;
 const enemies = [], ebolts = [], parts = [], projs = [], dmgPool = [], turrets = [], drops = [];
@@ -616,8 +702,9 @@ function newRun() {
     slots: { move: { id: 'roll', L: 1, cd: 0 }, sec: { id: 'phase', L: 1, cd: 0 }, util: { id: 'shock', L: 1, cd: 0 }, spec: { id: 'suppress', L: 1, cd: 0 } },
     burst: 0, burstT: 0, items: {}, perks: {},
     boss: null, shake: 0, hitstop: 0, hurtFlash: 0, leechCD: 0, dmgDealt: 0, powers: {}, hitmT: 0,
-    orbital: null,
+    orbital: null, special: null, lastHit: 'something', said: {}, lowSaid: false, radioFound: false,
   };
+  heroParts.duck.visible = false; lostRadio.led.material.color.set(0xff3b3b);
   const crate = stations.find(s => s.kind === 'crate'); crate.uses = 0; placeStation(crate, 9, -9);
   tele.visible = false; bossMesh.visible = false;
   buildAbilityBar(); refreshLoadout();
@@ -725,63 +812,137 @@ function keyGrid() {
     <div><kbd>Esc / P</kbd>Pause</div><div><kbd>M</kbd>Mute sound</div>
   </div>`;
 }
+function titleQuip(m) {
+  const r = m.runs || 0, best = `Best: round ${m.best || 0} · ${r} ${r === 1 ? 'shift' : 'shifts'}`;
+  if (!r) return 'First shift. Dot says hi. Shoot the glowing visors.';
+  if (m.wins) return `${best} · Voltmaw down ×${m.wins}. Dot framed the photo.`;
+  if (r === 1) return `${best} · You came back. Most don't.`;
+  if (r >= 25) return `${best} · Dot has stopped counting. Dot has not stopped counting.`;
+  if (r >= 10) return `${best} · Ten shifts in. Dot got you a mug.`;
+  return best;
+}
 function showTitle() {
-  const m = store.get();
   showSiteCorner(true);
+  const m = store.get();
   screen.hidden = false;
   screen.innerHTML = `<div class="panel">
-    <h1 class="logo">OVERCHARGE</h1>
-    <p class="tag">Hold the island round after round. Aim for the glowing visors, spend points on perks and crates, and rebuild your kit between rounds. Voltmaw arrives on round ${BOSS_ROUND}.</p>
-    <button class="btn" id="go">Drop in</button>
+    <div class="logo-wrap"><h1 class="logo">OVERCHARGE</h1><span class="scrawl">substation 9</span></div>
+    <p class="tag">The power plant went dark and things started climbing out of the ground. You're the new hire. Hold the island round after round, spend your points on snacks and crates, and keep your head down until Voltmaw shows up on round ${BOSS_ROUND}.</p>
+    <button class="btn" id="go">Clock in</button>
     ${keyGrid()}
-    <p class="note">${m.runs ? `Best: round ${m.best || 0} · ${m.runs} ${m.runs === 1 ? 'run' : 'runs'}` : 'Headshots deal bonus damage. Points come from every hit and kill.'}</p>
-  </div>`;
+    <p class="note">${titleQuip(m)}</p>
+  </div>
+  <span class="ver">v0.3 · the duck update</span>`;
   $('go').onclick = startRun;
 }
 function startRun() {
-  initAudio(); newRun(); showSiteCorner(false);
+  showSiteCorner(false);
+  initAudio(); newRun();
   screen.hidden = true; $('hud').hidden = false; $('draft').hidden = true; $('bossbar').hidden = true;
   state = 'play'; music.on = true;
   requestLock();
-  banner('GET READY', 'buy stations glow on the radar', 2.5);
+  banner('CLOCKED IN', 'shops are the diamonds on your radar', 2.5);
+  dot(pickLine('start'), 1.2);
 }
 function pause() {
   if (state !== 'play') return;
+  showSiteCorner(true);
   state = 'paused'; G.firing = G.zoom = false;
   screen.hidden = false;
-  showSiteCorner(true);
-  screen.innerHTML = `<div class="panel"><p class="big">PAUSED</p><div class="btns"><button class="btn" id="res">Resume</button><button class="btn alt" id="quit">Abandon run</button></div>${keyGrid()}</div>`;
+  screen.innerHTML = `<div class="panel"><p class="big">ON BREAK</p><p class="note">Dot is holding your coffee.</p><div class="btns"><button class="btn" id="res">Back to work</button><button class="btn alt" id="quit">Quit this shift</button></div>${keyGrid()}</div>`;
   $('res').onclick = resume;
   $('quit').onclick = () => { state = 'play'; die(true); };
 }
 function resume() { if (state !== 'paused') return; showSiteCorner(false); screen.hidden = true; state = 'play'; initAudio(); requestLock(); }
 function fmtTime(t) { t = Math.floor(t); return `${Math.floor(t / 60)}:${String(t % 60).padStart(2, '0')}`; }
+function deathLine(abandon) {
+  const n = G.round;
+  if (abandon) return 'Dot will mark it as a long lunch.';
+  if (n <= 2) return 'Rough first day. Happens to everyone. Mostly.';
+  if (n <= 5) return 'You lasted longer than the last guy.';
+  if (n < BOSS_ROUND) return 'So close to meeting Voltmaw. Next time.';
+  if (G.said.bossDown) return 'You beat the big one. Nobody can take that away.';
+  return 'Voltmaw sends its regards.';
+}
 function die(abandon) {
   if (S.revives > 0 && !abandon) {
     S.revives--; G.hp = S.maxHp * 0.5; G.iframes = 2.5;
     shockwave(G.pos.x, G.pos.y, G.pos.z, 14, 200, 3, 0xffd23f);
-    banner('LAST STAND', 'back on your feet', 2); SFX.draft(); refreshLoadout();
+    banner('SECOND SHIFT', 'back on your feet', 2); SFX.draft(); refreshLoadout(); dot(DOT.revive, 0.8);
     return;
   }
-  state = 'dead'; music.on = false;
+  state = 'dead'; showSiteCorner(true); music.on = false;
+  clearTimeout(bannerTimer); $('banner').style.opacity = 0; $('radio').classList.remove('on');
   if (document.pointerLockElement) document.exitPointerLock();
   const m = store.get();
   const newBest = G.round > (m.best || 0);
   m.best = Math.max(m.best || 0, G.round); m.runs = (m.runs || 0) + 1; store.set(m);
   screen.hidden = false;
   screen.innerHTML = `<div class="panel">
-    <p class="big" style="color:var(--hp)">${abandon ? 'RUN ABANDONED' : 'OVERRUN'}</p>
-    <p class="tag">You reached round ${G.round}. ${newBest && !abandon ? 'That is a new best.' : `Your best is round ${m.best}.`}</p>
+    <p class="big" style="color:var(--hp)">${abandon ? 'CLOCKED OUT' : 'OVERRUN'}</p>
+    ${abandon ? '' : `<p class="cause">Got by ${G.lastHit} on round ${G.round}.</p>`}
+    <p class="tag">${deathLine(abandon)} ${newBest && !abandon ? 'That is a new best.' : `Your best is round ${m.best}.`}</p>
     <div class="statgrid">
       <div><b>${G.round}</b><span>Round</span></div><div><b>${G.kills}</b><span>Kills</span></div>
       <div><b>${G.heads}</b><span>Headshot kills</span></div><div><b>${fmtTime(G.t)}</b><span>Time</span></div>
-      <div><b>${Math.round(G.dmgDealt / 1000)}k</b><span>Damage</span></div>
+      <div><b>${G.dmgDealt < 1000 ? Math.round(G.dmgDealt) : Math.round(G.dmgDealt / 1000) + 'k'}</b><span>Damage</span></div>
     </div>
-    <div class="btns"><button class="btn" id="again">Run it back</button><button class="btn alt" id="menu">Title</button></div>
+    <div class="btns"><button class="btn" id="again">Next shift</button><button class="btn alt" id="menu">Title</button></div>
     <p class="note">Press R to restart.</p>
   </div>`;
-  showSiteCorner(true);
   $('again').onclick = startRun; $('menu').onclick = () => { $('hud').hidden = true; showTitle(); state = 'title'; };
+}
+
+// ---------------------------------------------------------------- Dot, the dispatcher
+// Dot runs the substation from somewhere warm and talks to you over the radio.
+const DOT = {
+  start: ["Morning, new hire. The island's yours until something eats you.", "Grid's down again. Go stand on it and shoot things.", "Same as yesterday. Glowy bit on the face, that's the bit you shoot.", "Coffee's on. Try to be alive when it's ready."],
+  rounds: {
+    1: "They climb up out of the dirt. Aim for the visors.",
+    2: "That was the easy one, I'm told.",
+    3: "Skitters now. Small, fast, rude.",
+    4: "Something out there is gargling. Keep moving.",
+    6: "Lugnuts. Big ones. Shoot them a lot.",
+    9: "Readings are... loud. Something big is warming up under the island.",
+    11: "You're on overtime now. Nobody's been past here. Well. One guy.",
+    15: "Fifteen. I've run out of things to say. Keep going.",
+  },
+  generic: ["Another one. I'll put the kettle on.", "They're getting tougher. So is the coffee.", "Keep your back to a rock. That's what rocks are for.", "You're doing great. Statistically.", "If you see Gary, tell him he's doing great too.", "Remember to blink. With your eyes, I mean."],
+  low: ["You're leaking. Find a corner.", "Hey. Hey. Don't die. The paperwork is awful.", "That's a lot of red on my screen."],
+  crate: "That crate's older than me. No refunds.",
+  bench: "The Calibrator hums when it likes you. It doesn't like anyone.",
+  gary: "Gary's online. Say thank you to Gary.",
+  boss: "That's Voltmaw. It ate the last substation. Shoot the pink bit.",
+  bossDown: "...Wait. You did it? You DID it. I'm telling everyone. Well, Gary.",
+  revive: "Second Shift kicked in. Breathe. Then shoot.",
+  radio: "Hey, that's my radio! I've been looking for that all week.",
+  duck: "...Okay. That is not all.",
+};
+const dotLast = {};
+function pickLine(key) {
+  const arr = DOT[key]; if (!Array.isArray(arr)) return arr;
+  let l; do { l = arr[(Math.random() * arr.length) | 0]; } while (arr.length > 1 && l === dotLast[key]);
+  return dotLast[key] = l;
+}
+let dotTimer = null;
+function dot(text, delay) {
+  const run = G;
+  setTimeout(() => {
+    if (G !== run || state === 'dead' || state === 'title') return;
+    $('radioText').textContent = text; $('radio').classList.add('on'); SFX.chirp();
+    clearTimeout(dotTimer); dotTimer = setTimeout(() => $('radio').classList.remove('on'), 2200 + text.length * 45);
+  }, (delay || 0) * 1000);
+}
+function dotOnce(key, delay) { if (G.said[key]) return; G.said[key] = true; dot(pickLine(key), delay); }
+const article = n => (/^[aeiou]/i.test(n) ? 'an ' : 'a ') + n;
+function srcName(e) { return e.type === 'boss' ? 'Voltmaw' : e.elite ? `an elite ${e.def.name}` : article(e.def.name); }
+function duckCheck() {
+  const n = G.items.dud || 0; SFX.squeak();
+  if (n === 3) {
+    heroParts.duck.visible = true; S.ptsMul += 0.3; S.crit += 0.1;
+    setTimeout(() => toast('<b>Duck Hat</b> · +30% points, +10% crit<i>Three ducks make a hat. Everyone knows that.</i>', '#ffd23f'), 900);
+    dot(DOT.duck, 0.6);
+  } else if (n > 3) S.ptsMul += 0.05;
 }
 
 // ---------------------------------------------------------------- HUD helpers
@@ -800,6 +961,7 @@ function refreshLoadout() {
   if (S.benchTier) chips.push(`<span class="chip" style="--c:#ff9a3d">Pistols <b>Mk ${S.benchTier + 1}</b></span>`);
   for (const k in G.perks) { const p = PERKS.find(x => x.id === k); chips.push(`<span class="chip" style="--c:#${new THREE.Color(p.color).getHexString()}">${p.name}${k === 'stand' ? ` <b>×${S.revives}</b>` : ''}</span>`); }
   for (const [k, n] of Object.entries(G.items)) { const it = ITEMS.find(i => i.id === k); chips.push(`<span class="chip" style="--c:${RARITY[it.r].color}">${it.name}${n > 1 ? ` <b>×${n}</b>` : ''}</span>`); }
+  if (heroParts.duck.visible) chips.unshift('<span class="chip" style="--c:#ffd23f">Duck Hat</span>');
   $('loadout').innerHTML = chips.join('');
 }
 const abEls = {};
@@ -854,9 +1016,16 @@ function nearestEnemy(x, z, maxR, exclude) {
 function roundSize(n) { return Math.floor(6 + n * 4 + n * n * 0.6); }
 function hpMult() { const n = G.round; return 1 + (n - 1) * 0.32 + Math.max(0, n - 8) ** 2 * 0.06; }
 function startRound() {
-  G.round++; G.phase = 'fight'; G.toSpawn = roundSize(G.round); G.spawnAcc = 0;
+  G.round++; G.phase = 'fight'; G.toSpawn = roundSize(G.round); G.spawnAcc = 0; G.lowSaid = false;
+  // a couple of hand-picked rounds break the pattern
+  G.special = G.round === 5 ? 'rush' : G.round === 13 ? 'thirteen' : null;
   if (G.round % BOSS_ROUND === 0) { G.toSpawn = Math.floor(G.toSpawn * 0.5); spawnBoss(); }
-  else banner(`ROUND ${G.round}`, G.round === 1 ? 'aim for the visors' : '', 2.2);
+  else if (G.special === 'rush') { G.toSpawn = Math.floor(G.toSpawn * 1.3); banner('SKITTER RUSH', "round 5 · it's all legs", 2.6); dot("Oh no. It's the leggy ones. All of them.", 0.8); }
+  else if (G.special === 'thirteen') { banner('ROUND 13', 'unlucky. lots of elites.', 2.6); dot("Thirteen. I don't like thirteen.", 0.8); }
+  else {
+    banner(`ROUND ${G.round}`, G.round === 1 ? 'aim for the visors' : '', 2.2);
+    if (DOT.rounds[G.round]) dot(DOT.rounds[G.round], 1); else if (Math.random() < 0.45) dot(pickLine('generic'), 1.5);
+  }
   SFX.roundStart();
 }
 function endRound() {
@@ -883,6 +1052,7 @@ function spawnPoint(minD, maxD) {
   return [G.pos.x + rand(-1, 1) * maxD, G.pos.z + rand(-1, 1) * maxD];
 }
 function pickType() {
+  if (G.special === 'rush') return 'runner';
   const n = G.round, w = [['grunt', 10], ['runner', n >= 3 ? 3 + n * 0.6 : 0], ['spitter', n >= 4 ? 1.5 + n * 0.25 : 0], ['brute', n >= 6 ? 0.8 + n * 0.15 : 0]];
   let tot = w.reduce((s, x) => s + x[1], 0), r = Math.random() * tot;
   for (const [k, v] of w) { r -= v; if (r <= 0) return k; }
@@ -902,7 +1072,7 @@ function updateRounds(dt) {
     if (enemies.length >= maxAlive) { G.spawnAcc = 1; break; }
     G.spawnAcc -= 1; G.toSpawn--;
     const [x, z] = spawnPoint(20, 38);
-    spawnEnemy(pickType(), x, z, n >= 4 && Math.random() < Math.min(0.15, 0.02 + n * 0.008));
+    spawnEnemy(pickType(), x, z, n >= 4 && Math.random() < (G.special === 'thirteen' ? 0.35 : Math.min(0.15, 0.02 + n * 0.008)));
   }
   if (G.toSpawn <= 0 && enemies.length === 0) endRound();
 }
@@ -912,6 +1082,7 @@ function spawnBoss() {
   e.hp = e.maxHp = ETYPES.boss.hp * (G.round / BOSS_ROUND); e.atk = 4; e.slamT = 0; e.ringT = 3; e.rise = 0; e.y = groundY(x, z);
   G.boss = e; bossMesh.visible = true; $('bossbar').hidden = false;
   banner(`ROUND ${G.round}: VOLTMAW`, 'shoot the glowing core', 3); SFX.roar(); G.shake = 0.6;
+  if (G.round === BOSS_ROUND) dot(DOT.boss, 2.5);
 }
 
 // ---------------------------------------------------------------- combat
@@ -942,21 +1113,24 @@ function killEnemy(e, head) {
   if (head) G.heads++;
   if (e.type === 'boss') {
     G.boss = null; bossMesh.visible = false; $('bossbar').hidden = true; tele.visible = false;
-    G.hitstop = 0.4; G.shake = 1.2; SFX.slam(); banner('VOLTMAW FALLS', 'the run goes on. so do they.', 3);
+    G.hitstop = 0.4; G.shake = 1.2; SFX.slam(); banner('VOLTMAW FALLS', 'the shift goes on. so do they.', 3); dotOnce('bossDown', 2);
     const m = store.get(); m.wins = (m.wins || 0) + 1; store.set(m);
     return;
   }
   if (Math.random() < (e.elite ? 0.3 : 0.025) && drops.length < 2) spawnDrop(e.x, e.z);
   if (e.elite) { G.hitstop = Math.max(G.hitstop, 0.05); G.shake = Math.max(G.shake, 0.15); }
   if (S.ember > 0) explode(e.x, y, e.z, 2.6 + S.ember * 0.5, 40 * S.ember, 0xff5a3c, true);
+  if (G.items.dud && Math.random() < 0.12) SFX.squeak();
 }
-function damagePlayer(d) {
+function damagePlayer(d, src) {
   if (G.iframes > 0 || G.roll > 0 || state !== 'play') return;
+  if (src) G.lastHit = src;
   const red = S.armor / (S.armor + 40);
   let dmg = d * (1 + (G.round - 1) * 0.07) * (1 - red);
   if (G.shield > 0) { const a = Math.min(G.shield, dmg); G.shield -= a; dmg -= a; }
   G.hp -= dmg; G.iframes = 0.45; G.hurtFlash = 1; G.shake = Math.max(G.shake, 0.25); G.hitstop = Math.max(G.hitstop, 0.04);
   SFX.hurt();
+  if (G.hp > 0 && G.hp < S.maxHp * 0.3 && !G.lowSaid) { G.lowSaid = true; dot(pickLine('low')); }
   if (G.hp <= 0) die(false);
 }
 function explode(x, y, z, r, dmg, color, proc) {
@@ -1040,6 +1214,14 @@ function fireShot(dmg, spread, color, opts) {
     if (res.head) SFX.head(); else SFX.hit();
     burst(hitP.x, hitP.y, hitP.z, res.head ? 6 : 3, res.head ? '#ffd23f' : '#ffffff', 4);
   } else if (res.t < 140) burst(hitP.x, hitP.y, hitP.z, 3, '#c9b6e8', 3);
+  if (!G.radioFound) {
+    const lx = lostRadio.x - ray.o.x, ly = lostRadio.y - ray.o.y, lz = lostRadio.z - ray.o.z, tc = lx * ray.d.x + ly * ray.d.y + lz * ray.d.z;
+    if (tc > 0 && tc < res.t + 1 && lx * lx + ly * ly + lz * lz - tc * tc < 0.5 * 0.5) {
+      G.radioFound = true; lostRadio.led.material.color.set(0x5ef08a);
+      burst(lostRadio.x, lostRadio.y + 0.3, lostRadio.z, 16, '#ff9a3d', 4); SFX.radio(); addPoints(250);
+      dot(DOT.radio, 0.3);
+    }
+  }
   return res;
 }
 function primaryStats() { const t = S.benchTier; return { dmg: 12 * Math.pow(1.55, t), rate: 6.5 * S.rate * (1 + t * 0.1) }; }
@@ -1109,7 +1291,7 @@ const ABIL_FN = {
     const x = G.pos.x - Math.sin(G.yaw) * 1.5, z = G.pos.z - Math.cos(G.yaw) * 1.5, y = floorAt(x, z, G.pos.y + 1);
     g.position.set(x, y, z); scene.add(g);
     turrets.push({ mesh: g, head, x, y: y + 0.6, z, life: 12 + L * 2, cd: 0, dmg: ABILITIES.turret.dmg * up });
-    SFX.turret();
+    SFX.turret(); dotOnce('gary', 0.4);
   },
   shield(L, up) { G.shield = S.maxHp * 0.5 * up; G.shieldT = 6; SFX.shield(); shockwave(G.pos.x, G.pos.y, G.pos.z, 5, 5, 0.6, 0x4ff3ff); },
   suppress(L) { G.burst = 8 + (L - 1) * 3; G.burstT = 0; },
@@ -1140,10 +1322,11 @@ function openDraft() {
   box.innerHTML = cardChoices.map((c, i) => `<div class="card" tabindex="0" style="--c:${c.color || RARITY[c.rar].color}" data-i="${i}">
     <span class="key">${i + 1}</span>
     <span class="rar">${c.rarLabel || RARITY[c.rar].name}</span><span class="kind">${c.kind}</span>
-    <h3>${c.title}</h3><p>${c.desc}</p><div class="delta">${c.delta || ''}</div></div>`).join('');
+    <h3>${c.title}</h3><p>${c.desc}</p>${c.fl ? `<p class="fl">${c.fl}</p>` : ''}<div class="delta">${c.delta || ''}</div></div>`).join('');
   box.querySelectorAll('.card').forEach(el => { el.onclick = () => pickCard(+el.dataset.i); el.onkeydown = ev => { if (ev.key === 'Enter') pickCard(+el.dataset.i); }; });
   $('draft').hidden = false;
 }
+const TUNE_FL = ['Tightened a screw.', 'Hit it with a wrench until it got better.', 'Read the manual this time.', 'Dot talked you through it.', 'Blew the dust out.'];
 function buildChoices() {
   const opts = [];
   for (const s in SLOTS) {
@@ -1164,22 +1347,22 @@ function buildChoices() {
   return picks.map(o => {
     if (o.type === 'pas') {
       const rar = rollRarity(0), v = o.p.base * RARITY[rar].mult;
-      return { rar, kind: 'Stat upgrade', title: o.p.name, desc: o.p.fmt(v), apply: () => o.p.apply(v) };
+      return { rar, kind: 'Stat upgrade', title: o.p.name, desc: o.p.fmt(v), fl: o.p.fl, apply: () => o.p.apply(v) };
     }
     const slot = SLOTS[o.s];
     if (o.type === 'tune') {
       const a = ABILITIES[G.slots[o.s].id], L = G.slots[o.s].L;
-      return { rar: 2, color: slot.color, rarLabel: `${slot.label} · ${slot.key}`, kind: `Tune · Lv ${L} → ${L + 1}`, title: a.name, desc: a.up, delta: 'Also recharges 12% faster', apply: () => { G.slots[o.s].L++; } };
+      return { rar: 2, color: slot.color, rarLabel: `${slot.label} · ${slot.key}`, kind: `Tune · Lv ${L} → ${L + 1}`, title: a.name, desc: a.up, fl: TUNE_FL[(Math.random() * TUNE_FL.length) | 0], delta: 'Also recharges 12% faster', apply: () => { G.slots[o.s].L++; } };
     }
     const a = ABILITIES[o.id], old = ABILITIES[G.slots[o.s].id];
-    return { rar: 3, color: slot.color, rarLabel: `${slot.label} · ${slot.key}`, kind: 'New ability', title: a.name, desc: a.desc, delta: `Replaces ${old.name}, keeps Lv ${G.slots[o.s].L}`, apply: () => { G.slots[o.s].id = o.id; G.slots[o.s].cd = 0; } };
+    return { rar: 3, color: slot.color, rarLabel: `${slot.label} · ${slot.key}`, kind: 'New ability', title: a.name, desc: a.desc, fl: a.fl, delta: `Replaces ${old.name}, keeps Lv ${G.slots[o.s].L}`, apply: () => { G.slots[o.s].id = o.id; G.slots[o.s].cd = 0; } };
   });
 }
 function pickCard(i) {
   if (state !== 'draft' || !cardChoices[i] || performance.now() - cardOpenT < 350) return;
   cardChoices[i].apply(); SFX.pick(); buildAbilityBar(); refreshLoadout();
   $('draft').hidden = true; state = 'play';
-  banner(`NEXT ROUND IN ${Math.ceil(G.breakT)}`, 'spend your points', 2);
+  banner(`NEXT ROUND IN ${Math.ceil(G.breakT)}`, 'go spend your points', 2);
   requestLock();
 }
 
@@ -1190,7 +1373,7 @@ function stationInfo(st) {
     const owned = G.perks[st.perk.id], cost = st.perk.rebuy && owned ? st.perk.cost * 2 : st.perk.cost;
     return { name: st.perk.name, cost, desc: st.perk.desc, blocked: owned && !st.perk.rebuy ? 'Owned' : null };
   }
-  if (st.kind === 'crate') return { name: 'Mystery Crate', cost: 950, desc: 'Random item' };
+  if (st.kind === 'crate') return { name: 'Mystery Crate', cost: 950, desc: 'Random item. No refunds.' };
   const t = S.benchTier;
   return { name: 'Calibrator', cost: 2500 * (t + 1), desc: t >= 4 ? '' : `Pistols Mk ${t + 2}: +55% damage`, blocked: t >= 4 ? 'Fully calibrated' : null };
 }
@@ -1198,18 +1381,19 @@ function interact() {
   if (!nearStation) return;
   const st = nearStation, info = stationInfo(st);
   if (info.blocked) { SFX.deny(); return; }
-  if (G.points < info.cost) { SFX.deny(); toast(`Need <b>${info.cost - G.points}</b> more points`, '#ffd23f'); return; }
+  if (G.points < info.cost) { SFX.deny(); toast(`<b>${info.cost - G.points}</b> points short`, '#ffd23f'); return; }
   G.points -= info.cost; SFX.buy();
-  if (st.kind === 'perk') { G.perks[st.perk.id] = (G.perks[st.perk.id] || 0) + 1; st.perk.apply(); toast(`<b>${st.perk.name}</b> · ${st.perk.desc}`, '#' + new THREE.Color(st.perk.color).getHexString()); }
-  else if (st.kind === 'bench') { S.benchTier++; toast(`<b>Pistols Mk ${S.benchTier + 1}</b> · +55% damage`, '#ff9a3d'); }
+  if (st.kind === 'perk') { G.perks[st.perk.id] = (G.perks[st.perk.id] || 0) + 1; st.perk.apply(); toast(`<b>${st.perk.name}</b> · ${st.perk.desc}<i>${st.perk.fl}</i>`, '#' + new THREE.Color(st.perk.color).getHexString()); }
+  else if (st.kind === 'bench') { S.benchTier++; toast(`<b>Pistols Mk ${S.benchTier + 1}</b> · +55% damage`, '#ff9a3d'); dotOnce('bench', 0.5); }
   else {
     const r = rollRarity(0.15);
     let pool = ITEMS.filter(i => i.r === r); if (!pool.length) pool = ITEMS;
     const it = pool[(Math.random() * pool.length) | 0];
     G.items[it.id] = (G.items[it.id] || 0) + 1; it.apply();
-    toast(`<b>${it.name}</b> · ${it.desc}`, RARITY[it.r].color);
+    toast(`<b>${it.name}</b> · ${it.desc}<i>${it.fl}</i>`, RARITY[it.r].color);
+    if (it.id !== 'dud') dotOnce('crate', 1.2);
     st.uses++;
-    if (st.uses % 5 === 0) { const sp = CRATE_SPOTS[(Math.random() * CRATE_SPOTS.length) | 0]; burst(st.x, st.y + 1, st.z, 30, '#c86bff', 7); placeStation(st, sp[0], sp[1]); toast('The crate moved. Check the radar.', '#c86bff'); }
+    if (st.uses % 5 === 0) { const sp = CRATE_SPOTS[(Math.random() * CRATE_SPOTS.length) | 0]; burst(st.x, st.y + 1, st.z, 30, '#c86bff', 7); placeStation(st, sp[0], sp[1]); toast('The crate got bored and moved. Check the radar.', '#c86bff'); }
   }
   burst(st.x, st.y + 1.5, st.z, 30, '#ffd23f', 6);
   refreshLoadout();
@@ -1245,7 +1429,7 @@ function updateDrops(dt) {
     d.core.rotation.y += dt * 3; d.ring.rotation.x += dt * 2; d.mesh.position.y = d.y + Math.sin(G.t * 3) * 0.2;
     d.mesh.visible = d.life > 5 || Math.sin(G.t * 20) > 0;
     if (Math.hypot(G.pos.x - d.x, G.pos.z - d.z) < 1.6 && Math.abs(G.pos.y + 1 - d.y) < 2.2) {
-      const P = POWERUPS[d.k]; SFX.power(); banner(P.name.toUpperCase(), '', 1.6);
+      const P = POWERUPS[d.k]; SFX.power(); banner(P.name.toUpperCase(), P.sub, 1.6);
       if (d.k === 'wipe') { for (const e of enemies) if (e.alive && e.type !== 'boss') killEnemy(e, false); addPoints(400); G.shake = 0.6; spawnRing(G.pos.x, G.pos.y, G.pos.z, 40, 0xffffff, 0.6); }
       else if (d.k === 'refill') { for (const s in G.slots) G.slots[s].cd = 0; }
       else G.powers[d.k] = P.dur;
@@ -1402,13 +1586,13 @@ function updateEnemies(dt) {
     if (e.stun <= 0) e.face = Math.atan2(dx, dz);
     e.wob += dt * (6 + Math.abs(sp));
     const cy = e.y + d.yoff * e.s;
-    if (e.stun <= 0 && dist < rr + 0.7 && Math.abs(cy - (py + 0.9)) < d.h * e.s * 0.5 + 0.9) damagePlayer(d.dmg * (e.elite ? 1.5 : 1));
+    if (e.stun <= 0 && dist < rr + 0.7 && Math.abs(cy - (py + 0.9)) < d.h * e.s * 0.5 + 0.9) damagePlayer(d.dmg * (e.elite ? 1.5 : 1), srcName(e));
     if (d.ranged && e.stun <= 0) {
       e.cd -= dt;
       if (e.cd <= 0 && dist < 32) {
         e.cd = rand(2.4, 3.4);
         TMP.set(px + G.vel.x * 0.3 - e.x, py + 1 - cy, pz + G.vel.z * 0.3 - e.z).normalize().multiplyScalar(14);
-        ebolts.push({ x: e.x, y: cy, z: e.z, vx: TMP.x, vy: TMP.y, vz: TMP.z, life: 4, dmg: d.dmg * (e.elite ? 1.5 : 1) });
+        ebolts.push({ x: e.x, y: cy, z: e.z, vx: TMP.x, vy: TMP.y, vz: TMP.z, life: 4, dmg: d.dmg * (e.elite ? 1.5 : 1), src: `${srcName(e)}'s spit` });
         SFX.spit();
       }
     }
@@ -1422,7 +1606,7 @@ function updateBoss(e, dt) {
   if (e.ringT <= 0) {
     e.ringT = enraged ? 2.6 : 4;
     const n = enraged ? 26 : 18, off = Math.random() * TAU, y = e.y + 3;
-    for (let i = 0; i < n; i++) { const a = off + i / n * TAU; ebolts.push({ x: e.x, y, z: e.z, vx: Math.cos(a) * 10, vy: 0, vz: Math.sin(a) * 10, life: 6, dmg: 14, flat: true }); }
+    for (let i = 0; i < n; i++) { const a = off + i / n * TAU; ebolts.push({ x: e.x, y, z: e.z, vx: Math.cos(a) * 10, vy: 0, vz: Math.sin(a) * 10, life: 6, dmg: 14, flat: true, src: 'Voltmaw' }); }
     SFX.spit();
   }
   if (e.atk <= 0 && e.slamT <= 0) {
@@ -1442,7 +1626,7 @@ function updateBoss(e, dt) {
       e.y = groundY(e.x, e.z);
       spawnRing(e.x, e.y, e.z, 9, 0xff2e9a, 0.45); burst(e.x, e.y + 1, e.z, 40, '#ff2e9a', 10);
       SFX.slam(); G.shake = Math.max(G.shake, 0.7);
-      if (Math.hypot(G.pos.x - e.x, G.pos.z - e.z) < 9 && G.pos.y - e.y < 2.5) { damagePlayer(30); const l = Math.hypot(G.pos.x - e.x, G.pos.z - e.z) || 1; G.vel.x += (G.pos.x - e.x) / l * 18; G.vel.z += (G.pos.z - e.z) / l * 18; G.vel.y = 9; }
+      if (Math.hypot(G.pos.x - e.x, G.pos.z - e.z) < 9 && G.pos.y - e.y < 2.5) { damagePlayer(30, 'Voltmaw, from above'); const l = Math.hypot(G.pos.x - e.x, G.pos.z - e.z) || 1; G.vel.x += (G.pos.x - e.x) / l * 18; G.vel.z += (G.pos.z - e.z) / l * 18; G.vel.y = 9; }
     }
   }
   $('bossFill').style.width = `${Math.max(0, e.hp / e.maxHp * 100)}%`;
@@ -1476,7 +1660,7 @@ function updateProjectiles(dt) {
     b.x += b.vx * dt; b.y += b.vy * dt; b.z += b.vz * dt; b.life -= dt;
     if (b.flat) b.y = Math.max(b.y - 2 * dt, groundY(b.x, b.z) + 1);
     const dx = b.x - G.pos.x, dy = b.y - (G.pos.y + 1), dz = b.z - G.pos.z;
-    if (dx * dx + dy * dy + dz * dz < 1.0) { damagePlayer(b.dmg); ebolts.splice(i, 1); continue; }
+    if (dx * dx + dy * dy + dz * dz < 1.0) { damagePlayer(b.dmg, b.src); ebolts.splice(i, 1); continue; }
     if (b.life <= 0 || solidAt(b.x, b.y - 0.3, b.z)) ebolts.splice(i, 1);
   }
 }
@@ -1572,6 +1756,7 @@ function syncHero(dt) {
     heroBody.rotateOnAxis(TMP.set(Math.cos(local), 0, -Math.sin(local)), k * TAU);
   } else { heroBody.rotation.set(0, 0, 0); heroBody.position.y = lerp(heroBody.position.y, 0.95, 0.3); }
   hero.visible = !(G.iframes > 0 && G.roll <= 0 && Math.sin(G.t * 40) > 0.3);
+  heroParts.tip.visible = Math.sin(G.t * 5) > -0.2;
   shieldBubble.visible = G.shield > 0;
   if (shieldBubble.visible) { shieldBubble.position.set(G.pos.x, G.pos.y + 1, G.pos.z); shieldBubble.rotation.y += dt; }
 }
@@ -1616,7 +1801,7 @@ function updateHud(dt) {
   hudT -= dt; if (hudT > 0) return; hudT = 0.1;
   $('roundNum').textContent = Math.max(1, G.round);
   $('roundLbl').textContent = G.phase === 'break' ? (G.round === 0 ? 'STARTING IN ' + Math.ceil(G.breakT) : `NEXT ROUND IN ${Math.ceil(G.breakT)}`) : 'ROUND';
-  $('enemiesLeft').textContent = G.phase === 'fight' ? `${G.toSpawn + enemies.length} enemies left` : 'Shop at the stations';
+  $('enemiesLeft').textContent = G.phase === 'fight' ? `${G.toSpawn + enemies.length} left` : 'Go shopping';
   $('ptsVal').textContent = G.points.toLocaleString();
   $('powerups').innerHTML = Object.entries(G.powers).map(([k, t]) => `<span class="pu" style="--c:${POWERUPS[k].color}">${POWERUPS[k].name} ${Math.ceil(t)}</span>`).join('') + (G.overdrive > 0 ? `<span class="pu" style="--c:#ff7ad9">Overdrive ${Math.ceil(G.overdrive)}</span>` : '');
   $('hpFill').style.width = `${Math.max(0, G.hp / S.maxHp * 100)}%`;
