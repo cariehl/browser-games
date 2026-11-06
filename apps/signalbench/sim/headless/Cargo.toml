@@ -1,0 +1,13 @@
+[package]
+name = "signalbench-headless"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+description = "Headless SignalBench runner: SIL scenario tests for CI"
+
+[[bin]]
+name = "sbsim"
+path = "src/main.rs"
+
+[dependencies]
+signalbench-core = { path = "../core" }

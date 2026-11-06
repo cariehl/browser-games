@@ -1,0 +1,30 @@
+# Guided tour of the bench (~45 s of sim time). In the app:
+# Events & build -> Scenario "demo tour" -> Play scenario.
+@0      ignition on
+@0      park on
+@1000   press lights                 # stage 1: slow wig-wag + rear flashers
+@3500   press lights                 # stage 2: fast wig-wag
+@6000   press lights                 # stage 3: quad flash
+@6500   expect lightbar.alive == 1
+@7000   press siren                  # wail
+@9500   press siren                  # yelp
+@11500  press siren                  # phaser
+@13000  press siren                  # off
+@13300  expect siren.sounding == 0
+@13500  press scene                  # scene light on
+@14500  press arm                    # deploy the light arm
+@20000  expect arm.angle >= 89
+@20000  expect uart "deploying -> deployed"
+@20500  press takedown               # white takedown heads
+@23000  press takedown
+@23500  fault short 4 on             # rear-flasher harness shorts to ground
+@24500  expect pdm.4.tripped == 1
+@33000  expect uart "LOCKED OUT"     # 3 retries with back-off, then lock-out
+@33500  fault short 4 off            # harness repaired
+@34000  press aux                    # operator clears the lock-out
+@36000  expect pdm.4.tripped == 0
+@36500  park off                     # shift into drive: arm stows itself
+@44000  expect arm.angle < 1
+@44500  press lights                 # lights off
+@45200  expect lightbar.alive == 0
+@45200  expect fw.resets == 0
