@@ -1,0 +1,216 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>cariehl · Games</title>
+  <meta name="description" content="Browser games by cariehl.">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🎲</text></svg>">
+  <style>
+    :root {
+      --bg: #0d0b16;
+      --panel: #171425;
+      --panel-hi: #211d35;
+      --line: #2e2945;
+      --text: #ece8f6;
+      --dim: #a49cbd;
+      --accent: #f2c96b;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background:
+        radial-gradient(1200px 600px at 50% -10%, #2a1f4d 0%, transparent 60%),
+        var(--bg);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    main { max-width: 1040px; margin: 0 auto; padding: 64px 16px 48px; }
+    header { margin-bottom: 40px; }
+    h1 { margin: 0; font-size: clamp(2rem, 5vw, 2.8rem); letter-spacing: -0.02em; }
+    header p { margin: 8px 0 0; color: var(--dim); }
+
+    .games {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+    .game[hidden] { display: none; }
+    .game {
+      display: flex;
+      flex-direction: column;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      overflow: hidden;
+      color: inherit;
+      text-decoration: none;
+      transition: transform .15s ease, border-color .15s ease, background .15s ease;
+    }
+    .game:hover, .game:focus-visible {
+      transform: translateY(-3px);
+      border-color: var(--accent);
+      background: var(--panel-hi);
+      outline: none;
+    }
+    .game img { display: block; width: 100%; height: auto; aspect-ratio: 16 / 9; object-fit: cover; background: #000; }
+    .game .body { padding: 16px 18px 18px; display: flex; flex-direction: column; gap: 8px; flex: 1; }
+    .game h2 { margin: 0; font-size: 1.25rem; }
+    .game p { margin: 0; color: var(--dim); font-size: .95rem; }
+    .tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; padding-top: 6px; }
+    .tags span {
+      font-size: .75rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      color: var(--dim);
+    }
+    .play { color: var(--accent); font-weight: 600; font-size: .95rem; }
+
+    .filter { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin-bottom: 24px; }
+    .filter-label { color: var(--dim); font-size: .9rem; margin-right: 4px; }
+    .filter button {
+      font: inherit;
+      font-size: .9rem;
+      color: var(--dim);
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 999px;
+      padding: 6px 14px;
+      cursor: pointer;
+    }
+    .filter button[aria-pressed="true"] { color: var(--bg); background: var(--accent); border-color: var(--accent); font-weight: 600; }
+    .filter button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+    .tags span.mobile { border-color: var(--accent); color: var(--accent); }
+    .empty { color: var(--dim); }
+
+    .soon {
+      border: 1px dashed var(--line);
+      border-radius: 14px;
+      display: grid;
+      place-items: center;
+      min-height: 160px;
+      color: var(--dim);
+      text-align: center;
+      padding: 24px;
+    }
+    footer { margin-top: 48px; color: var(--dim); font-size: .85rem; }
+    footer a { color: var(--dim); }
+  </style>
+</head>
+<body>
+  <main>
+    <header>
+      <h1>Games</h1>
+      <p>Small games that run in your browser. No install, no account.</p>
+    </header>
+
+    <div class="filter" role="group" aria-label="Filter games">
+      <span class="filter-label">Show</span>
+      <button type="button" data-filter="all" aria-pressed="true">All games</button>
+      <button type="button" data-filter="mobile" aria-pressed="false">📱 Mobile-friendly</button>
+    </div>
+
+    <section class="games">
+      <!-- To add a game: put its build in a folder (like orbs/) and copy this <a> block.
+           Add data-mobile and a <span class="mobile">Mobile-friendly</span> tag if it plays well on a phone. -->
+      <a class="game" href="orbs/">
+        <img src="img/orbs.jpg" alt="The Orbs of Magic hex battlefield" width="800" height="450">
+        <div class="body">
+          <h2>🔮 Orbs of Magic</h2>
+          <p>A tactical card battler. Summon units onto a hex battlefield, give them orders, and shatter the enemy Sanctum.</p>
+          <div class="tags"><span>Card game</span><span>Tactics</span><span>vs AI</span></div>
+          <span class="play">Play →</span>
+        </div>
+      </a>
+
+      <a class="game" href="guidle/" data-mobile>
+        <img src="img/guidle.jpg" alt="A GUIDle roll with its matched characters lit up and badges below" width="800" height="450">
+        <div class="body">
+          <h2>🔢 GUIDle</h2>
+          <p>One random UUID a day. Collect badges for the patterns hiding inside it, each worth its odds, and see how your roll ranks.</p>
+          <div class="tags"><span class="mobile">Mobile-friendly</span><span>Daily</span><span>Luck</span><span>Collecting</span></div>
+          <span class="play">Play →</span>
+        </div>
+      </a>
+
+      <a class="game" href="hexbound/">
+        <img src="img/hexbound.jpg" alt="A party of four heroes facing skeletons and soul lanterns on a hex battlefield in a barrow" width="800" height="450">
+        <div class="body">
+          <h2>⬢ Hexbound Tactics</h2>
+          <p>A turn-based tactics roguelite. Build a party of four, then fight across a three-act campaign of hex battles, events and merchants.</p>
+          <div class="tags"><span>Tactics</span><span>Roguelite</span><span>Party builder</span></div>
+          <span class="play">Play →</span>
+        </div>
+      </a>
+
+      <a class="game" href="hexmancer/" data-mobile>
+        <img src="img/hexmancer.jpg" alt="A wizard surrounded by imps on a hex board, aiming a fireball" width="800" height="450">
+        <div class="body">
+          <h2>🧙 Hexmancer</h2>
+          <p>A turn-based wizard roguelite. Gather fire, frost and storm orbs, dodge telegraphed attacks, and level spell masteries that carry between runs.</p>
+          <div class="tags"><span class="mobile">Mobile-friendly</span><span>Roguelite</span><span>Tactics</span><span>Daily</span></div>
+          <span class="play">Play →</span>
+        </div>
+      </a>
+
+      <a class="game" href="overcharge/">
+        <img src="img/overcharge.jpg" alt="A gunner in a neon arena facing a horde at sunset" width="800" height="450">
+        <div class="body">
+          <h2>⚡ Overcharge</h2>
+          <p>A third-person, round-based roguelite shooter. Aim, dash and swap abilities as each wave of the horde hits harder, then face the boss on round 10.</p>
+          <div class="tags"><span>Shooter</span><span>Roguelite</span><span>Rounds</span></div>
+          <span class="play">Play →</span>
+        </div>
+      </a>
+
+      <a class="game" href="mechscape/">
+        <img src="img/mechscape.jpg" alt="An android pilot in a walled scrapyard camp with a manufactory, workbench and storage lockers" width="800" height="450">
+        <div class="body">
+          <h2>🤖 MechScape</h2>
+          <p>A tick-based MMO-style adventure. Salvage, fight and craft as an android pilot, then build a mech together. Play alone in your browser or join a friend's server.</p>
+          <div class="tags"><span>RPG</span><span>Multiplayer</span><span>Crafting</span></div>
+          <span class="play">Play →</span>
+        </div>
+      </a>
+
+      <div class="soon">More games on the way.</div>
+    </section>
+    <p class="empty" id="empty" hidden>No games match this filter yet.</p>
+
+    <footer>
+      <a href="https://github.com/cariehl">github.com/cariehl</a>
+    </footer>
+  </main>
+  <script>
+    (() => {
+      const KEY = 'games.filter';
+      const buttons = document.querySelectorAll('.filter button');
+      const cards = document.querySelectorAll('.games .game');
+      const isMobile = (navigator.userAgentData && navigator.userAgentData.mobile) ||
+        /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent) ||
+        (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1) ||
+        matchMedia('(pointer: coarse) and (hover: none)').matches;
+      let saved = null;
+      try { saved = localStorage.getItem(KEY); } catch (e) {}
+
+      function apply(filter) {
+        let shown = 0;
+        cards.forEach(card => {
+          const hide = filter === 'mobile' && !card.hasAttribute('data-mobile');
+          card.hidden = hide;
+          if (!hide) shown++;
+        });
+        buttons.forEach(b => b.setAttribute('aria-pressed', String(b.dataset.filter === filter)));
+        document.getElementById('empty').hidden = shown > 0;
+      }
+      buttons.forEach(b => b.addEventListener('click', () => {
+        apply(b.dataset.filter);
+        try { localStorage.setItem(KEY, b.dataset.filter); } catch (e) {}
+      }));
+      apply(saved === 'all' || saved === 'mobile' ? saved : (isMobile ? 'mobile' : 'all'));
+    })();
+  </script>
+</body>
+</html>
