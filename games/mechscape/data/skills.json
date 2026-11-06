@@ -1,0 +1,11 @@
+{
+ "melee": { "id": "melee", "display_name": "Melee", "description": "Trained by fighting with blades. Higher levels hit more often and harder. Blades swing every {weapon_types:blade.attack_speed} ticks and are the steady, low-attention style.", "starting_level": 1 },
+ "firearms": { "id": "firearms", "display_name": "Firearms", "description": "Trained by fighting with pistols. Pistols fire every {weapon_types:pistol.attack_speed} ticks from up to {weapon_types:pistol.attack_range} tiles and use a gas cartridge per shot; shoot and step back to kite.", "starting_level": 1 },
+ "toughness": { "id": "toughness", "display_name": "Toughness", "description": "Your maximum HP equals your Toughness level. Every hit you land gives Toughness XP.", "starting_level": 10 },
+ "endurance": { "id": "endurance", "display_name": "Endurance", "description": "Makes you harder to hit. Trained by switching combat XP to Endurance in the Gear tab. Armor adds to it.", "starting_level": 1 },
+ "salvaging": { "id": "salvaging", "display_name": "Salvaging", "description": "Gathering: click a node to work it until it's stripped or your inventory is full.", "starting_level": 1 },
+ "siphoning": { "id": "siphoning", "display_name": "Siphoning", "description": "Gathering: click a node to work it until it's stripped or your inventory is full.", "starting_level": 1 },
+ "xenobiology": { "id": "xenobiology", "display_name": "Xenobiology", "description": "Gathering: click a node to work it until it's stripped or your inventory is full.", "starting_level": 1 },
+ "engineering": { "id": "engineering", "display_name": "Engineering", "description": "Manufacturing: weapons, ammo and empty injectors at the weapons bench, armor and canisters at the metal press. XP comes from the materials used, the same per unit whatever you make.", "starting_level": 1 },
+ "splicing": { "id": "splicing", "display_name": "Splicing", "description": "Manufacturing from living things, at the bio-still: healing injectors distilled from ventbloom and ichor. XP comes from the materials, the same per unit.", "starting_level": 1 }
+}

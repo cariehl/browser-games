@@ -1,0 +1,352 @@
+{
+ "junk": {
+  "id": "junk",
+  "entries": [
+   {
+    "item": "bent_bolt",
+    "weight": 30,
+    "max_count": 2
+   },
+   {
+    "item": "dead_battery",
+    "weight": 20
+   },
+   {
+    "item": "burnt_chip",
+    "weight": 18
+   },
+   {
+    "item": "frayed_wire",
+    "weight": 20,
+    "max_count": 2
+   },
+   {
+    "item": "cracked_lens",
+    "weight": 12
+   }
+  ]
+ },
+ "trinkets": {
+  "id": "trinkets",
+  "entries": [
+   {
+    "item": "tin_pilot",
+    "weight": 1
+   },
+   {
+    "item": "rubber_duck",
+    "weight": 1
+   },
+   {
+    "item": "lucky_cog",
+    "weight": 1
+   },
+   {
+    "item": "snow_globe",
+    "weight": 1
+   },
+   {
+    "item": "cracked_photo",
+    "weight": 1
+   },
+   {
+    "item": "music_chip",
+    "weight": 1
+   },
+   {
+    "item": "confetti_blade",
+    "weight": 0.5
+   }
+  ]
+ },
+ "surface_lore": {
+  "id": "surface_lore",
+  "entries": [
+   {
+    "item": "lore_shard_1",
+    "weight": 1
+   },
+   {
+    "item": "lore_shard_2",
+    "weight": 1
+   },
+   {
+    "item": "lore_shard_3",
+    "weight": 1
+   },
+   {
+    "item": "lore_shard_6",
+    "weight": 1
+   }
+  ]
+ },
+ "deep_lore": {
+  "id": "deep_lore",
+  "entries": [
+   {
+    "item": "lore_shard_4",
+    "weight": 1
+   },
+   {
+    "item": "lore_shard_5",
+    "weight": 1
+   },
+   {
+    "item": "lore_shard_2",
+    "weight": 1
+   }
+  ]
+ },
+ "sentry": {
+  "id": "sentry",
+  "entries": [
+   {
+    "table": "junk",
+    "weight": 60
+   },
+   {
+    "table": "trinkets",
+    "weight": 12
+   },
+   {
+    "table": "surface_lore",
+    "weight": 10
+   },
+   {
+    "item": "sentry_eye",
+    "weight": 5
+   },
+   {
+    "item": "traffic_cone",
+    "weight": 2
+   },
+   {
+    "item": "flame_decal",
+    "weight": 2
+   },
+   {
+    "item": "scuttle_drone_pet",
+    "weight": 0.6
+   }
+  ]
+ },
+ "loader": {
+  "id": "loader",
+  "entries": [
+   {
+    "table": "junk",
+    "weight": 60
+   },
+   {
+    "table": "trinkets",
+    "weight": 12
+   },
+   {
+    "table": "surface_lore",
+    "weight": 8
+   },
+   {
+    "item": "loader_horn",
+    "weight": 5
+   },
+   {
+    "item": "antenna_hat",
+    "weight": 2
+   },
+   {
+    "item": "hazard_paint",
+    "weight": 2
+   },
+   {
+    "item": "loader_pup_pet",
+    "weight": 0.6
+   }
+  ]
+ },
+ "breacher": {
+  "id": "breacher",
+  "entries": [
+   {
+    "table": "junk",
+    "weight": 50
+   },
+   {
+    "table": "trinkets",
+    "weight": 15
+   },
+   {
+    "table": "surface_lore",
+    "weight": 10
+   },
+   {
+    "item": "crown_of_bolts",
+    "weight": 3
+   },
+   {
+    "item": "rust_paint",
+    "weight": 3
+   },
+   {
+    "item": "loader_pup_pet",
+    "weight": 1
+   }
+  ]
+ },
+ "crawler": {
+  "id": "crawler",
+  "entries": [
+   {
+    "table": "junk",
+    "weight": 70
+   },
+   {
+    "table": "trinkets",
+    "weight": 10
+   },
+   {
+    "table": "deep_lore",
+    "weight": 15
+   },
+   {
+    "item": "traffic_cone",
+    "weight": 2
+   },
+   {
+    "item": "scuttle_drone_pet",
+    "weight": 0.6
+   }
+  ]
+ },
+ "foundry_drone": {
+  "id": "foundry_drone",
+  "entries": [
+   {
+    "table": "junk",
+    "weight": 50
+   },
+   {
+    "table": "trinkets",
+    "weight": 10
+   },
+   {
+    "table": "deep_lore",
+    "weight": 20
+   },
+   {
+    "item": "chrome_paint",
+    "weight": 3
+   },
+   {
+    "item": "scuttle_drone_pet",
+    "weight": 1
+   }
+  ]
+ },
+ "warden": {
+  "id": "warden",
+  "entries": [
+   {
+    "item": "warden_core",
+    "weight": 30
+   },
+   {
+    "table": "deep_lore",
+    "weight": 30
+   },
+   {
+    "table": "trinkets",
+    "weight": 20
+   },
+   {
+    "item": "crown_of_bolts",
+    "weight": 10
+   },
+   {
+    "item": "chrome_paint",
+    "weight": 10
+   }
+  ]
+ },
+ "press": {
+  "id": "press",
+  "entries": [
+   {
+    "item": "press_core",
+    "weight": 30
+   },
+   {
+    "table": "trinkets",
+    "weight": 20
+   },
+   {
+    "item": "hazard_paint",
+    "weight": 10
+   },
+   {
+    "item": "flame_decal",
+    "weight": 10
+   },
+   {
+    "item": "mini_press_pet",
+    "weight": 2
+   }
+  ]
+ },
+ "colossus": {
+  "id": "colossus",
+  "entries": [
+   {
+    "item": "colossus_heart",
+    "weight": 30
+   },
+   {
+    "table": "trinkets",
+    "weight": 20
+   },
+   {
+    "item": "crown_of_bolts",
+    "weight": 10
+   },
+   {
+    "item": "rust_paint",
+    "weight": 10
+   }
+  ]
+ },
+ "hulk": {
+  "id": "hulk",
+  "entries": [
+   {
+    "table": "junk",
+    "weight": 80
+   },
+   {
+    "table": "trinkets",
+    "weight": 20
+   }
+  ]
+ },
+ "reach_seeds": {
+  "id": "reach_seeds",
+  "entries": [
+   {
+    "item": "glowroot_seed",
+    "weight": 3,
+    "min_count": 1,
+    "max_count": 2
+   },
+   {
+    "item": "ventbloom_seed",
+    "weight": 4,
+    "min_count": 1,
+    "max_count": 3
+   },
+   {
+    "item": "rustcap_spores",
+    "weight": 3,
+    "min_count": 1,
+    "max_count": 2
+   }
+  ]
+ }
+}

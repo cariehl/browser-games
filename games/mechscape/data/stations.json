@@ -1,0 +1,556 @@
+{
+ "bio_still": {
+  "id": "bio_still",
+  "display_name": "Bio-still",
+  "description": "Distils herbs in ichor.",
+  "skill": "splicing",
+  "recipes": [
+   "healing_injector",
+   "edge_injector",
+   "surge_injector",
+   "deadeye_injector",
+   "coolant_bloom",
+   "cockpit_shell"
+  ],
+  "model": "bio_still.glb",
+  "model_scale": 1.0,
+  "color": [
+   0.55,
+   0.42,
+   0.3,
+   1.0
+  ]
+ },
+ "manufactory": {
+  "id": "manufactory",
+  "display_name": "Manufactory",
+  "verb": "Reconfigure",
+  "description": "Centrepiece of the Spawn Camp. If I get wrecked, I'll be reprinted here.",
+  "skill": "",
+  "kind": "respawn",
+  "color": [
+   0.55,
+   0.6,
+   0.66,
+   1.0
+  ],
+  "model": "manufactory.glb",
+  "model_scale": 1.0
+ },
+ "metal_press": {
+  "id": "metal_press",
+  "description": "Presses armor and canisters out of various metals.",
+  "display_name": "Metal press",
+  "skill": "engineering",
+  "recipes": [
+   "canister",
+   "scrap_helmet",
+   "scrap_gauntlets",
+   "scrap_greaves",
+   "scrap_chestplate",
+   "relic_helmet",
+   "relic_gauntlets",
+   "relic_greaves",
+   "relic_chestplate",
+   "alloy_helmet",
+   "alloy_gauntlets",
+   "alloy_greaves",
+   "alloy_chestplate",
+   "breacher_plate",
+   "recycle_bolts",
+   "recycle_batteries",
+   "recycle_wire",
+   "recycle_lenses",
+   "recycle_chips",
+   "refined_metal",
+   "servo_assembly",
+   "mech_frame",
+   "mech_leg",
+   "power_core",
+   "armor_plate"
+  ],
+  "model": "metal_press.glb",
+  "model_scale": 0.85,
+  "color": [
+   0.36,
+   0.4,
+   0.46,
+   1.0
+  ]
+ },
+ "storage_locker": {
+  "id": "storage_locker",
+  "display_name": "Storage locker",
+  "verb": "Open",
+  "description": "My personal storage. Shared across all lockers.",
+  "skill": "",
+  "kind": "storage",
+  "color": [
+   0.3,
+   0.42,
+   0.5,
+   1.0
+  ],
+  "model": "storage_locker.glb",
+  "model_scale": 1.0
+ },
+ "weapons_bench": {
+  "id": "weapons_bench",
+  "description": "A bench for crafting weapons from parts.",
+  "display_name": "Weapons bench",
+  "skill": "engineering",
+  "recipes": [
+   "scrap_blade",
+   "gas_cartridges",
+   "empty_injector",
+   "pipe_pistol",
+   "relic_blade",
+   "relic_pistol",
+   "alloy_blade",
+   "alloy_pistol",
+   "servo_blade",
+   "servo_pistol",
+   "control_board",
+   "weapon_mount"
+  ],
+  "model": "weapons_bench.glb",
+  "model_scale": 0.6,
+  "color": [
+   0.45,
+   0.38,
+   0.3,
+   1.0
+  ]
+ },
+ "gantry": {
+  "id": "gantry",
+  "display_name": "Mech gantry",
+  "description": "Not to be confused with a mech pantry.",
+  "skill": "",
+  "kind": "gantry",
+  "recipes": [],
+  "color": [
+   0.45,
+   0.45,
+   0.4,
+   1.0
+  ],
+  "shape": "gantry"
+ },
+ "undercroft_hatch": {
+  "id": "undercroft_hatch",
+  "display_name": "Hatch",
+  "verb": "Climb-down",
+  "description": "A rusted hatch. Who knows where it leads?",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.35,
+   0.33,
+   0.3,
+   1
+  ],
+  "shape": "hatch"
+ },
+ "undercroft_ladder": {
+  "id": "undercroft_ladder",
+  "display_name": "Ladder",
+  "verb": "Climb-up",
+  "description": "A ladder back to the Scrapyard.",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.4,
+   0.4,
+   0.42,
+   1
+  ],
+  "shape": "ladder"
+ },
+ "reach_lift": {
+  "id": "reach_lift",
+  "display_name": "Survey elevator",
+  "verb": "Ride",
+  "description": "An elevator that will take me up the cliff to the Quiet Reach.",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.5,
+   0.6,
+   0.55,
+   1
+  ],
+  "shape": "lift",
+  "shaft": [
+   0,
+   1
+  ]
+ },
+ "reach_return": {
+  "id": "reach_return",
+  "display_name": "Survey elevator",
+  "verb": "Ride",
+  "description": "An elevator back down to the Scrapyard.",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.5,
+   0.6,
+   0.55,
+   1
+  ],
+  "shape": "lift"
+ },
+ "deadfields_gate": {
+  "id": "deadfields_gate",
+  "display_name": "Deadfields gate",
+  "verb": "Go-through",
+  "description": "A gate to the Deadfields. Wonder why it's called that?",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.6,
+   0.35,
+   0.25,
+   1
+  ],
+  "shape": "gate"
+ },
+ "deadfields_return": {
+  "id": "deadfields_return",
+  "display_name": "Deadfields gate",
+  "verb": "Go-through",
+  "description": "A gate back to the Scrapyard.",
+  "skill": "",
+  "kind": "portal",
+  "color": [
+   0.6,
+   0.35,
+   0.25,
+   1
+  ],
+  "shape": "gate"
+ },
+ "fabricator": {
+  "id": "fabricator",
+  "display_name": "Fabricator",
+  "description": "Prints fittings and furniture for the hab.",
+  "skill": "engineering",
+  "kind": "craft",
+  "recipes": [
+   "crate_stack",
+   "work_lamp",
+   "tool_wall",
+   "coolant_rack",
+   "grow_bed",
+   "potted_glowroot",
+   "bunk",
+   "lounge_chair",
+   "moss_rug",
+   "hab_banner",
+   "specimen_case_glowcap",
+   "specimen_case_skyfern",
+   "specimen_case_ruin_orchid"
+  ],
+  "color": [
+   0.4,
+   0.48,
+   0.55,
+   1.0
+  ],
+  "shape": "fabricator"
+ },
+ "hab_workbench": {
+  "id": "hab_workbench",
+  "display_name": "Hab workbench",
+  "description": "A tidy bench. Fittings in the hab make work here faster.",
+  "skill": "engineering",
+  "kind": "craft",
+  "recipes": [
+   "scrap_blade",
+   "gas_cartridges",
+   "empty_injector",
+   "pipe_pistol",
+   "relic_blade",
+   "relic_pistol",
+   "alloy_blade",
+   "alloy_pistol",
+   "servo_blade",
+   "servo_pistol",
+   "canister",
+   "scrap_helmet",
+   "scrap_gauntlets",
+   "scrap_greaves",
+   "scrap_chestplate",
+   "relic_helmet",
+   "relic_gauntlets",
+   "relic_greaves",
+   "relic_chestplate",
+   "alloy_helmet",
+   "alloy_gauntlets",
+   "alloy_greaves",
+   "alloy_chestplate",
+   "breacher_plate",
+   "recycle_bolts",
+   "recycle_batteries",
+   "recycle_wire",
+   "recycle_lenses",
+   "recycle_chips",
+   "refined_metal",
+   "servo_assembly",
+   "mech_frame",
+   "mech_leg",
+   "power_core",
+   "armor_plate",
+   "weapon_mount",
+   "cockpit_interior",
+   "control_board"
+  ],
+  "color": [
+   0.5,
+   0.4,
+   0.3,
+   1.0
+  ],
+  "shape": "bench"
+ },
+ "bio_bench": {
+  "id": "bio_bench",
+  "display_name": "Bio-bench",
+  "description": "Distils herbs in ichor. The hab's racks and coolers make work here faster.",
+  "skill": "splicing",
+  "kind": "craft",
+  "recipes": [
+   "healing_injector",
+   "edge_injector",
+   "surge_injector",
+   "deadeye_injector",
+   "coolant_bloom",
+   "cockpit_shell"
+  ],
+  "color": [
+   0.35,
+   0.5,
+   0.4,
+   1.0
+  ],
+  "shape": "bench"
+ },
+ "commission_board": {
+  "id": "commission_board",
+  "display_name": "Commission board",
+  "verb": "Browse",
+  "description": "I can request items here, or view requests from other pilots.",
+  "skill": "",
+  "kind": "board",
+  "recipes": [],
+  "color": [
+   0.5,
+   0.42,
+   0.3,
+   1.0
+  ],
+  "shape": "board"
+ },
+ "trophy_wall": {
+  "id": "trophy_wall",
+  "display_name": "Trophy wall",
+  "verb": "View",
+  "description": "Mount trophies here for a bonus everyone shares.",
+  "skill": "",
+  "kind": "trophy",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.32,
+   0.26,
+   1.0
+  ],
+  "shape": "trophy_wall"
+ },
+ "blueprint_cache": {
+  "id": "blueprint_cache",
+  "display_name": "Sealed vault",
+  "verb": "Open",
+  "description": "Something important was locked away down here...",
+  "skill": "",
+  "kind": "cache",
+  "recipes": [],
+  "color": [
+   0.35,
+   0.37,
+   0.42,
+   1.0
+  ],
+  "shape": "vault",
+  "gives": "mech_blueprint",
+  "guard": "undercroft_warden",
+  "quest": "ignition",
+  "quest_stage": "find_blueprint"
+ },
+ "arena_door": {
+  "id": "arena_door",
+  "display_name": "Press hall door",
+  "verb": "Open",
+  "description": "A heavy door to the old paint press hall.",
+  "skill": "",
+  "kind": "arena_door",
+  "recipes": [],
+  "color": [
+   0.38,
+   0.36,
+   0.34,
+   1.0
+  ],
+  "shape": "door",
+  "blocks_sight": true
+ },
+ "repair_rig": {
+  "id": "repair_rig",
+  "display_name": "Repair rig",
+  "description": "I can feed it alloy plating to patch up the mech.",
+  "skill": "",
+  "kind": "repair",
+  "recipes": [],
+  "color": [
+   0.5,
+   0.45,
+   0.3,
+   1.0
+  ],
+  "shape": "rig"
+ },
+ "bridge_winch": {
+  "id": "bridge_winch",
+  "display_name": "Bridge winch",
+  "verb": "Repair",
+  "description": "A winch for the broken bridge. I can mend it with some scrap.",
+  "skill": "engineering",
+  "kind": "puzzle",
+  "recipes": [],
+  "color": [
+   0.45,
+   0.4,
+   0.32,
+   1.0
+  ],
+  "shape": "winch",
+  "needs": {
+   "item": "scrap_metal",
+   "count": 5
+  },
+  "opens": "broken_bridge",
+  "done_text": "You patch the bridge with scrap and winch it into place."
+ },
+ "gas_valve": {
+  "id": "gas_valve",
+  "display_name": "Door valve",
+  "verb": "Turn",
+  "description": "Feeds gas to the old blast door.",
+  "skill": "siphoning",
+  "kind": "puzzle",
+  "recipes": [],
+  "color": [
+   0.4,
+   0.45,
+   0.42,
+   1.0
+  ],
+  "shape": "valve",
+  "needs": {
+   "item": "vent_gas",
+   "count": 10
+  },
+  "opens": "gas_door",
+  "done_text": "The valve drinks the gas and the blast door grinds open."
+ },
+ "veil_projector": {
+  "id": "veil_projector",
+  "display_name": "Projector",
+  "verb": "Scan",
+  "description": "A flickering projector, still running after all this time.",
+  "skill": "xenobiology",
+  "kind": "puzzle",
+  "recipes": [],
+  "color": [
+   0.35,
+   0.42,
+   0.5,
+   1.0
+  ],
+  "shape": "projector",
+  "scan": true,
+  "opens": "holo_veil",
+  "done_text": "Your scan finds the projector's off switch. The wall of rock was only a picture."
+ },
+ "landmark_skull": {
+  "id": "landmark_skull",
+  "display_name": "Colossus skull",
+  "description": "A colossus skull, big enough to park a hab in. The survey log will want this one.",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [0.62, 0.58, 0.5, 1],
+  "shape": "colossus_skull",
+  "accent": [1, 0.3, 0.15, 1],
+  "lore": "A skull the size of a hab, from a machine nobody remembers building."
+ },
+ "landmark_antenna": {
+  "id": "landmark_antenna",
+  "display_name": "Old relay mast",
+  "description": "An old relay mast, still blinking away at nobody. Worth a scan for the survey.",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [0.45, 0.48, 0.5, 1],
+  "shape": "relay_mast",
+  "accent": [1, 0.25, 0.2, 1],
+  "lore": "The mast that once talked to the orbital yards. Its last log is a single word: \"Hold.\""
+ },
+ "landmark_pool": {
+  "id": "landmark_pool",
+  "display_name": "Glow pool",
+  "description": "A pool of coolant, lit from underneath by whatever's growing in it. Pell will want a scan of this.",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [0.4, 0.38, 0.35, 1],
+  "shape": "glow_pool",
+  "accent": [0.35, 0.85, 1, 1],
+  "lore": "The fungus here feeds on coolant leaking from far below. The Undercroft is closer than it looks."
+ },
+ "landmark_overlook": {
+  "id": "landmark_overlook",
+  "display_name": "The overlook",
+  "description": "A breathtaking view, if I could breathe. There's a coin-op scope, too. Worth a scan for the log.",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [0.5, 0.47, 0.42, 1],
+  "shape": "overlook",
+  "accent": [0.2, 0.55, 0.45, 1],
+  "lore": "The highest ground on the Reach. Turn north and the whole Scrapyard is laid out below: the camp, the long wall, the loader yard, the hatch in the ruins. Turn south and there is nothing at all, for a very long way."
+ },
+ "landmark_lander": {
+  "id": "landmark_lander",
+  "display_name": "Crashed lander",
+  "description": "A crashed lander, nose-down and scorched. This one's going in the survey log.",
+  "skill": "",
+  "kind": "landmark",
+  "recipes": [],
+  "color": [
+   0.6,
+   0.58,
+   0.54,
+   1
+  ],
+  "shape": "lander",
+  "lore": "The lander that brought the first pilots down. Its little manufactory printed the first of them, right here, before anyone hauled a bigger one down to the camp.",
+  "accent": [
+   1,
+   0.65,
+   0.25,
+   1
+  ]
+ }
+}

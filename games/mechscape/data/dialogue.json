@@ -1,0 +1,472 @@
+{
+ "foreman": {
+  "id": "foreman",
+  "entries": [
+   {
+    "if": {
+     "quest": "ignition",
+     "stage": "none"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Another fresh print. Welcome to the Scrapyard, pilot. Ada. I run what's left of the gantry."
+     },
+     {
+      "who": "npc",
+      "text": "This yard broke ships for the orbital fleet. When the fleet stopped coming home, the machines kept working. The loaders, the sentries. Nobody told them to stop."
+     },
+     {
+      "who": "npc",
+      "text": "We used to have mechs. Walkers you could climb inside, big enough to take on that monstrosity in the Deadfields. The foundry that built them is under our feet."
+     },
+     {
+      "who": "npc",
+      "text": "The last blueprint is down there, in the warden's vault. Bring it to me and this gantry builds again. It'll take everyone, mind. Pilots weren't built to work alone."
+     }
+    ],
+    "choices": [
+     {
+      "text": "I'll find your blueprint.",
+      "do": [
+       {
+        "start": "ignition"
+       }
+      ]
+     },
+     {
+      "text": "Who built the Scrapyard?",
+      "lines": [
+       {
+        "who": "npc",
+        "text": "The fleet did, a long time ago. The relay mast's last order was \"Hold\". Everything here has been holding ever since."
+       }
+      ],
+      "after": "menu"
+     },
+     {
+      "text": "Not right now."
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "ignition",
+     "stage": "find_hatch"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "The hatch is in the sentry ruins, east of camp, past the long wall. Mind the sentries; they're still holding."
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "ignition",
+     "stage": "find_blueprint"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Go down through the foundry floor, then up the far stairs to the vault. The warden won't let it open while it's standing. Bring a squad."
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "ignition",
+     "stage": "return_blueprint"
+    },
+    "lines": [
+     {
+      "who": "player",
+      "text": "I found the blueprint."
+     },
+     {
+      "who": "npc",
+      "text": "Let me see... a two-seater! Pilot and gunner. Oh, this is good."
+     }
+    ],
+    "choices": [
+     {
+      "text": "Load it into the gantry.",
+      "do": [
+       {
+        "take": "mech_blueprint",
+        "unless_flag": "blueprint_loaded"
+       },
+       {
+        "flag": "blueprint_loaded"
+       },
+       {
+        "stage": [
+         "ignition",
+         "build_mech"
+        ]
+       }
+      ],
+      "lines": [
+       {
+        "who": "npc",
+        "text": "There. The console will tell you every part it needs. Engineers, salvagers, siphoners, splicers: you'll all be on the hook for something."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "ignition",
+     "stage": "build_mech"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "The console by the pad lists every component and who's installed what. Work with your squad. Let's get this thing built!"
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "ignition",
+     "stage": "power_up"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "It's finished! I never thought I'd see one stand up again."
+     },
+     {
+      "who": "npc",
+      "text": "Go on, then. Let's wake it up."
+     }
+    ],
+    "choices": [
+     {
+      "text": "Power it up!",
+      "do": [
+       {
+        "event": "mech_powerup"
+       },
+       {
+        "complete": "ignition"
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "ignition",
+     "stage": "done"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Take that walker out to the Deadfields; that's what it was built for. Bring it back in one piece if you can. If it takes a beating, feed the repair rig some alloy plating and it'll patch it up."
+     }
+    ]
+   },
+   {
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Busy, pilot. Gantry won't fix itself."
+     }
+    ]
+   }
+  ]
+ },
+ "scrap_artist": {
+  "id": "scrap_artist",
+  "entries": [
+   {
+    "if": {
+     "quest": "found_art",
+     "stage": "none"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Oh! A new face. Can I measure it? No? Fine."
+     },
+     {
+      "who": "npc",
+      "text": "I'm Juno. I make art out of the yard. Right now I'm making a masterpiece, and I need three very particular things."
+     },
+     {
+      "who": "npc",
+      "text": "A sentry's eye, intact. A loader's horn. And a ventbloom grown in coolant, which is a thing I just invented. Will you help?"
+     }
+    ],
+    "choices": [
+     {
+      "text": "Sure, I'll find them.",
+      "do": [
+       {
+        "start": "found_art"
+       }
+      ]
+     },
+     {
+      "text": "That sounds dangerous and pointless.",
+      "lines": [
+       {
+        "who": "npc",
+        "text": "Yes! That's art."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "found_art",
+     "stage": "collect"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Eye, horn, cold bloom. The bio-still can grow a bloom in coolant if you know a bit of Splicing. And loaders don't give up their horns to just anyone: you'll want Salvaging 10 before you start prying."
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "found_art",
+     "stage": "bring_parts"
+    },
+    "lines": [
+     {
+      "who": "player",
+      "text": "I've got your eye, your horn and your bloom."
+     },
+     {
+      "who": "npc",
+      "text": "Ohhh. Oh, it's all coming together."
+     }
+    ],
+    "choices": [
+     {
+      "text": "Hand them over.",
+      "do": [
+       {
+        "take": "sentry_eye"
+       },
+       {
+        "take": "loader_horn"
+       },
+       {
+        "take": "coolant_bloom"
+       },
+       {
+        "stage": [
+         "found_art",
+         "press"
+        ]
+       }
+      ],
+      "lines": [
+       {
+        "who": "npc",
+        "text": "Now it needs paint. Real paint, from the old paint press in the Undercroft. It's a bit lively. Bring me its reservoir."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "found_art",
+     "stage": "press"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "The press hall is off the antechamber in the Undercroft. It marks the floor before it splats it. Don't stand on the marks!"
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "found_art",
+     "stage": "bring_paint"
+    },
+    "lines": [
+     {
+      "who": "player",
+      "text": "One paint reservoir, still sloshing."
+     },
+     {
+      "who": "npc",
+      "text": "Perfect. And as promised, a little something for you. I made it from the leftovers."
+     }
+    ],
+    "choices": [
+     {
+      "text": "What is it?",
+      "do": [
+       {
+        "take": "paint_reservoir"
+       },
+       {
+        "complete": "found_art"
+       }
+      ],
+      "lines": [
+       {
+        "who": "npc",
+        "text": "A paintball cannon! Harmless, mostly. Go and make the yard prettier. Oh, and I think I hear that paint press still stomping around down there, louder than ever. Might want to check it out."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "found_art",
+     "stage": "done"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "My masterpiece! Isn't it awful? I love it."
+     },
+     {
+      "who": "npc",
+      "text": "The press is still down there, stomping around. Bring friends."
+     }
+    ]
+   },
+   {
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Art is just scrap that's been thought about."
+     }
+    ]
+   }
+  ]
+ },
+ "surveyor": {
+  "id": "surveyor",
+  "entries": [
+   {
+    "if": {
+     "quest": "survey",
+     "stage": "none"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Hello there. Pell, surveyor. Retired, technically, but nobody's mapped the Quiet Reach in forty years."
+     },
+     {
+      "who": "npc",
+      "text": "It's up that elevator. No sentries, no loaders, nothing that bites. Just a lot of very old things and a view."
+     },
+     {
+      "who": "npc",
+      "text": "Scan the landmarks, collect a few specimens, and take my drone. It talks, I'm afraid."
+     }
+    ],
+    "choices": [
+     {
+      "text": "I'd love to.",
+      "do": [
+       {
+        "start": "survey"
+       },
+       {
+        "give": "survey_drone_pet"
+       }
+      ],
+      "lines": [
+       {
+        "who": "npc",
+        "text": "Here's the drone. Use it from your pack to call it out. Off you go!"
+       }
+      ]
+     },
+     {
+      "text": "Maybe later."
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "survey",
+     "stage": "survey"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Five landmarks, three specimens. If a path is blocked, look around: there's usually a way."
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "survey",
+     "stage": "report"
+    },
+    "lines": [
+     {
+      "who": "player",
+      "text": "The survey's done."
+     },
+     {
+      "who": "npc",
+      "text": "Wonderful! Let me see the log..."
+     }
+    ],
+    "choices": [
+     {
+      "text": "Hand over the survey.",
+      "do": [
+       {
+        "take": "glowcap_specimen"
+       },
+       {
+        "take": "skyfern_specimen"
+       },
+       {
+        "take": "ruin_orchid_specimen"
+       },
+       {
+        "complete": "survey"
+       }
+      ],
+      "lines": [
+       {
+        "who": "npc",
+        "text": "Splendid work. Rummage round those specimens and you'll turn up seeds now and then. They do nicely in the hab's grow beds, by the way."
+       }
+      ]
+     }
+    ]
+   },
+   {
+    "if": {
+     "quest": "survey",
+     "stage": "done"
+    },
+    "lines": [
+     {
+      "who": "npc",
+      "text": "The Reach is still there whenever you need a quiet minute. The seeds up there grow in the hab's beds."
+     }
+    ]
+   },
+   {
+    "lines": [
+     {
+      "who": "npc",
+      "text": "Lovely day for it."
+     }
+    ]
+   }
+  ]
+ }
+}

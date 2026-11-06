@@ -1,0 +1,26 @@
+{
+ "blade": {
+  "id": "blade",
+  "display_name": "Blade",
+  "combat_skill": "melee",
+  "attack_speed": 4,
+  "attack_range": 1,
+  "attack_windup_frames": 12
+ },
+ "pistol": {
+  "id": "pistol",
+  "display_name": "Pistol",
+  "combat_skill": "firearms",
+  "attack_speed": 3,
+  "attack_range": 6,
+  "attack_windup_frames": 6
+ },
+ "cannon": {
+  "id": "cannon",
+  "display_name": "Cannon",
+  "combat_skill": "firearms",
+  "attack_speed": 4,
+  "attack_range": 6,
+  "attack_windup_frames": 0
+ }
+}

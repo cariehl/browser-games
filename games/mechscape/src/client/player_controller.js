@@ -1,0 +1,351 @@
+// Turns mouse and keyboard input into Actions for the local player.
+//
+// The mouse picks what's under it by hitbox (NPCs, gather nodes, stations,
+// items on the ground), falling back to the ground tile. Each target has a
+// list of options, OSRS style: the first is what a left click does and what
+// the hover text shows; a right click opens the whole list. Plain ground
+// and walls have no hover text, only "Walk here".
+//
+// It never changes the World directly: it only sends actions through the
+// link, and the GameLoop applies them on the tick after they arrive.
+// Swapping the simulated link for a real socket is the whole multiplayer
+// port on this side.
+
+import { ClientState } from './client_state.js';
+import { MoveAction, AttackAction, InteractAction, TakeAction, SetRunAction, TradeRequestAction } from '../sim/actions.js';
+import { GatherNode, Station, Wreck } from '../sim/objects.js';
+import { capitalize } from '../sim/skills.js';
+import { Hitbox, HitboxKind } from '../view/hitbox.js';
+import { worldToTile } from '../view/tile_math.js';
+import { isTyping } from '../view/camera_rig.js';
+import { Screen } from '../ui/screen.js';
+import { TalkAction } from '../sim/quests.js';
+import { BoardAction, LeaveMechAction } from '../sim/mech.js';
+import { HabPiece, EditPieceAction } from '../sim/hab.js';
+import { bedStage } from '../view/piece_view.js';
+import { DismissPetAction } from '../sim/appearance.js';
+import { NPC_COLOR, OBJECT_COLOR, ITEM_COLOR, PLAYER_COLOR, withIds, levelTag } from '../ui/common.js';
+import { Combat } from '../sim/combat.js';
+import { InspectInfo } from '../ui/inspect_info.js';
+import { lookOptions } from '../ui/examine.js';
+
+/** How many things under the mouse a right-click menu lists. */
+const MAX_TARGETS = 6;
+
+export class PlayerController {
+  constructor(canvas, { link, marker, hover, menu, inspector, build }) {
+    this.canvas = canvas;
+    this.link = link;
+    this.marker = marker;
+    this.hover = hover;
+    this.menu = menu;
+    this.inspector = inspector;
+    /** Build mode (ui/build_mode.js): while it's on, clicks place a hab piece. */
+    this.build = build;
+    this._mouse = null;
+    this._overUi = false;
+
+    window.addEventListener('pointermove', (e) => {
+      this._mouse = [e.clientX, e.clientY];
+      this._overUi = e.target !== canvas;
+    });
+    canvas.addEventListener('pointerleave', () => {
+      this._overUi = true;
+    });
+    canvas.addEventListener('pointerdown', (e) => {
+      // Clicking the world takes focus away from any text box, so keys (arrows, R) go back to the game.
+      if (document.activeElement && document.activeElement !== document.body) document.activeElement.blur();
+      if (this.build && this.build.click(e.button)) return;
+      if (e.button === 0) {
+        const first = this.allOptions(e.clientX, e.clientY).find((o) => !o.rightOnly);
+        if (first.action) first.action();
+      } else if (e.button === 2) {
+        this.menu.open(this.allOptions(e.clientX, e.clientY), e.clientX, e.clientY);
+      }
+    });
+    window.addEventListener('keydown', (e) => {
+      if (e.repeat || isTyping(e) || e.ctrlKey || e.metaKey || e.altKey) return;
+      if (e.key === 'r' || e.key === 'R') this.toggleRun();
+    });
+  }
+
+  /** Run on, run off (the R key, and the run globe by the minimap). */
+  toggleRun() {
+    const me = ClientState.me();
+    if (me) this.link.send(ClientState.localPlayerId, new SetRunAction(!me.running));
+  }
+
+  update() {
+    if (!this._mouse) return;
+    const [x, y] = this._mouse;
+    if (this.build && this.build.active) {
+      this.build.update(this._overUi ? null : x, y);
+      this.hover.hide();
+      return;
+    }
+    if (this.menu.isOpen()) {
+      this.hover.hide();
+      return;
+    }
+    if (this._overUi) {
+      // Over the UI: show what the UI asked for (an inventory item), if anything.
+      const ui = this.hover.uiOption();
+      if (ui) this.hover.show(ui.option, ui.more, x, y, ui.detail);
+      else this.hover.hide();
+      return;
+    }
+    const options = this.targetOptions(x, y);
+    // Walk here and Cancel are always there; they don't count as "more".
+    if (options.length && options[0].rightOnly) this.hover.show({ verb: 'Walk here' }, options.length, x, y);
+    else if (options.length) this.hover.show(options[0], options.length - 1, x, y);
+    else this.hover.hide();
+  }
+
+  /**
+   * Every option at a screen position: the target's own, then "Walk here"
+   * (over the map), then Inspect and Examine, then "Cancel".
+   */
+  allOptions(x, y) {
+    const all = this.targetOptions(x, y);
+    const options = all.filter((o) => !o.look);
+    const tile = this._groundTile(x, y);
+    if (tile) options.push({ verb: 'Walk here', action: () => this._walk(tile) });
+    options.push(...all.filter((o) => o.look));
+    options.push({ verb: 'Cancel', action: null });
+    return options;
+  }
+
+  /** Inspect and Examine for a target (see ui/examine.js). */
+  _look(target, color, x, y, extra) {
+    return lookOptions({ link: this.link, inspector: this.inspector, target, color, x, y, ...extra });
+  }
+
+  /**
+   * Options for everything under the mouse, nearest first (with ids, when the
+   * debug window shows them): every target's actions, then every target's
+   * Inspect and Examine, like OSRS listing a sentry and the husk under it.
+   * A left click does the first action, so the nearest thing still wins.
+   */
+  targetOptions(x, y) {
+    const world = ClientState.world;
+    const actions = [];
+    const looks = [];
+    for (const hitbox of Hitbox.pickAll(Screen.ray(x, y)).slice(0, MAX_TARGETS)) {
+      for (const option of withIds(this._optionsFor(hitbox, x, y), debugId(hitbox, world))) {
+        (option.look ? looks : actions).push(option);
+      }
+    }
+    return [...actions, ...looks];
+  }
+
+  _optionsFor(hitbox, x, y) {
+    const world = ClientState.world;
+    if (hitbox.kind === HitboxKind.NPC) {
+      const npc = world.entities.get(hitbox.targetId);
+      if (!npc || npc.isDead()) return [];
+      const name = npc.def.display_name;
+      const examine = { kind: 'npc', defId: npc.def.id };
+      if (npc.def.brain === 'mech') return [...this._mechOptions(npc), ...this._look(name, NPC_COLOR, x, y, examine)];
+      if (!npc.def.attackable) {
+        const options = [];
+        if (npc.def.talk) options.push({ verb: 'Talk-to', target: name, color: NPC_COLOR, action: () => this._talk(npc.id) });
+        // Your own pet can go back in your pack.
+        const me = ClientState.me();
+        if (me && me.pet && me.pet_npc_id === npc.id) options.push({ verb: 'Pick up', target: name, color: NPC_COLOR, action: () => this._pickUpPet(npc) });
+        return [...options, ...this._look(name, NPC_COLOR, x, y, examine)];
+      }
+      const level = levelTag(Combat.level(npc), myLevel());
+      return [
+        { verb: 'Attack', target: name, level, color: NPC_COLOR, action: () => this._attack(npc.id) },
+        ...this._look(name, NPC_COLOR, x, y, { ...examine, source: () => InspectInfo.npc(ClientState.world, npc, ClientState.me()) }),
+      ];
+    }
+    if (hitbox.kind === HitboxKind.PLAYER) {
+      const other = world.entities.get(hitbox.targetId);
+      if (!other || other.id === ClientState.localPlayerId) return [];
+      const name = other.display_name;
+      // Right-click only: a left click on a player walks, like OSRS.
+      return [
+        { verb: 'Trade with', target: name, level: levelTag(Combat.level(other), myLevel()), color: PLAYER_COLOR, action: () => this._trade(other.id), rightOnly: true },
+      ];
+    }
+    if (hitbox.kind === HitboxKind.OBJECT) {
+      const object = world.getObject(hitbox.targetId);
+      if (!object) return [];
+      const name = object.displayName();
+      if (object instanceof HabPiece) return [...this._pieceOptions(object), ...this._look(name, OBJECT_COLOR, x, y, { kind: 'item', defId: object.item.id })];
+      let verb = 'Use';
+      let look = {};
+      if (object instanceof GatherNode) {
+        verb = capitalize(object.def.verb);
+        look = { kind: 'node', defId: object.def.id, source: () => InspectInfo.gatherNode(ClientState.world, object, ClientState.me()) };
+      } else if (object instanceof Wreck) {
+        verb = 'Salvage';
+        look = { source: () => InspectInfo.wreck(ClientState.world, object) };
+      } else if (object instanceof Station) {
+        verb = object.def.verb;
+        look = { kind: 'station', defId: object.def.id };
+      }
+      return [
+        { verb, target: name, color: OBJECT_COLOR, action: () => this._interact(object.id) },
+        ...this._look(name, OBJECT_COLOR, x, y, look),
+      ];
+    }
+    if (hitbox.kind === HitboxKind.SCENERY) {
+      const { def, tile, terrain } = hitbox.targetId;
+      // Terrain a puzzle has cleared since is gone.
+      if (terrain && world.terrainAt(tile) !== def) return [];
+      // Scenery only has Examine: a left click still walks.
+      return this._look(def.display_name, OBJECT_COLOR, x, y, { kind: terrain ? 'terrain' : 'decor', defId: def.id });
+    }
+    if (hitbox.kind === HitboxKind.ITEM) {
+      const picked = world.ground_items.get(hitbox.targetId);
+      if (!picked) return [];
+      // The one under the mouse first, then everything else on the tile, like OSRS listing a whole pile.
+      const pile = [picked, ...world.groundItemsAt(picked.tile).filter((g) => g !== picked)];
+      const options = pile.map((ground) => ({ verb: 'Take', target: groundName(ground), color: ITEM_COLOR, action: () => this._take(ground.id) }));
+      options.push(...this._look(picked.item.display_name, ITEM_COLOR, x, y, { kind: 'item', defId: picked.item.id, live: false, source: () => InspectInfo.item(picked.item, ClientState.me()) }));
+      return options;
+    }
+    return [];
+  }
+
+  /** A hab piece: use it (tend a grow bed), and if you placed it, move, turn, recolour or pick it up. */
+  _pieceOptions(piece) {
+    const name = piece.displayName();
+    const send = (action) => () => this.link.send(ClientState.localPlayerId, action);
+    let verb = 'Admire';
+    if (piece.bed) verb = ['Plant', 'Water', 'Check', 'Harvest'][bedStage(piece.bed, ClientState.world.tick)];
+    const options = [{ verb, target: name, color: OBJECT_COLOR, action: () => this._interact(piece.id) }];
+    const me = ClientState.me();
+    if (me && piece.owner === me.display_name) {
+      const colors = piece.def.colors || [];
+      const next = colors[(colors.indexOf(piece.color) + 1) % colors.length];
+      options.push(
+        { verb: 'Move', target: name, color: OBJECT_COLOR, action: () => this.build.move(piece) },
+        { verb: 'Turn', target: name, color: OBJECT_COLOR, action: send(new EditPieceAction(piece.id, 'turn')) },
+      );
+      if (colors.length > 1) options.push({ verb: 'Recolour', target: name, color: OBJECT_COLOR, action: send(new EditPieceAction(piece.id, 'color', { color: next })) });
+      options.push({ verb: 'Pick up', target: name, color: OBJECT_COLOR, action: send(new EditPieceAction(piece.id, 'pick_up')) });
+    }
+    return options;
+  }
+
+  /** Climb in (either seat), swap seats, or climb out. */
+  _mechOptions(mech) {
+    const me = ClientState.me();
+    const name = mech.def.display_name;
+    const send = (action) => () => this.link.send(ClientState.localPlayerId, action);
+    const seatName = { pilot: "Pilot's seat", gunner: "Gunner's seat" };
+    if (me && me.riding && me.riding.mech === mech.id) {
+      const other = me.riding.seat === 'pilot' ? 'gunner' : 'pilot';
+      return [
+        { verb: 'Climb out of', target: name, color: NPC_COLOR, action: send(new LeaveMechAction()) },
+        { verb: `Move to the ${other}'s seat of`, target: name, color: NPC_COLOR, action: send(new BoardAction(mech.id, other)) },
+      ];
+    }
+    return ['pilot', 'gunner'].map((seat) => ({
+      verb: 'Board', target: `${name} (${seatName[seat]})`, color: NPC_COLOR,
+      action: () => {
+        this.marker.showAt(mech.tile, false);
+        this.link.send(ClientState.localPlayerId, new BoardAction(mech.id, seat));
+      },
+    }));
+  }
+
+  _talk(npcId) {
+    const npc = ClientState.world.entities.get(npcId);
+    if (!npc) return;
+    this.marker.showAt(npc.tile, false);
+    this.link.send(ClientState.localPlayerId, new TalkAction(npcId));
+  }
+
+  /** Put your pet back in your pack (it's never far: it follows you). */
+  _pickUpPet(npc) {
+    this.marker.showAt(npc.tile, false);
+    this.link.send(ClientState.localPlayerId, new DismissPetAction());
+  }
+
+  _trade(playerId) {
+    this.link.send(ClientState.localPlayerId, new TradeRequestAction(playerId));
+  }
+
+  _take(groundId) {
+    const ground = ClientState.world.ground_items.get(groundId);
+    if (!ground) return;
+    this.marker.showAt(ground.tile, false);
+    this.link.send(ClientState.localPlayerId, new TakeAction(groundId));
+  }
+
+  _attack(npcId) {
+    const npc = ClientState.world.entities.get(npcId);
+    if (!npc) return;
+    this.marker.showAt(npc.tile, false);
+    this.link.send(ClientState.localPlayerId, new AttackAction(npcId));
+  }
+
+  _interact(objectId) {
+    const object = ClientState.world.getObject(objectId);
+    if (!object) return;
+    // Instant, purely cosmetic feedback, shown before the action is even
+    // sent: latency feels fine as long as something responds the frame you
+    // click. Red for interacting, like OSRS.
+    this.marker.showAt(object.tile, false);
+    this.link.send(ClientState.localPlayerId, new InteractAction(objectId));
+  }
+
+  /** Walks to [tile], as clicking it would (the minimap). */
+  walkTo(tile) {
+    this._walk(tile);
+  }
+
+  _walk(tile) {
+    // Yellow for walking, red for a tile you can't walk onto.
+    this.marker.showAt(tile, ClientState.world.isWalkable(tile));
+    this.link.send(ClientState.localPlayerId, new MoveAction(tile));
+  }
+
+  /** The map tile under the mouse, or null off the map. */
+  _groundTile(x, y) {
+    const hit = Screen.groundPoint(Screen.ray(x, y));
+    if (!hit) return null;
+    const tile = worldToTile(hit);
+    return ClientState.world.inBounds(tile) ? tile : null;
+  }
+}
+
+/** What the debug window's "Ids" shows for a hitbox: def id and instance id ("foreman #12"). */
+function debugId(hitbox, world) {
+  switch (hitbox.kind) {
+    case HitboxKind.NPC: {
+      const npc = world.entities.get(hitbox.targetId);
+      return npc && `${npc.def.id} #${npc.id}`;
+    }
+    case HitboxKind.PLAYER: return `#${hitbox.targetId}`;
+    case HitboxKind.OBJECT: {
+      const object = world.getObject(hitbox.targetId);
+      const def = object && (object.def || object.item);
+      return object && `${def && def.id ? `${def.id} ` : ''}#${object.id}`;
+    }
+    case HitboxKind.SCENERY: {
+      const { def, tile } = hitbox.targetId;
+      return `${def.id} ${tile.x},${tile.y}`;
+    }
+    case HitboxKind.ITEM: {
+      const ground = world.ground_items.get(hitbox.targetId);
+      return ground && `${ground.item.id} #${ground.id}`;
+    }
+    default: return '';
+  }
+}
+
+function groundName(ground) {
+  if (ground.item.container) return `${ground.item.display_name} (${ground.count}/${ground.item.capacity})`;
+  return ground.item.display_name + (ground.count > 1 ? ` ×${ground.count}` : '');
+}
+
+/** The local player's combat level, to colour others' against (0 before joining). */
+function myLevel() {
+  const me = ClientState.me();
+  return me ? Combat.level(me) : 0;
+}

@@ -1,0 +1,27 @@
+{
+  "name": "mechscape-threejs",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "start": "node server/index.js",
+    "dev": "node server/index.js --debug",
+    "offline": "node tools/serve.js",
+    "vendor-sdk": "node tools/vendor_sdk.js",
+    "test": "node --test tests/*.test.js",
+    "check-loops": "node tools/check_loops.js",
+    "check-reach": "node tools/check_reach.js",
+    "check-text": "node tools/check_text.js",
+    "editor": "node tools/editor/server.js",
+    "build:pages": "node tools/build_pages.js"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.18.18",
+    "@colyseus/ws-transport": "^0.18.4"
+  },
+  "devDependencies": {
+    "@colyseus/sdk": "^0.18.5"
+  },
+  "engines": {
+    "node": ">=22"
+  }
+}
