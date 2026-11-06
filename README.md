@@ -10,6 +10,7 @@ Browser games and apps by cariehl, in one repo. Most of the games are on https:/
 | [games/hexmancer](games/hexmancer) | Hexmancer (single file) | [/hexmancer/](https://cariehl.github.io/hexmancer/) | cariehl.github.io `hexmancer/` |
 | [games/overcharge](games/overcharge) | Overcharge, a third-person roguelite shooter (single file) | [/overcharge/](https://cariehl.github.io/overcharge/) | cariehl.github.io `overcharge/` |
 | [games/mechscape](games/mechscape) | MechScape (plain ES modules, Node game server) | [/mechscape/](https://cariehl.github.io/mechscape/) | cariehl/mechscape-threejs |
+| [games/deep-space](games/deep-space) | Deep Space, an idle survival game with a talent constellation (plain scripts) | not hosted yet | new |
 | [games/wow-clone](games/wow-clone) | Raid, a raids-only MMO (three.js, Colyseus 0.18 server) | not hosted yet | cariehl/wow-clone-threejs |
 | [apps/on-the-wire](apps/on-the-wire) | On the Wire, an embedded protocols course with an in-browser C sandbox (single file) | not hosted yet | a Claude artifact |
 | [apps/signalbench](apps/signalbench) | SignalBench, a virtual hardware bench for embedded C firmware (C firmware, Rust sim, Tauri desktop app) | desktop app | cariehl/SignalBench |
@@ -27,7 +28,7 @@ This builds every game on the site that has a build step and writes `dist/`, lai
 
 Game folders on the site keep the short URL paths (`orbs/`, not `orbs-of-magic/`), so links people already have keep working. To put a game on the site, add it to `GAMES` in `scripts/build-site.mjs`, and add a card and a 16:9 thumbnail to `site/` (see the comment in `site/index.html`). Commentary for a game goes in `site/commentary/<slug>.md`; each game's menu shows a Commentary button only while that file exists.
 
-Raid, On the Wire and SignalBench are not part of the site build.
+Deep Space, Raid, On the Wire and SignalBench are not part of the site build.
 
 ## CI
 
