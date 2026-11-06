@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, World, Content, DEFAULT_MAP, messages } from './helpers.js';
+import { act, die, World, Content, DEFAULT_MAP, messages } from './helpers.js';
 import { AttackAction } from '../src/sim/actions.js';
 import { Arena, ArenaAction, BossState } from '../src/sim/boss.js';
 import { key, chebyshev } from '../src/sim/grid.js';
@@ -48,12 +48,28 @@ test('the boss is a BossState in its sealed hall; the door lets you in and out b
   const door = doorOf(world);
   act(world, ann, new ArenaAction(door.id, 'easy'));
   assert.ok(boss.fight, 'the fight is on');
-  // Nobody else gets in, and Ann can't get out.
+  // Nobody else gets in.
   const bob = world.spawnPlayer('Bob');
   bob.teleport(Arena.doorSides(world, door, boss)[0]);
   act(world, bob, new ArenaAction(door.id, 'enter'));
   assert.ok(!world.inZone(bob.tile, 'arena'));
   assert.ok(messages(world, bob.id).some((m) => m.includes('sealed')));
+});
+
+test('a fighter can bail out mid-fight; with nobody left inside, the press resets', () => {
+  const world = fresh();
+  const boss = bossOf(world);
+  const [ann] = party(world, 'Ann');
+  const door = doorOf(world);
+  act(world, ann, new ArenaAction(door.id, 'easy'));
+  assert.ok(boss.fight);
+  boss.hp -= 5;
+  act(world, ann, new ArenaAction(door.id, 'leave'));
+  assert.ok(!world.inZone(ann.tile, 'arena'), 'Ann is out');
+  assert.ok(messages(world, ann.id).some((m) => m.includes('crew hatch')));
+  world.runTick();
+  assert.equal(boss.fight, null);
+  assert.equal(boss.hp, boss.maxHp());
 });
 
 test('HP scales with the players inside at the start', () => {
@@ -178,7 +194,7 @@ test('a death in the hall leaves the wreck outside the door, and a wipe resets t
   act(world, ann, new ArenaAction(doorOf(world).id, 'easy'));
   boss.hp = 10;
   ann.inventory.add(Content.item('scrap_metal'));
-  world.kill(ann, boss);
+  die(world, ann, boss);
   const wreck = [...world.wrecks.values()].find((w) => w.owner_id === ann.id);
   assert.ok(!world.inZone(wreck.tile, 'arena'));
   assert.ok(chebyshev(wreck.tile, doorOf(world).tile) <= 2);

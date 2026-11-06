@@ -88,13 +88,17 @@ test('a mirror fed snapshots matches the server world', () => {
     sync();
   }
   world.kill(other, null);
-  world.runTick();
-  sync();
+  for (let i = 0; i < World.DYING_TICKS; i++) {
+    world.runTick();
+    sync();
+  }
   const otherWreck = [...world.wrecks.values()].find((w) => w.owner_id === other.id);
   assert.ok(otherWreck);
   world.kill(me, null);
-  world.runTick();
-  sync();
+  for (let i = 0; i < World.DYING_TICKS; i++) {
+    world.runTick();
+    sync();
+  }
   world.removePlayer(other.id);
   world.runTick();
   sync();
@@ -170,6 +174,7 @@ test('the server save survives a restart, with everyone logged out until they re
     ann.inventory.add(item('scrap_metal'), 4);
     bo.inventory.add(item('scrap_metal'), 1);
     game.world.kill(bo, null);
+    for (let i = 0; i < World.DYING_TICKS; i++) game.loop.runTick();
     const wreckId = [...game.world.wrecks.keys()][0];
     game.leave(ann.id);
     for (let i = 0; i < 100; i++) game.loop.runTick();

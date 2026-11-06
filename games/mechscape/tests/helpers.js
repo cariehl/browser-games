@@ -34,3 +34,10 @@ export function runUntil(world, done, max = 2000) {
 export function messages(world, entityId) {
   return world.events.filter((e) => e.entity === entityId && e.type === 'message').map((e) => e.data.text);
 }
+
+/** Kills [entity] and, for a pilot, waits out the fall until the manufactory reprints them. */
+export function die(world, entity, killer = null) {
+  world.kill(entity, killer);
+  if (entity.isNpc()) return;
+  for (let i = 0; i < World.DYING_TICKS && entity.isDead(); i++) world.runTick();
+}

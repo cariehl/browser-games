@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, runUntil, World, Content, DEFAULT_MAP } from './helpers.js';
+import { act, runUntil, die, World, Content, DEFAULT_MAP } from './helpers.js';
 import { AttackAction, EquipAction } from '../src/sim/actions.js';
 import { cleanLook, SetLookAction, CallPetAction, DismissPetAction, Pets } from '../src/sim/appearance.js';
 import { StationKind } from '../src/sim/defs.js';
@@ -47,7 +47,7 @@ test('cosmetics are worn over the look, and dropped in the wreck on death', () =
   act(world, player, new EquipAction(player.inventory.slots.findIndex((s) => s && s.item.id === 'traffic_cone')));
   assert.equal(player.cosmetics.hat.id, 'traffic_cone');
   assert.equal(player.inventory.countOf(item('traffic_cone')), 0);
-  world.kill(player, null);
+  die(world, player);
   assert.deepEqual(player.cosmetics, {});
   const wreck = [...world.wrecks.values()].find((w) => w.owner_id === player.id);
   assert.ok(wreck.items.some((s) => s.item.id === 'traffic_cone'));

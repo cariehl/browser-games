@@ -270,9 +270,23 @@ function buildWeapon(weapon) {
   const metal = own(weapon.color, { metalness: 0.6, roughness: 0.4 });
   const grip = own([0.12, 0.12, 0.13]);
   const type = weapon.weapon_type ? weapon.weapon_type.id : '';
-  if (type === 'pistol') {
+  if (type === 'pistol' && weapon.weapon_look === 'pipe') {
+    // A length of pipe on a pipe-elbow grip, a gas cartridge hose-clamped
+    // underneath, and a lot of tape. It mostly points the right way.
+    const tape = own([0.55, 0.5, 0.35], { roughness: 0.95, metalness: 0 });
+    const brass = own([0.8, 0.62, 0.3], { metalness: 0.7, roughness: 0.35 });
+    g.add(part(new THREE.CylinderGeometry(0.032, 0.032, 0.34, 10), metal, 0, 0.09, -0.12, Math.PI / 2));
+    g.add(part(new THREE.CylinderGeometry(0.042, 0.042, 0.04, 10), metal, 0, 0.09, -0.29, Math.PI / 2));
+    g.add(part(new THREE.TorusGeometry(0.026, 0.012, 6, 12, Math.PI / 2), metal, 0, 0.045, 0.05, 0, Math.PI / 2, Math.PI));
+    g.add(part(new THREE.CylinderGeometry(0.024, 0.026, 0.11, 10), tape, 0, 0.0, 0.07, 0.25, 0, 0));
+    g.add(part(new THREE.CylinderGeometry(0.018, 0.018, 0.12, 8), brass, 0, 0.045, -0.1, Math.PI / 2));
+    for (const z of [-0.15, -0.05]) g.add(part(new THREE.TorusGeometry(0.03, 0.006, 4, 12), grip, 0, 0.07, z));
+    g.add(part(new THREE.BoxGeometry(0.012, 0.04, 0.03), grip, 0, 0.045, 0.0));
+  } else if (type === 'pistol') {
     g.add(part(new THREE.BoxGeometry(0.05, 0.05, 0.26), metal, 0, 0.08, -0.08));
     g.add(part(new THREE.BoxGeometry(0.045, 0.12, 0.06), grip, 0, 0.04, 0.03));
+    g.add(part(new THREE.BoxGeometry(0.035, 0.03, 0.12), own(weapon.color, { metalness: 0.4, roughness: 0.5 }), 0, 0.115, -0.03));
+    g.add(part(new THREE.CylinderGeometry(0.014, 0.014, 0.04, 8), grip, 0, 0.08, -0.22, Math.PI / 2));
   } else if (type === 'cannon') {
     g.add(part(new THREE.CylinderGeometry(0.06, 0.07, 0.42, 12), metal, 0, 0.09, -0.12, Math.PI / 2));
     g.add(part(new THREE.SphereGeometry(0.08, 12, 8), own([0.95, 0.4, 0.75]), 0, 0.17, 0.04));

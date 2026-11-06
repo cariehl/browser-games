@@ -23,6 +23,7 @@ import { Content } from '../sim/defs.js';
 import { Combat } from '../sim/combat.js';
 import { HazardViews } from './hazard_view.js';
 import { PieceView, PieceGhost } from './piece_view.js';
+import { applyVariant } from './npc_variants.js';
 
 export const PLAYER_MODEL = 'player.glb';
 /** Ground one Walk and one Run cycle of the player model cover, in metres. */
@@ -361,6 +362,8 @@ function makePlayerView(state) {
     animator.enableUpperBody('spine');
     view.animator = animator;
     view.lunges = false;
+    // A pilot lies where they fell until they're reprinted.
+    view.collapseSeconds = Infinity;
   }
   view.appearance = new PlayerAppearance(model, state);
   const box = Models.bounds(model);
@@ -421,6 +424,7 @@ function makeNpcView(state) {
   const view = new EntityView(state);
   if (def.model && Models.has(def.model)) {
     const { model, animations } = Models.instance(def.model, def.model_scale);
+    applyVariant(model, def);
     view.add(model);
     const animator = ModelAnimator.attach(model, animations, state, def.model_scale);
     if (animator) {

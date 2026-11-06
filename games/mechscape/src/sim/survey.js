@@ -46,14 +46,16 @@ StationHandlers[StationKind.PUZZLE] = (world, player, station) => {
   if (def.needs) {
     const { item, count } = def.needs;
     if (player.inventory.countOf(item) < count) {
-      world.message(player.id, `${def.description}: ${count} ${item.display_name.toLowerCase()}. You have ${player.inventory.countOf(item)}.`);
+      const have = player.inventory.countOf(item);
+      world.message(player.id, Text.get('survey.puzzle_needs', { count, item: item.display_name.toLowerCase(), puzzle: def.display_name.toLowerCase(), have: have || 'none' }));
       return;
     }
     player.inventory.remove(item, count);
   }
   Survey.open(world, def.opens);
   world.message(player.id, def.done_text);
-  world.grantXp(player, XENOBIOLOGY, Content.rules.survey.puzzle_xp);
+  // The skill the job takes: mending the winch is engineering, feeding the valve siphoning.
+  world.grantXp(player, def.skill || XENOBIOLOGY, Content.rules.survey.puzzle_xp);
   world.announce(Text.get('survey.puzzle_solved', { player: player.display_name, puzzle: def.display_name, area: world.areaAt(station.tile)?.name || '' }));
   world.emitEvent(player.id, 'puzzle_solved', { station: station.id, opens: def.opens });
 };

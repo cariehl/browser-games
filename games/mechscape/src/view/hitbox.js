@@ -17,8 +17,26 @@ const _inverse = new THREE.Matrix4();
 const _ray = new THREE.Ray();
 const _hit = new THREE.Vector3();
 
+/**
+ * Which hitboxes the debug view draws: none, NPCs, everything that moves
+ * (NPCs and players), everything you can use (objects and ground items),
+ * or all of it, scenery included.
+ */
+export const HitboxFilter = {
+  off: { label: 'Off', kinds: [] },
+  npcs: { label: 'NPCs', kinds: [HitboxKind.NPC] },
+  entities: { label: 'All entities', kinds: [HitboxKind.NPC, HitboxKind.PLAYER] },
+  objects: { label: 'All objects', kinds: [HitboxKind.OBJECT, HitboxKind.ITEM] },
+  all: { label: 'Everything', kinds: Object.values(HitboxKind) },
+};
+
 export class Hitbox extends THREE.Object3D {
-  static debugVisible = false;
+  /** A key of HitboxFilter. */
+  static debugFilter = 'off';
+
+  static get debugVisible() {
+    return Hitbox.debugFilter !== 'off';
+  }
 
   /** [size] and [center] (THREE.Vector3) are in the parent view's local space. */
   constructor(kind, targetId, size, center) {
@@ -31,7 +49,11 @@ export class Hitbox extends THREE.Object3D {
     /** The debug wireframe, made the first time it's shown (there are thousands of boxes). */
     this._wire = null;
     all.add(this);
-    if (Hitbox.debugVisible) this._showWire(true);
+    if (Hitbox._drawn(kind)) this._showWire(true);
+  }
+
+  static _drawn(kind) {
+    return HitboxFilter[Hitbox.debugFilter].kinds.includes(kind);
   }
 
   _showWire(on) {
@@ -70,23 +92,35 @@ export class Hitbox extends THREE.Object3D {
     return _hit.applyMatrix4(this.matrixWorld).distanceTo(ray.origin);
   }
 
-  /** The nearest hitbox along [ray], or null. */
-  static pick(ray) {
-    let best = null;
-    let bestDistance = Infinity;
+  /** Every hitbox along [ray], nearest first (one per target). */
+  static pickAll(ray) {
+    const hits = [];
     for (const hitbox of all) {
       const d = hitbox.rayDistance(ray);
-      if (d >= 0 && d < bestDistance) {
-        bestDistance = d;
-        best = hitbox;
-      }
+      if (d >= 0) hits.push([d, hitbox]);
     }
-    return best;
+    hits.sort((p, q) => p[0] - q[0]);
+    const seen = new Set();
+    const out = [];
+    for (const [, hitbox] of hits) {
+      const id = `${hitbox.kind}:${typeof hitbox.targetId === 'object' ? `${hitbox.targetId.def.id}@${hitbox.targetId.tile.x},${hitbox.targetId.tile.y}` : hitbox.targetId}`;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(hitbox);
+    }
+    return out;
   }
 
-  static setDebugVisible(on) {
-    Hitbox.debugVisible = on;
-    for (const hitbox of all) hitbox._showWire(on);
+  /** Draws the hitboxes [filter] (a key of HitboxFilter) picks. */
+  static setDebugFilter(filter) {
+    Hitbox.debugFilter = filter in HitboxFilter ? filter : 'off';
+    for (const hitbox of all) hitbox._showWire(Hitbox._drawn(hitbox.kind));
+  }
+
+  /** F5: on to the next filter. */
+  static cycleDebugFilter() {
+    const keys = Object.keys(HitboxFilter);
+    Hitbox.setDebugFilter(keys[(keys.indexOf(Hitbox.debugFilter) + 1) % keys.length]);
   }
 }
 

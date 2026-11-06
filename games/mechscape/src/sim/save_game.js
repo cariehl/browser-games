@@ -192,6 +192,8 @@ export const SaveGame = {
       if (item) player.storage.deposit(item, count);
     }
     Features.feed('loadPlayer', entry.f, world, player);
+    // Saved mid-death: the manufactory finishes the job on the next tick.
+    if (player.hp <= 0) player.dying_until = world.tick;
     return player;
   },
 

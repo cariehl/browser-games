@@ -32,6 +32,23 @@ export const rock = (radius, x = 0, y = 0, z = 0, sx = 1, sy = 0.7, sz = 1, ry =
   g.scale(sx, sy, sz);
   return place(g, x, y, z, 0, ry, 0);
 };
+/**
+ * A boulder that reads as a rock, not a box: a once-subdivided icosahedron
+ * with every corner pushed in or out a little (the same corner the same way,
+ * so it stays closed), squashed by [sx, sy, sz].
+ */
+const lumpy = (radius, r, x, y, z, sx, sy, sz) => {
+  const g = new THREE.IcosahedronGeometry(radius, 1);
+  const p = g.attributes.position;
+  const nudge = new Map();
+  for (let i = 0; i < p.count; i++) {
+    const k = `${p.getX(i).toFixed(3)},${p.getY(i).toFixed(3)},${p.getZ(i).toFixed(3)}`;
+    if (!nudge.has(k)) nudge.set(k, r.range(0.8, 1.15));
+    const s = nudge.get(k);
+    p.setXYZ(i, p.getX(i) * s * sx, p.getY(i) * s * sy, p.getZ(i) * s * sz);
+  }
+  return place(g, x, y, z, 0, r.range(0, 3), 0);
+};
 /** A tapering column with its faces knocked about: a rock spire [height] tall. */
 const jagged = (bottom, top, height, r) => {
   const g = new THREE.CylinderGeometry(top, bottom, height, 6, 4);
@@ -73,6 +90,13 @@ const SHAPES = {
     base: [cyl(0.04, 0.05, 1.7, 0, 0.85, 0), box(0.3, 0.06, 0.3, 0, 0.03, 0), box(0.06, 0.06, 0.35, 0, 1.68, 0.12)],
     glow: [box(0.16, 0.08, 0.16, 0, 1.62, 0.28)],
   }),
+  // Taller than a yard lamp and banded, so a pilot can steer by it from across the yard.
+  marker: () => ({
+    base: [box(0.4, 0.1, 0.4, 0, 0.05, 0), cyl(0.05, 0.07, 2.5, 0, 1.3, 0, 0, 0, 0, 8)],
+    dark: [cyl(0.13, 0.13, 0.08, 0, 2.52, 0, 0, 0, 0, 10), cyl(0.11, 0.11, 0.05, 0, 2.92, 0, 0, 0, 0, 10)],
+    accent: [0.7, 1.3, 1.9].map((y) => cyl(0.075, 0.075, 0.14, 0, y, 0, 0, 0, 0, 8)),
+    glow: [cyl(0.1, 0.1, 0.36, 0, 2.73, 0, 0, 0, 0, 10), ball(0.035, 0, 3.0, 0)],
+  }),
   puddle: (r) => ({
     accent: [place(new THREE.CircleGeometry(r.range(0.3, 0.45), 14), 0, 0.012, 0, -Math.PI / 2)],
   }),
@@ -98,7 +122,8 @@ const SHAPES = {
   }),
   pipe: () => ({
     base: [cyl(0.14, 0.14, 1.4, 0, 0.14, 0, 0, 0, Math.PI / 2, 10)],
-    dark: [torus(0.15, 0.03, 0.6, 0.14, 0, 0).rotateY(Math.PI / 2)],
+    // A bolted flange at each end, around the pipe rather than beside it.
+    dark: [-0.62, 0.62].map((x) => cyl(0.18, 0.18, 0.06, x, 0.14, 0, 0, 0, Math.PI / 2, 10)),
   }),
   tire: (r) => ({
     base: [torus(0.26, 0.09, 0, 0.09, 0, -Math.PI / 2 + r.range(-0.1, 0.1))],
@@ -144,8 +169,8 @@ const SHAPES = {
   }),
   // Big scenery, mostly for the land beyond the maps' edges (data/scenery.json).
   boulder: (r) => ({
-    base: [rock(0.55, 0, 0.22, 0, r.range(0.9, 1.2), r.range(0.6, 0.85), r.range(0.8, 1.05), r.range(0, 3)),
-      ...(r.next() < 0.6 ? [rock(0.3, r.range(0.35, 0.5), 0.1, r.range(-0.3, 0.3), 1, 0.7, 1, r.range(0, 3))] : [])],
+    base: [lumpy(0.55, r, 0, 0.22, 0, r.range(0.9, 1.2), r.range(0.6, 0.85), r.range(0.8, 1.05)),
+      ...(r.next() < 0.6 ? [lumpy(0.3, r, r.range(0.35, 0.5), 0.1, r.range(-0.3, 0.3), 1, 0.7, 1)] : [])],
   }),
   /** A tall, broken pillar of rock. */
   rock_spire: (r) => ({
@@ -265,7 +290,7 @@ export function buildProps(props) {
       }
       if (def.inspect) for (const p of these) if (p.hitbox !== false) group.add(sceneryHitbox(def, p.tile, bounds, p.scale, false, p.big ? p.at : null));
     });
-    if (def.light) for (const p of mine) glowSpots.push({ at: p.at.clone().setY(p.at.y + (def.shape === 'lamp' ? 1.5 : 0.6)), light: def.light });
+    if (def.light) for (const p of mine) glowSpots.push({ at: p.at.clone().setY(p.at.y + (def.shape === 'lamp' ? 1.5 : def.light_height)), light: def.light });
   }
   return { group, lights: new LightPool(group, glowSpots) };
 }

@@ -11,6 +11,7 @@ import { ClientState } from '../client/client_state.js';
 import { Content, StationKind } from '../sim/defs.js';
 import { Mechs, InstallComponentAction, MechCommandAction, LeaveMechAction, BoardAction } from '../sim/mech.js';
 import { Text } from '../sim/text.js';
+import { Skills } from '../sim/skills.js';
 import { el } from './screen.js';
 import { onEscape } from './common.js';
 
@@ -92,7 +93,11 @@ export class MechWindow {
             el('button', '', 'Install', row).addEventListener('click', () => this._send(new InstallComponentAction(station.id, item.id)));
           } else {
             const recipe = Object.values(Content.recipes).find((r) => r.output === item);
-            if (recipe && have < count) el('span', 'muted small', `${recipe.skill} ${recipe.level_required}`, row);
+            if (recipe && have < count) {
+              // Where it's made, too: the cockpit, say, only comes off the hab workbench.
+              const where = Object.values(Content.stations).find((s) => s.recipes.includes(recipe));
+              el('span', 'muted small', `${Skills.displayName(recipe.skill)} ${recipe.level_required}${where ? `, ${where.display_name.toLowerCase()}` : ''}`, row);
+            }
           }
         }
         if (build.contributors.length) {

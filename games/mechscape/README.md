@@ -26,7 +26,7 @@ Controls:
 - **Right-click:** anything for its options: the action, Walk here, **Inspect** (a card of its stats and your odds against it, for things that have stats), **Examine** (its description, in the chat box on the next tick) and Cancel. Right-click an inventory item for Wield or Wear, Drop, Inspect and Examine, and a recipe in a crafting station's menu to make it or Inspect and Examine what it makes; hovering an item shows its left-click action and stats.
 - **Keys:** **R** toggles run; middle-drag or the arrow keys orbit the camera; scroll to zoom.
 
-Clicks land on what's drawn: NPCs, nodes and stations have hitboxes that move with their models, so you click the mech, not the tile under it. **F5** shows the hitboxes.
+Clicks land on what's drawn: NPCs, nodes and stations have hitboxes that move with their models, so you click the mech, not the tile under it. **F5** shows the hitboxes. Right-click lists everything under the mouse, nearest first, so a sentry standing on a husk doesn't hide the husk.
 
 The map is the Scrapyard, 64 × 48 tiles. From west to east:
 
@@ -114,11 +114,12 @@ The debug window (top left, **F4** or click its header to collapse) has:
 - **Path** (**F1**): the remaining route.
 - **True tile** (**F2**): an outline on the tile the simulation has the player on.
 - **Tick metronome** (**F3**): a click on every tick.
-- **Hitboxes** (**F5**): wireframes of what's clickable.
+- **Hitboxes** (**F5** cycles): wireframes of what's clickable, for NPCs only, all entities (NPCs and players), all objects (stations, nodes and ground items), or everything including scenery.
 - **Ids in menus** (**F6**): right-click menus and hover text name each thing's id (`foreman #12`, `crashed_drone #40`, scenery with its tile).
 - **Tick speed** (**[** and **]**, offline only): 0.25x to 8x. It scales the game's clock, so the simulation and everything animated speed up together; the camera and simulated latency stay at real time.
 - **Simulated input delay**: base and fuzz in milliseconds. Each action is turned into JSON and held for base ± fuzz before it's sent, in order, like a reliable network channel. Online this is on top of the real network.
 - **Grant XP**: pick a skill and an amount; it arrives on the next tick as a normal XP drop (and level-up), e.g. 1,154 XP for Salvaging 10. Online it only shows when the server runs with `npm run dev`; otherwise the server refuses it.
+- **Give item**: type part of an item's name or id (the box suggests them), a count, and Give. Same rules as Grant XP online.
 - **Save / Load / New game** (offline only), and when it last saved. New game deletes the save.
 
 The browser console has `window.mechscape` for poking at the running game.
@@ -226,7 +227,7 @@ Big props within 30 tiles of an area can be examined (their decor's description)
 
 ### The tick
 
-`GameLoop` accumulates frame time and runs a fixed 0.6s tick. Each tick, `World.runTick()` runs in a fixed order: apply queued actions (in the order the client sent them) → NPC brains (respawns, aggression, wandering) → movement → tasks (hits committed last tick land first, then gathering, crafting and new attacks; damage and deaths resolve here) → regeneration → husk, wreck and ground-item cleanup. Views interpolate between the last two tick states using `ClientState.tickAlpha`, so rendering runs at any frame rate. The random number generator is seeded and saved, so a loaded world carries on exactly as the original would have.
+`GameLoop` accumulates frame time and runs a fixed 0.6s tick. Each tick, `World.runTick()` runs in a fixed order: apply queued actions (in the order the client sent them) → NPC brains (respawns, aggression, wandering) → movement → tasks (hits committed last tick land first, then gathering, crafting and new attacks; damage and deaths resolve here) → regeneration → reprinting players who've finished dying → husk, wreck and ground-item cleanup. Views interpolate between the last two tick states using `ClientState.tickAlpha`, so rendering runs at any frame rate. The random number generator is seeded and saved, so a loaded world carries on exactly as the original would have.
 
 Input is queued: clicking sends an action as JSON, and the latest action per slot wins until the next tick consumes it. Offline, `SimulatedLink` hands it to the `GameLoop` in the page. Online, `NetLink` sends it to the server, which queues it for the sender's own pilot.
 
@@ -264,7 +265,7 @@ On Windows, `start-server.cmd -HostOnline` does all of that in one go: it pulls 
 
 - **Saves** live in the browser's local storage, not in a file. The save format is new (version 1 of the three.js format) and doesn't read Godot saves.
 - **No PvP in the sim:** an attack on another player is refused by the sim itself. In Godot it was only prevented by players having no hitbox, which a multiplayer client couldn't be trusted with. A PvP arena can switch it back on later.
-- **Fixed: no lying dead at the manufactory.** A player dies and is printed in the same tick; Godot's animator stopped at the death event and never played Print, so the player lay in the death pose until it ended. Here the print wins.
+- **Dying takes a moment.** A player who dies lies where they fell for `dying_ticks` (5, in `data/rules.json`) while the Death clip plays, unable to do anything but chat; then their things drop into a wreck and they're printed at the manufactory. (In Godot death and print shared a tick and the print had to win.)
 - **Labels and the HUD are HTML** over the canvas instead of Godot controls and `Label3D`, with the same layout and colours.
 - **No catalog export:** the debug window's Export catalog button isn't ported (`CATALOG.md`, copied from the Godot project, still describes the same content).
 - **Multiplayer:** the Godot MVP was single player; this one is played on a Colyseus server, with offline single player kept behind `?offline`. Each player picks their own look, and other players' names float over them.

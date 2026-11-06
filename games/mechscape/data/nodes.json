@@ -167,7 +167,7 @@
   "skill": "siphoning",
   "verb": "siphon",
   "level_required": 5,
-  "xp": 6,
+  "xp": 9,
   "loot": "ichor",
   "action_ticks": 5,
   "deplete_chance": 0.0,
@@ -385,10 +385,7 @@
   "respawn_ticks": 15,
   "chance_low": 90,
   "chance_high": 220,
-  "model": "crashed_drone.glb",
-  "depleted_model": "crashed_drone_stripped.glb",
-  "model_scale": 1.3,
-  "look": "wreck",
+  "look": "hauler",
   "color": [
    0.55,
    0.45,
@@ -630,7 +627,7 @@
  "glowcap_cluster": {
   "id": "glowcap_cluster",
   "display_name": "Glowcap cluster",
-  "description": "Caps that light the cavern from below. Pell wants a sample of these.",
+  "description": "Caps that light the cavern from below, like someone left the lamps on. Pell wants a jar of these.",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -651,12 +648,13 @@
   ],
   "size": 0.9,
   "bonus_table": "reach_seeds",
-  "bonus_chance": 0.6
+  "bonus_chance": 0.6,
+  "keep_one": true
  },
  "skyfern_patch": {
   "id": "skyfern_patch",
   "display_name": "Skyfern patch",
-  "description": "Ferns that turn to follow the open sky. Pell wants a sample of these.",
+  "description": "Ferns that turn to follow the open sky, in case it goes anywhere. Pell would love a sample.",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -677,12 +675,13 @@
   ],
   "size": 0.9,
   "bonus_table": "reach_seeds",
-  "bonus_chance": 0.6
+  "bonus_chance": 0.6,
+  "keep_one": true
  },
  "ruin_orchid": {
   "id": "ruin_orchid",
   "display_name": "Ruin orchid",
-  "description": "An orchid rooted in the cracks of the old ruins. Pell wants a sample of these.",
+  "description": "An orchid rooted in cracks older than the yard. Pell has asked about this one twice.",
   "skill": "xenobiology",
   "verb": "sample",
   "level_required": 1,
@@ -703,7 +702,8 @@
   ],
   "size": 0.9,
   "bonus_table": "reach_seeds",
-  "bonus_chance": 0.6
+  "bonus_chance": 0.6,
+  "keep_one": true
  },
  "mech_wreckage": {
   "id": "mech_wreckage",

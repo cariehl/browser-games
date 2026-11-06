@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { makeWorld, act, runUntil, messages, World, Content, DEFAULT_MAP } from './helpers.js';
+import { makeWorld, act, runUntil, messages, die, World, Content, DEFAULT_MAP } from './helpers.js';
 import { Skills } from '../src/sim/skills.js';
 import { MapData } from '../src/sim/map_data.js';
 import { Grid } from '../src/sim/grid.js';
@@ -349,6 +349,12 @@ test('dying drops everything into a wreck only you can salvage, and prints you a
   player.armor.head = item('scrap_helmet');
   player.inventory.add(item('scrap_metal'), 4);
   world.kill(player, null);
+  // Down where they fell for a few ticks (the death animation), still holding everything.
+  assert.ok(player.isDead());
+  assert.deepEqual(player.tile, { x: 30, y: 30 });
+  assert.equal(world.wrecks.size, 0);
+  for (let i = 0; i < World.DYING_TICKS; i++) world.runTick();
+  assert.ok(!player.isDead());
   assert.deepEqual(player.tile, world.spawn_point);
   assert.equal(player.hp, player.maxHp());
   assert.equal(player.weapon, null);

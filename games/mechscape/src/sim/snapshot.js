@@ -62,6 +62,7 @@ export function takeSnapshot(world, viewerId) {
       }
     } else {
       out.name = e.display_name;
+      out.dying = e.dying_until;
       out.xp = e.xp;
       out.weapon = e.weapon ? e.weapon.id : '';
       out.armor = Object.fromEntries(Object.entries(e.armor).map(([slot, item]) => [slot, item.id]));
@@ -142,6 +143,7 @@ export function applySnapshot(world, snap, viewerId) {
       continue;
     }
     e.display_name = data.name;
+    e.dying_until = data.dying ?? -1;
     e.xp = { ...data.xp };
     e.weapon = data.weapon ? Content.item(data.weapon) : null;
     const armor = {};

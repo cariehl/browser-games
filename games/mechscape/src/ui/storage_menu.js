@@ -10,7 +10,7 @@ import { Inventory } from '../sim/inventory.js';
 import { DepositAction, DepositAllAction, WithdrawAction } from '../sim/actions.js';
 import { cssColor } from '../view/tile_math.js';
 import { el } from './screen.js';
-import { ITEM_COLOR, onEscape } from './common.js';
+import { ITEM_COLOR, onEscape, short, commas } from './common.js';
 
 export class StorageMenu {
   constructor(parent, link, menu) {
@@ -101,8 +101,10 @@ export class StorageMenu {
     const cell = el('div', 'cell', '', parent);
     if (!item) return cell;
     el('div', 'swatch', '', cell).style.background = cssColor(item.color);
-    el('div', 'cell-name', count <= 1 ? item.display_name : `${item.display_name} ×${count}`, cell);
-    cell.title = count > 1 ? `${item.display_name} ×${count}` : item.display_name;
+    el('div', 'cell-name', item.display_name, cell);
+    // The count gets its own spot at the end, so a long name can't push it out of sight.
+    if (count > 1) el('div', 'cell-count', short(count), cell);
+    cell.title = count > 1 ? `${item.display_name} ×${commas(count)}` : item.display_name;
     return cell;
   }
 

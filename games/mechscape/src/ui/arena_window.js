@@ -52,6 +52,7 @@ export class ArenaWindow {
     };
     if (fighting) {
       this._text.textContent = bossText(boss, inside ? 'door_fight_inside' : 'door_fight_outside');
+      if (inside) button(bossText(boss, 'flee_button'), 'leave');
     } else if (!inside) {
       this._text.textContent = bossText(boss, 'door_outside');
       button(bossText(boss, 'enter_button'), 'enter');
@@ -60,7 +61,7 @@ export class ArenaWindow {
       const unlockedBy = Object.values(Content.quests).find((q) => q.rewards && q.rewards.unlock === 'overclocked');
       this._text.textContent = boss.isDead()
         ? bossText(boss, 'rebuilding')
-        : `${bossText(boss, 'door_inside')}${unlocked || !unlockedBy ? '' : ` Finish ${unlockedBy.display_name} to learn how to overclock it.`}`;
+        : `${bossText(boss, 'door_inside')}${unlocked || !unlockedBy ? '' : ` Finish ${unlockedBy.display_name} to learn how to overclock it.`}${tooEarly(boss, me) ? ` ${bossText(boss, 'too_early')}` : ''}`;
       if (!boss.isDead()) {
         button(`Wake the ${boss.def.display_name}`, 'easy');
         button('Wake it Overclocked', 'overclocked', unlocked);
@@ -75,6 +76,23 @@ export class ArenaWindow {
     this._door = null;
     this.el.style.display = 'none';
   }
+}
+
+/**
+ * Whether [me] is partway through a quest that wants something from [boss]'s
+ * husk, but not at that stage yet: a kill now would drop nothing for it.
+ */
+function tooEarly(boss, me) {
+  const husk = boss.def.husk;
+  if (!husk || !me.quests) return false;
+  return husk.quest_drops.some((drop) => {
+    const progress = me.quests[drop.quest];
+    const quest = Content.quests[drop.quest];
+    if (!progress || !quest || progress.stage === 'done') return false;
+    const at = quest.stages.findIndex((s) => s.id === progress.stage);
+    const wanted = quest.stages.findIndex((s) => s.id === drop.stage);
+    return at >= 0 && at < wanted;
+  });
 }
 
 /** The boss's name, HP and shield across the top while you're in its fight. */

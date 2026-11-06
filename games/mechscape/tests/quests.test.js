@@ -100,13 +100,15 @@ test('Found Art: the scrap artist takes the three things only when you have them
   player.inventory.add(item('coolant_bloom'));
   world.runTick();
   assert.equal(Quests.stageOf(player, 'found_art'), 'bring_parts');
-  // Drop one before handing over: the choice is refused, nothing is taken.
+  // Lose one before handing over: the journal steps back a page, so the quest
+  // can never sit on a stage whose items are gone.
   player.inventory.remove(item('loader_horn'), 1);
-  talk(world, player, juno, 'Hand');
-  assert.equal(player.inventory.countOf(item('sentry_eye')), 1);
-  assert.equal(Quests.stageOf(player, 'found_art'), 'bring_parts');
-  assert.ok(messages(world, player.id).some((m) => m.includes("don't have a loader horn")));
+  world.runTick();
+  assert.equal(Quests.stageOf(player, 'found_art'), 'collect');
+  assert.ok(messages(world, player.id).some((m) => m.includes('journal flips back')));
   player.inventory.add(item('loader_horn'));
+  world.runTick();
+  assert.equal(Quests.stageOf(player, 'found_art'), 'bring_parts');
   talk(world, player, juno, 'Hand');
   assert.equal(Quests.stageOf(player, 'found_art'), 'press');
   assert.equal(player.inventory.countOf(item('sentry_eye')), 0);

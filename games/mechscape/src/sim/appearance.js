@@ -180,7 +180,8 @@ Features.register({
       if (!pet || !pet.def.comments) continue;
       const key = ev.type === 'scan' ? ev.data.landmark : ev.type === 'sampled' ? 'specimen' : 'puzzle';
       const text = pet.def.comments[key];
-      if (text) world.emitEvent(pet.id, 'say', { entity: pet.id, text });
+      // Overhead for everyone nearby, and in the owner's chat box so it isn't missed.
+      if (text) world.emitEvent(pet.id, 'say', { entity: pet.id, text, name: pet.def.display_name, to: player.id });
     }
   },
 

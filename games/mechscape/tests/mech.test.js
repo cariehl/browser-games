@@ -134,7 +134,7 @@ test('deploy, two crew board, the pilot drives (burning fuel) and the gunner fir
     p.teleport(Mechs.tileBeside(world, mech));
     act(world, p, new BoardAction(mech.id, seat));
     runUntil(world, () => p.riding != null, 10);
-    assert.deepEqual(p.riding, { mech: mech.id, seat });
+    assert.deepEqual(p.riding, { mech: mech.id, seat, def: 'walker' });
   }
   // The pilot drives; the gunner can't.
   const start = { ...mech.tile };
@@ -242,7 +242,7 @@ test('repairs, fuel and ammo at the repair rig', () => {
   assert.equal(ann.inventory.countOf(item('alloy_plating')), 0);
 });
 
-test('the build and a standing mech survive a save; the crew come back on foot', () => {
+test('the build and a standing mech survive a save; the crew come back in their seats', () => {
   const world = fresh();
   const ann = world.spawnPlayer('Ann');
   const mech = deployed(world, ann);
@@ -258,7 +258,9 @@ test('the build and a standing mech survive a save; the crew come back on foot',
   assert.equal(again.fuel, mech.fuel);
   assert.equal(Object.values(build.installed).reduce((a, b) => a + b, 0), 11);
   const annAgain = loaded.players().find((p) => p.display_name === 'Ann');
-  assert.equal(annAgain.riding, null);
+  assert.equal(annAgain.riding && annAgain.riding.seat, 'pilot');
+  assert.equal(again.crew.pilot, annAgain.id);
+  assert.deepEqual(annAgain.tile, again.tile);
 });
 
 test('Ignition: the finished mech moves the quest on, and powering it up lets it deploy', async () => {

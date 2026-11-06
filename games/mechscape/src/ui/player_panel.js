@@ -187,8 +187,8 @@ export class PlayerPanel {
       this.hover.setUiOption(drop, options.length - 2, itemDetail(stack));
       return;
     }
-    if (item.isWeapon || item.isArmor() || item.isConsumable() || item.kind === 'piece') {
-      // Left click injects, wields, wears or places; the rest (minus Cancel) are "more".
+    if (item.isWeapon || item.isArmor() || item.isConsumable() || ['piece', 'pet', 'cosmetic'].includes(item.kind)) {
+      // Left click injects, wields, wears, places or calls a pet; the rest (minus Cancel) are "more".
       this.hover.setUiOption(options[0], options.length - 2, itemDetail(stack));
     } else {
       // Nothing happens on a left click, so just name it.
@@ -292,6 +292,7 @@ export class PlayerPanel {
     const stack = this._shown[index];
     if (stack && stack.item.isConsumable()) this._use(index);
     else if (stack && stack.item.kind === 'piece' && this.build) this.build.place(index);
+    else if (stack && stack.item.kind === 'pet') this.link.send(ClientState.localPlayerId, new CallPetAction(index));
     else this._equip(index);
   }
 
