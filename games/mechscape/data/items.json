@@ -138,7 +138,7 @@
    1.0
   ],
   "abbreviation": "Can",
-  "description": "A metal canister. Good for holding gaseous things."
+  "description": "A metal canister. Holds gas, ichor or coolant, and a faint smell of all three."
  },
  "coolant": {
   "id": "coolant",
@@ -282,6 +282,7 @@
   ],
   "abbreviation": "Pistol",
   "weapon_type": "pistol",
+  "weapon_look": "pipe",
   "accuracy": 16,
   "power": 12,
   "ammo": "gas_cartridge"
@@ -799,8 +800,8 @@
    1.0
   ],
   "kind": "lore",
-  "description": "A cracked data shard. You can still read it.",
-  "lore": "LOG 1. The Scrapyard was a shipbreaking yard for the orbital fleet. Hulls came down on the long wall's rails and the loaders took them apart. When the fleet stopped coming home, the loaders kept working."
+  "description": "A data shard with a yard tally etched on the case: forty-one hulls, then the scratches stop.",
+  "lore": "LOG 1, yard tally, shift foreman's copy. Hull 2207 down the wall rails at dawn, stripped by noon. Hull 2208 overdue. Hull 2209 overdue. Told the loaders to keep the bays clear for them anyway. They're good about that. They'll keep them clear forever if nobody tells them otherwise."
  },
  "lore_shard_2": {
   "id": "lore_shard_2",
@@ -813,8 +814,8 @@
    1.0
   ],
   "kind": "lore",
-  "description": "A cracked data shard. You can still read it.",
-  "lore": "LOG 2. Pilots are printed, not born. The manufactory keeps a pattern of every pilot it ever made. If you are reading this, it still keeps yours."
+  "description": "A data shard someone has written \"MINE\" on in grease pencil. Not anymore.",
+  "lore": "LOG 2, personal. Got printed again today. Third time this month. The tech says the pattern's fine, it's just me being careless. Funny thing: I remember the fall, and I remember waking up, and there's a gap between them the exact shape of a person. Going to stop counting."
  },
  "lore_shard_3": {
   "id": "lore_shard_3",
@@ -827,8 +828,8 @@
    1.0
   ],
   "kind": "lore",
-  "description": "A cracked data shard. You can still read it.",
-  "lore": "LOG 3. Final order from the relay mast: HOLD. Every machine in the yard took it literally. The sentries are still holding."
+  "description": "A data shard with a relay stamp. Most of the header has been read so many times it's worn away.",
+  "lore": "LOG 3, relay traffic, inbound. Message body: HOLD. Sender field corrupted. Timestamp corrupted. Repeat count: 1. Every unit on the yard acknowledged within the second. Nobody here thought to ask what we were holding, or for how long."
  },
  "lore_shard_4": {
   "id": "lore_shard_4",
@@ -841,8 +842,8 @@
    1.0
   ],
   "kind": "lore",
-  "description": "A cracked data shard. You can still read it.",
-  "lore": "LOG 4. Below the yard is the foundry that built the mechs. The warden was set to guard the last blueprint until a crew came back for it."
+  "description": "A data shard, warm to the touch. It was kept close to something that ran hot.",
+  "lore": "LOG 4, foundry handover. Last walker frame is off the line. Blueprint sealed in the vault. Warden instructed to release it to a returning crew and nobody else. It will want some proof you're crew. In my experience it accepts being knocked flat on its back as proof."
  },
  "lore_shard_5": {
   "id": "lore_shard_5",
@@ -855,8 +856,8 @@
    1.0
   ],
   "kind": "lore",
-  "description": "A cracked data shard. You can still read it.",
-  "lore": "LOG 5. The paint press in the Undercroft has been painting the same nothing for forty years. Do not let it see you holding still."
+  "description": "A data shard spattered pink. The pink does not come off.",
+  "lore": "LOG 5, maintenance ticket, never closed. The paint press in hall C is still running its colour test. The test calls for a target. There is no target. It has decided that anything standing still is close enough. Recommend nobody stands still."
  },
  "lore_shard_6": {
   "id": "lore_shard_6",
@@ -869,8 +870,8 @@
    1.0
   ],
   "kind": "lore",
-  "description": "A cracked data shard. You can still read it.",
-  "lore": "LOG 6. Something big walks the Deadfields. Small arms do nothing to it. That is what the mechs were for."
+  "description": "A data shard with a crack straight through it, like it was stepped on by something heavy.",
+  "lore": "LOG 6, perimeter watch, Deadfields. Seismic again tonight. Not a quake; it has a rhythm. Left, right. Sent a sentry pair out to look. One came back. It won't stop facing east. Requesting the walker programme be moved up, and a lot more ammunition."
  },
  "traffic_cone": {
   "id": "traffic_cone",
@@ -1736,7 +1737,7 @@
    5
   ],
   "grow_xp": 30,
-  "description": "Plant it in a grow bed in the hab and water it with ichor or coolant. It grows glowroot."
+  "description": "A seed that's glowing already, a bit too keen. Plant it in a hab grow bed and water it with ichor or coolant."
  },
  "ventbloom_seed": {
   "id": "ventbloom_seed",
@@ -1756,11 +1757,11 @@
    5
   ],
   "grow_xp": 30,
-  "description": "Plant it in a grow bed in the hab and water it with ichor or coolant. It grows ventbloom."
+  "description": "It smells of vent gas, even as a seed. Plant it in a hab grow bed and water it with ichor or coolant."
  },
  "rustcap_spores": {
   "id": "rustcap_spores",
-  "display_name": "Rustcap spores",
+  "display_name": "Rustcap spore",
   "stackable": true,
   "color": [
    0.75,
@@ -1776,6 +1777,6 @@
    5
   ],
   "grow_xp": 30,
-  "description": "Plant it in a grow bed in the hab and water it with ichor or coolant. It grows rustcap."
+  "description": "A pinch of rust-red dust that is very much alive. Plant it in a hab grow bed and water it with ichor or coolant."
  }
 }

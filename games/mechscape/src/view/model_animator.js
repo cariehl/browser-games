@@ -100,6 +100,12 @@ export class ModelAnimator {
     this.player.mixer.stopAllAction();
   }
 
+  /** Whether it has its own loop for what it's working at now (so it needs no bob). */
+  playsActivity() {
+    const clip = ACTIVITY_CLIPS[this.state.activity];
+    return !!clip && this.player.has(clip);
+  }
+
   /** Seconds the death collapse takes, or 0 without one. */
   collapseSeconds() {
     return this.player.length(DEATH);

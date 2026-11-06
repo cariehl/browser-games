@@ -153,6 +153,25 @@ export const Quests = {
     }
   },
 
+  /**
+   * Steps a quest back when the item that moved it on is gone: a stage reached
+   * from a "have" stage (Juno's parts, the blueprint, the reservoir) only
+   * stands while you still carry them. Lose them (a death, a drop) and the
+   * journal goes back a page, so the vault, the husks and the press pay out
+   * again instead of the quest being stuck on "I have everything".
+   */
+  _regress(world, player, questId) {
+    const progress = player.quests[questId];
+    if (!progress || progress.stage === 'done') return;
+    const quest = Content.quests[questId];
+    if (!quest) return;
+    const before = quest.stages.find((s) => s.next === progress.stage);
+    if (!before || !goalsOf(before.goal).some((g) => g.type === 'have')) return;
+    if (goalMet(world, player, before.goal, progress, questId)) return;
+    world.message(player.id, Text.get('quest.lost_items', { quest: quest.display_name }));
+    Quests.setStage(world, player, questId, before.id);
+  },
+
   /** The dialogue entry index NPC [def] would use with [player] now, or -1. */
   entryFor(world, player, talkId) {
     const dialogue = Content.dialogue[talkId];
@@ -164,7 +183,7 @@ export const Quests = {
   talk(world, player, npc) {
     const index = Quests.entryFor(world, player, npc.def.talk);
     if (index < 0) {
-      world.message(player.id, `The ${npc.def.display_name} doesn't have anything to say.`);
+      world.message(player.id, `The ${npc.def.display_name} doesn't seem to want to chat.`);
       return;
     }
     const entry = Content.dialogue[npc.def.talk].entries[index];
@@ -450,7 +469,10 @@ Features.register({
 
   tick(world) {
     for (const player of world.players()) {
-      for (const questId of Object.keys(player.quests)) Quests._advance(world, player, questId);
+      for (const questId of Object.keys(player.quests)) {
+        Quests._regress(world, player, questId);
+        Quests._advance(world, player, questId);
+      }
       if (player.dialogue) {
         const npc = world.entities.get(player.dialogue.npc_id);
         if (!npc || npc.isDead() || chebyshev(npc.tile, player.tile) > Content.rules.world.talk_range) player.dialogue = null;

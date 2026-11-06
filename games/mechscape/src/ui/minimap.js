@@ -2,7 +2,8 @@
 // around you that turns with the camera, with dots for what's nearby
 // (yellow NPCs, white players, red items on the ground, blue stations) and
 // a white square for you. Click it to walk there; scroll on it to zoom; click
-// the compass to face north.
+// the compass to face north. Down its left side, OSRS-style globes: your
+// hitpoints, and run (click to toggle; R does the same).
 //
 // Read-only: it draws the client's World (the map is the same for everyone,
 // and the snapshot only sends things in your own area) and walks through the
@@ -27,6 +28,17 @@ const DOT = {
   station: 'rgb(90, 200, 255)',
 };
 
+/** A round globe with a fill that drains from the top, an icon and a number beside it. */
+function globe(parent, kind, title) {
+  const root = el('button', `globe globe-${kind}`, '', parent);
+  root.title = title;
+  const ball = el('div', 'globe-ball', '', root);
+  const fill = el('div', 'globe-fill', '', ball);
+  el('div', 'globe-icon', kind === 'hp' ? '\u2665' : '\u00BB', ball);
+  const value = el('div', 'globe-value', '', root);
+  return { el: root, fill, value };
+}
+
 export class Minimap {
   /** [rig]: the CameraRig (its yaw, and facing north). [views]: WorldViews, for smooth positions. [controller]: walks. */
   constructor(parent, { rig, views, controller }) {
@@ -41,6 +53,11 @@ export class Minimap {
     this._needle = el('div', 'needle', 'N', this._compass);
     this._compass.addEventListener('click', () => this.rig.faceNorth());
     this._caption = el('div', 'minimap-caption', '', this.el);
+    const globes = el('div', 'minimap-globes', '', this.el);
+    this._hp = globe(globes, 'hp', 'Hitpoints');
+    this._run = globe(globes, 'run', 'Toggle run (R)');
+    this._run.el.addEventListener('click', () => this.controller.toggleRun());
+    this._shownGlobes = '';
     this._zoom = DEFAULT_ZOOM;
     /** area index -> canvas with one pixel per tile. */
     this._areaImages = new Map();
@@ -57,6 +74,22 @@ export class Minimap {
       e.preventDefault();
       this._zoom = Math.min(Math.max(this._zoom + (e.deltaY < 0 ? 1 : -1), 0), ZOOMS.length - 1);
     }, { passive: false });
+  }
+
+  _updateGlobes(me) {
+    const max = me.maxHp();
+    const key = `${me.hp}/${max}/${me.running}`;
+    if (key === this._shownGlobes) return;
+    this._shownGlobes = key;
+    const left = max > 0 ? Math.max(0, Math.min(1, me.hp / max)) : 0;
+    this._hp.value.textContent = String(me.hp);
+    this._hp.fill.style.height = `${Math.round(left * 100)}%`;
+    this._hp.el.classList.toggle('low', left <= 0.25);
+    this._hp.value.style.color = left > 0.5 ? 'rgb(120, 255, 120)' : left > 0.25 ? 'rgb(255, 220, 60)' : 'rgb(255, 80, 70)';
+    this._hp.el.title = `Hitpoints: ${me.hp}/${max}`;
+    this._run.value.textContent = me.running ? 'On' : 'Off';
+    this._run.fill.style.height = me.running ? '100%' : '0%';
+    this._run.el.classList.toggle('on', !!me.running);
   }
 
   get _scale() {
@@ -111,6 +144,7 @@ export class Minimap {
       this._openedKey = opened;
       this._areaImages.clear();
     }
+    this._updateGlobes(me);
     const area = world.areaAt(me.tile);
     const caption = area ? area.name : '';
     if (this._caption.textContent !== caption) this._caption.textContent = caption;

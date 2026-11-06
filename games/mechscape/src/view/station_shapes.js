@@ -5,9 +5,18 @@
 
 import * as THREE from 'three';
 import { mergeGeometries } from 'three/addons/utils/BufferGeometryUtils.js';
-import { box, cyl, cone, ball, torus } from './decor_view.js';
+import { box, cyl, cone, ball, torus, rock, place } from './decor_view.js';
 import { color, darkened } from './tile_math.js';
 
+/** A round strut from point [a] to point [b] ([x, y, z] each). */
+const strut = (a, b, r) => {
+  const from = new THREE.Vector3(...a);
+  const to = new THREE.Vector3(...b);
+  const g = new THREE.CylinderGeometry(r, r, from.distanceTo(to), 5);
+  g.applyQuaternion(new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), to.clone().sub(from).normalize()));
+  const mid = from.add(to).multiplyScalar(0.5);
+  return place(g, mid.x, mid.y, mid.z);
+};
 const posts = (h, w, d, r = 0.05) => [[-w, -d], [w, -d], [-w, d], [w, d]].map(([x, z]) => box(r, h, r, x, h / 2, z));
 
 /** Parts of each shape: { base, dark, accent, glow } -> geometries, at the origin of its tile. */
@@ -77,7 +86,7 @@ const SHAPES = {
   winch: () => ({
     base: [box(0.12, 0.7, 0.12, -0.35, 0.35, 0), box(0.12, 0.7, 0.12, 0.35, 0.35, 0), box(0.9, 0.12, 0.6, 0, 0.06, 0)],
     dark: [cyl(0.2, 0.2, 0.6, 0, 0.55, 0, 0, 0, Math.PI / 2, 12)],
-    accent: [torus(0.2, 0.03, 0.45, 0.55, 0, 0).rotateY(Math.PI / 2), box(0.05, 0.3, 0.05, 0.5, 0.75, 0.1)],
+    accent: [cyl(0.24, 0.24, 0.05, 0.33, 0.55, 0, 0, 0, Math.PI / 2, 12), cyl(0.24, 0.24, 0.05, -0.33, 0.55, 0, 0, 0, Math.PI / 2, 12), box(0.05, 0.3, 0.05, 0.5, 0.75, 0.1)],
   }),
   valve: () => ({
     base: [cyl(0.12, 0.12, 1.1, 0, 0.55, 0, 0, 0, 0, 10), cyl(0.12, 0.12, 0.8, 0.4, 0.2, 0, 0, 0, Math.PI / 2, 10)],
@@ -133,6 +142,81 @@ const SHAPES = {
     for (const g of [...hull, ...dark, ...accent, ...glow, ...debris]) g.scale(1.45, 1.45, 1.45);
     return { base: hull, dark: [...dark, ...debris], accent, glow };
   },
+  // --- Landmarks on the Quiet Reach (see sim/survey.js) ---
+  /** A colossus's skull, sunk to the cheekbones: a dome, a brow, dead eye sockets with a last flicker in them. */
+  colossus_skull: () => {
+    const lean = 0.18;
+    const base = [
+      ball(0.95, 0, 0.55, -0.1, 0.78),
+      box(1.7, 0.32, 0.5, 0, 0.92, 0.62, lean, 0, 0.04),
+      box(1.3, 0.38, 0.5, 0, 0.1, 0.85, lean + 0.3, 0, 0),
+    ];
+    const dark = [
+      cyl(0.27, 0.22, 0.3, -0.42, 0.62, 0.82, Math.PI / 2 + lean, 0, 0, 8),
+      cyl(0.27, 0.22, 0.3, 0.42, 0.62, 0.82, Math.PI / 2 + lean, 0, 0, 8),
+      // A crack across the dome, and teeth along the buried jaw.
+      box(0.06, 0.06, 1.2, 0.35, 1.18, -0.1, 0.2, 0.5, 0.3),
+      ...[-0.45, -0.15, 0.15, 0.45].map((x) => box(0.12, 0.3, 0.12, x, 0.02, 1.12, lean + 0.3, 0, 0)),
+    ];
+    const glow = [ball(0.07, -0.42, 0.62, 0.95), ball(0.04, 0.42, 0.6, 0.95)];
+    for (const g of [...base, ...dark, ...glow]) g.scale(1.15, 1.15, 1.15);
+    return { base, dark, glow };
+  },
+  /** The relay mast: a three-legged lattice tower with a dish, still blinking on top. */
+  relay_mast: () => {
+    const h = 3.6;
+    const base = [box(0.9, 0.12, 0.9, 0, 0.06, 0)];
+    const dark = [];
+    // Three legs leaning in from a wide footing to a narrow top, braced in zigzags.
+    const corner = (i, y) => {
+      const a = (i / 3) * Math.PI * 2;
+      const r = 0.4 + (0.12 - 0.4) * (y / h);
+      return [Math.sin(a) * r, y, Math.cos(a) * r];
+    };
+    for (let i = 0; i < 3; i++) base.push(strut(corner(i, 0.1), corner(i, h), 0.04));
+    for (let y = 0.1, k = 0; y < h - 0.4; y += 0.6, k++) {
+      for (let i = 0; i < 3; i++) {
+        dark.push(strut(corner(i, y + 0.6), corner((i + 1) % 3, y + 0.6), 0.015));
+        dark.push(k % 2 ? strut(corner(i, y), corner((i + 1) % 3, y + 0.6), 0.015) : strut(corner((i + 1) % 3, y), corner(i, y + 0.6), 0.015));
+      }
+    }
+    // The dish, tilted up at a sky that stopped answering, and a crossbar of beacons.
+    base.push(place(new THREE.SphereGeometry(0.6, 14, 5, 0, Math.PI * 2, 0, 0.62).translate(0, -0.55, 0), 0, 0, 0, 1.05, 0, 0).translate(0, h - 0.95, 0.3));
+    dark.push(strut([0, h - 0.95, 0.1], [0, h - 0.7, 0.55], 0.02), box(0.7, 0.04, 0.04, 0, h - 0.25, 0));
+    const glow = [ball(0.08, 0, h + 0.05, 0), ball(0.04, 0.35, h - 0.25, 0), ball(0.04, -0.35, h - 0.25, 0)];
+    return { base, dark, glow };
+  },
+  /** A pool of coolant in a ring of stones, lit from below, glowcaps crowding the edge. */
+  glow_pool: () => {
+    const stones = [];
+    for (let i = 0; i < 9; i++) {
+      const a = (i / 9) * Math.PI * 2 + (i % 2) * 0.2;
+      const r = 0.72 + (i % 3) * 0.05;
+      stones.push(rock(0.14 + (i % 3) * 0.04, Math.sin(a) * r, 0.04, Math.cos(a) * r, 1.2, 0.6, 1, a));
+    }
+    const glow = [
+      place(new THREE.CircleGeometry(0.66, 18), 0, 0.03, 0, -Math.PI / 2),
+      ...[[0.62, 0.35], [-0.5, 0.55], [0.15, -0.75], [-0.7, -0.25]].map(([x, z], i) => ball(0.08 + (i % 2) * 0.03, x, 0.24 + (i % 2) * 0.06, z, 0.5)),
+    ];
+    const accent = [[0.62, 0.35], [-0.5, 0.55], [0.15, -0.75], [-0.7, -0.25]].map(([x, z], i) => cyl(0.02, 0.03, 0.22 + (i % 2) * 0.06, x, 0.11 + (i % 2) * 0.03, z, 0, 0, 0, 5));
+    return { base: stones, accent, glow };
+  },
+  /**
+   * The overlook: a flagstone ledge with a bit of railing, and a coin-op
+   * viewing scope someone carried all the way up here. It still takes coins.
+   * Nobody has any.
+   */
+  overlook: () => ({
+    base: [box(1.1, 0.12, 0.9, 0, 0.06, 0), ...[-0.5, -0.17, 0.17, 0.5].map((x) => box(0.06, 0.8, 0.06, x, 0.5, 0.42))],
+    accent: [box(1.1, 0.05, 0.05, 0, 0.9, 0.42), box(1.1, 0.04, 0.04, 0, 0.55, 0.42)],
+    dark: [
+      cyl(0.05, 0.07, 1.0, 0, 0.6, 0, 0, 0, 0, 8),
+      box(0.36, 0.24, 0.26, 0, 1.2, 0.02, -0.15, 0, 0),
+      cyl(0.06, 0.07, 0.18, -0.08, 1.24, 0.2, Math.PI / 2 - 0.15, 0, 0, 8),
+      cyl(0.06, 0.07, 0.18, 0.08, 1.24, 0.2, Math.PI / 2 - 0.15, 0, 0, 8),
+    ],
+    glow: [box(0.04, 0.03, 0.02, 0.12, 1.12, -0.12)],
+  }),
   pylon: () => ({
     base: [box(0.5, 0.15, 0.5, 0, 0.07, 0), cyl(0.06, 0.1, 1.8, 0, 0.9, 0, 0, 0, 0, 6)],
     accent: [torus(0.22, 0.03, 0, 1.4, 0, -Math.PI / 2)],

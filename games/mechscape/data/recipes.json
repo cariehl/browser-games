@@ -666,10 +666,6 @@
   "level_required": 15,
   "inputs": [
    {
-    "item": "canister",
-    "count": 1
-   },
-   {
     "item": "vent_gas",
     "count": 50
    },

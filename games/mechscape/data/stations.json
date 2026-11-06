@@ -24,6 +24,7 @@
  "manufactory": {
   "id": "manufactory",
   "display_name": "Manufactory",
+  "verb": "Reconfigure",
   "description": "Centrepiece of the Spawn Camp. If I get wrecked, I'll be reprinted here.",
   "skill": "",
   "kind": "respawn",
@@ -80,6 +81,7 @@
  "storage_locker": {
   "id": "storage_locker",
   "display_name": "Storage locker",
+  "verb": "Open",
   "description": "My personal storage. Shared across all lockers.",
   "skill": "",
   "kind": "storage",
@@ -138,6 +140,7 @@
  "undercroft_hatch": {
   "id": "undercroft_hatch",
   "display_name": "Hatch",
+  "verb": "Climb-down",
   "description": "A rusted hatch. Who knows where it leads?",
   "skill": "",
   "kind": "portal",
@@ -152,6 +155,7 @@
  "undercroft_ladder": {
   "id": "undercroft_ladder",
   "display_name": "Ladder",
+  "verb": "Climb-up",
   "description": "A ladder back to the Scrapyard.",
   "skill": "",
   "kind": "portal",
@@ -166,6 +170,7 @@
  "reach_lift": {
   "id": "reach_lift",
   "display_name": "Survey elevator",
+  "verb": "Ride",
   "description": "An elevator that will take me up the cliff to the Quiet Reach.",
   "skill": "",
   "kind": "portal",
@@ -184,6 +189,7 @@
  "reach_return": {
   "id": "reach_return",
   "display_name": "Survey elevator",
+  "verb": "Ride",
   "description": "An elevator back down to the Scrapyard.",
   "skill": "",
   "kind": "portal",
@@ -198,6 +204,7 @@
  "deadfields_gate": {
   "id": "deadfields_gate",
   "display_name": "Deadfields gate",
+  "verb": "Go-through",
   "description": "A gate to the Deadfields. Wonder why it's called that?",
   "skill": "",
   "kind": "portal",
@@ -212,6 +219,7 @@
  "deadfields_return": {
   "id": "deadfields_return",
   "display_name": "Deadfields gate",
+  "verb": "Go-through",
   "description": "A gate back to the Scrapyard.",
   "skill": "",
   "kind": "portal",
@@ -331,6 +339,7 @@
  "commission_board": {
   "id": "commission_board",
   "display_name": "Commission board",
+  "verb": "Browse",
   "description": "I can request items here, or view requests from other pilots.",
   "skill": "",
   "kind": "board",
@@ -346,6 +355,7 @@
  "trophy_wall": {
   "id": "trophy_wall",
   "display_name": "Trophy wall",
+  "verb": "View",
   "description": "Mount trophies here for a bonus everyone shares.",
   "skill": "",
   "kind": "trophy",
@@ -361,6 +371,7 @@
  "blueprint_cache": {
   "id": "blueprint_cache",
   "display_name": "Sealed vault",
+  "verb": "Open",
   "description": "Something important was locked away down here...",
   "skill": "",
   "kind": "cache",
@@ -380,6 +391,7 @@
  "arena_door": {
   "id": "arena_door",
   "display_name": "Press hall door",
+  "verb": "Open",
   "description": "A heavy door to the old paint press hall.",
   "skill": "",
   "kind": "arena_door",
@@ -411,8 +423,9 @@
  "bridge_winch": {
   "id": "bridge_winch",
   "display_name": "Bridge winch",
+  "verb": "Repair",
   "description": "A winch for the broken bridge. I can mend it with some scrap.",
-  "skill": "",
+  "skill": "engineering",
   "kind": "puzzle",
   "recipes": [],
   "color": [
@@ -432,8 +445,9 @@
  "gas_valve": {
   "id": "gas_valve",
   "display_name": "Door valve",
+  "verb": "Turn",
   "description": "Feeds gas to the old blast door.",
-  "skill": "",
+  "skill": "siphoning",
   "kind": "puzzle",
   "recipes": [],
   "color": [
@@ -453,8 +467,9 @@
  "veil_projector": {
   "id": "veil_projector",
   "display_name": "Projector",
+  "verb": "Scan",
   "description": "A flickering projector, still running after all this time.",
-  "skill": "",
+  "skill": "xenobiology",
   "kind": "puzzle",
   "recipes": [],
   "color": [
@@ -471,71 +486,55 @@
  "landmark_skull": {
   "id": "landmark_skull",
   "display_name": "Colossus skull",
-  "description": "A massive colossus skull. I should scan it for my survey log.",
+  "description": "A colossus skull, big enough to park a hab in. The survey log will want this one.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
-  "color": [
-   0.4,
-   0.5,
-   0.55,
-   1.0
-  ],
-  "shape": "pylon",
+  "color": [0.62, 0.58, 0.5, 1],
+  "shape": "colossus_skull",
+  "accent": [1, 0.3, 0.15, 1],
   "lore": "A skull the size of a hab, from a machine nobody remembers building."
  },
  "landmark_antenna": {
   "id": "landmark_antenna",
   "display_name": "Old relay mast",
-  "description": "An old relay mast, still blinking. I should scan it for my survey log.",
+  "description": "An old relay mast, still blinking away at nobody. Worth a scan for the survey.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
-  "color": [
-   0.4,
-   0.5,
-   0.55,
-   1.0
-  ],
-  "shape": "pylon",
+  "color": [0.45, 0.48, 0.5, 1],
+  "shape": "relay_mast",
+  "accent": [1, 0.25, 0.2, 1],
   "lore": "The mast that once talked to the orbital yards. Its last log is a single word: \"Hold.\""
  },
  "landmark_pool": {
   "id": "landmark_pool",
   "display_name": "Glow pool",
-  "description": "A glowing pool of ichor. I should scan it for my survey log.",
+  "description": "A pool of coolant, lit from underneath by whatever's growing in it. Pell will want a scan of this.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
-  "color": [
-   0.4,
-   0.5,
-   0.55,
-   1.0
-  ],
-  "shape": "pylon",
+  "color": [0.4, 0.38, 0.35, 1],
+  "shape": "glow_pool",
+  "accent": [0.35, 0.85, 1, 1],
   "lore": "The fungus here feeds on coolant leaking from far below. The Undercroft is closer than it looks."
  },
  "landmark_overlook": {
   "id": "landmark_overlook",
   "display_name": "The overlook",
-  "description": "A breathtaking view, if I could breathe. I should scan it for my survey log.",
+  "description": "A breathtaking view, if I could breathe. There's a coin-op scope, too. Worth a scan for the log.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
-  "color": [
-   0.4,
-   0.5,
-   0.55,
-   1.0
-  ],
-  "shape": "pylon",
-  "lore": "From here you can see the whole Scrapyard: the camp, the long wall, the loader yard, and the hatch in the ruins."
+  "color": [0.5, 0.47, 0.42, 1],
+  "shape": "overlook",
+  "accent": [0.2, 0.55, 0.45, 1],
+  "lore": "The highest ground on the Reach. Turn north and the whole Scrapyard is laid out below: the camp, the long wall, the loader yard, the hatch in the ruins. Turn south and there is nothing at all, for a very long way."
  },
  "landmark_lander": {
   "id": "landmark_lander",
   "display_name": "Crashed lander",
-  "description": "A crashed lander. I should scan it for my survey log.",
+  "description": "A crashed lander, nose-down and scorched. This one's going in the survey log.",
   "skill": "",
   "kind": "landmark",
   "recipes": [],
@@ -546,7 +545,7 @@
    1
   ],
   "shape": "lander",
-  "lore": "The lander that brought the first pilots down. The manufactory inside it is the one that printed you.",
+  "lore": "The lander that brought the first pilots down. Its little manufactory printed the first of them, right here, before anyone hauled a bigger one down to the camp.",
   "accent": [
    1,
    0.65,

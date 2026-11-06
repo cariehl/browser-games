@@ -8,8 +8,9 @@
 import { ClientState, SPEEDS, TICK_SECONDS } from '../client/client_state.js';
 import { AUTOSAVE_TICKS } from '../client/save_manager.js';
 import { Skills } from '../sim/skills.js';
-import { DebugGrantXpAction } from '../sim/actions.js';
-import { Hitbox } from '../view/hitbox.js';
+import { DebugGrantXpAction, DebugGiveAction } from '../sim/actions.js';
+import { Content } from '../sim/defs.js';
+import { Hitbox, HitboxFilter } from '../view/hitbox.js';
 import { isTyping } from '../view/camera_rig.js';
 import { el } from './screen.js';
 import { DebugView } from './common.js';
@@ -34,7 +35,6 @@ export class DebugHud {
       ['Path (F1)', () => overlay.showPath, (on) => { overlay.showPath = on; }],
       ['True tile (F2)', () => overlay.showTrueTile, (on) => { overlay.showTrueTile = on; }],
       ['Tick metronome (F3)', () => overlay.metronome, (on) => { overlay.metronome = on; }],
-      ['Hitboxes (F5)', () => Hitbox.debugVisible, (on) => Hitbox.setDebugVisible(on)],
       ['Ids in menus (F6)', () => DebugView.showIds, (on) => { DebugView.showIds = on; }],
     ].map(([text, get, set]) => {
       const label = el('label', 'check', '', toggles);
@@ -46,6 +46,15 @@ export class DebugHud {
       });
       label.append(text);
       return { box, get };
+    });
+
+    const hitRow = el('div', 'row', '', this._body);
+    el('span', 'label', 'Hitboxes (F5)', hitRow);
+    this._hitboxes = el('select', '', '', hitRow);
+    for (const [key, { label }] of Object.entries(HitboxFilter)) el('option', '', label, this._hitboxes).value = key;
+    this._hitboxes.addEventListener('change', () => {
+      Hitbox.setDebugFilter(this._hitboxes.value);
+      this._hitboxes.blur();
     });
 
     const speedRow = el('div', 'row', '', this._body);
@@ -83,6 +92,33 @@ export class DebugHud {
       if (e.key === 'Enter') this._grantXp();
     });
 
+    // Give items: type to search every item by name or id, pick one, say how many.
+    el('div', 'muted', 'Give item', xp);
+    const giveRow = el('div', 'row', '', xp);
+    this._giveName = el('input', 'grow', '', giveRow);
+    this._giveName.placeholder = 'Item name or id';
+    this._giveName.spellcheck = false;
+    const listId = 'debug-items';
+    this._giveName.setAttribute('list', listId);
+    const list = el('datalist', '', '', giveRow);
+    list.id = listId;
+    for (const item of Object.values(Content.items).sort((a, b) => a.display_name.localeCompare(b.display_name))) {
+      el('option', '', item.id, list).value = `${item.display_name} (${item.id})`;
+    }
+    this._giveCount = el('input', 'number', '', giveRow);
+    this._giveCount.type = 'number';
+    this._giveCount.min = '1';
+    this._giveCount.max = '1000';
+    this._giveCount.value = '1';
+    el('button', '', 'Give', giveRow).addEventListener('click', () => this._give());
+    for (const input of [this._giveName, this._giveCount]) {
+      input.addEventListener('keydown', (e) => {
+        e.stopPropagation();
+        if (e.key === 'Enter') this._give();
+      });
+    }
+    this._giveNote = el('div', 'muted small', '', xp);
+
     el('hr', '', '', this._body);
     this._saved = el('div', '', '', this._body);
     if (saves) {
@@ -99,7 +135,7 @@ export class DebugHud {
     window.addEventListener('keydown', (e) => {
       if (e.repeat || isTyping(e)) return;
       if (e.key === 'F4') this._toggle();
-      else if (e.key === 'F5') Hitbox.setDebugVisible(!Hitbox.debugVisible);
+      else if (e.key === 'F5') Hitbox.cycleDebugFilter();
       else if (e.key === 'F6') DebugView.showIds = !DebugView.showIds;
       else if (e.key === '[' && saves) this._stepSpeed(-1);
       else if (e.key === ']' && saves) this._stepSpeed(1);
@@ -139,6 +175,27 @@ export class DebugHud {
     this.link.send(ClientState.localPlayerId, new DebugGrantXpAction(skill, amount));
   }
 
+  /** Gives the item named in the box: "Name (id)" from the list, a bare id, or a unique bit of a name. */
+  _give() {
+    const text = this._giveName.value.trim();
+    if (!text) return;
+    const items = Object.values(Content.items);
+    const byId = text.match(/\(([a-z0-9_]+)\)$/);
+    const lower = text.toLowerCase();
+    let item = Content.items[byId ? byId[1] : text] || items.find((i) => i.display_name.toLowerCase() === lower);
+    if (!item) {
+      const matches = items.filter((i) => i.display_name.toLowerCase().includes(lower) || i.id.includes(lower));
+      if (matches.length === 1) item = matches[0];
+      else {
+        this._giveNote.textContent = matches.length ? `${matches.length} items match "${text}". Be more specific.` : `No item called "${text}".`;
+        return;
+      }
+    }
+    const count = Math.min(Math.max(Math.round(Number(this._giveCount.value) || 1), 1), 1000);
+    this._giveNote.textContent = `Gave ${count} × ${item.display_name}.`;
+    this.link.send(ClientState.localPlayerId, new DebugGiveAction(item.id, count));
+  }
+
   update() {
     const world = ClientState.world;
     const me = ClientState.me();
@@ -150,6 +207,7 @@ export class DebugHud {
     }
     // Keep the boxes in sync when the F-keys change things.
     for (const { box, get } of this._boxes) box.checked = get();
+    if (this._hitboxes.value !== Hitbox.debugFilter) this._hitboxes.value = Hitbox.debugFilter;
     const index = SPEEDS.indexOf(ClientState.speed);
     if (index >= 0 && this._speed.selectedIndex !== index) this._speed.selectedIndex = index;
     setText(this._inFlight, `Actions in flight: ${this.link.inFlight()}`);

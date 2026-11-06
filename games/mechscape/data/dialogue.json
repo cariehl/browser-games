@@ -69,7 +69,7 @@
     "lines": [
      {
       "who": "npc",
-      "text": "The vault's at the bottom, up past the foundry floor. The warden won't let it open while it's standing. Bring a squad."
+      "text": "Go down through the foundry floor, then up the far stairs to the vault. The warden won't let it open while it's standing. Bring a squad."
      }
     ]
    },
@@ -164,7 +164,7 @@
     "lines": [
      {
       "who": "npc",
-      "text": "Take that walker out to the Deadfields; that's what it was built for. Bring it back in one piece if you can. If it takes a beating, some alloy plates should patch it up."
+      "text": "Take that walker out to the Deadfields; that's what it was built for. Bring it back in one piece if you can. If it takes a beating, feed the repair rig some alloy plating and it'll patch it up."
      }
     ]
    },
@@ -228,7 +228,7 @@
     "lines": [
      {
       "who": "npc",
-      "text": "Eye, horn, cold bloom. The bio-still can grow a bloom in coolant if you know a bit of Splicing."
+      "text": "Eye, horn, cold bloom. The bio-still can grow a bloom in coolant if you know a bit of Splicing. And loaders don't give up their horns to just anyone: you'll want Salvaging 10 before you start prying."
      }
     ]
    },
@@ -441,7 +441,7 @@
       "lines": [
        {
         "who": "npc",
-        "text": "Splendid work. The seeds you find up there grow nicely in the hab's grow beds, by the way."
+        "text": "Splendid work. Rummage round those specimens and you'll turn up seeds now and then. They do nicely in the hab's grow beds, by the way."
        }
       ]
      }

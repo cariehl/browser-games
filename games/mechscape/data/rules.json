@@ -3,6 +3,7 @@
   "regen_ticks": 10,
   "ground_item_ticks": 300,
   "wreck_ticks": 1500,
+  "dying_ticks": 5,
   "in_combat_ticks": 10,
   "npc_wander_chance": 0.08,
   "talk_range": 2

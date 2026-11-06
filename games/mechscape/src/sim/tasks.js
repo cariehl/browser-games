@@ -114,13 +114,22 @@ export class GatherTask extends Task {
 
     if (world.rng.randf() >= def.successChance(entity.level(def.skill))) return true;
 
+    // A specimen you already carry: no second jar, but a rummage round the
+    // roots can still turn up seeds (and still teaches you something).
+    if (def.keep_one && entity.inventory.countOf(def.loot) > 0) {
+      world.message(entity.id, `You've already got ${a(def.loot.display_name.toLowerCase())}, so you poke about the roots instead.`);
+      world.grantXp(entity, def.skill, def.xp);
+      if (def.bonus_table && world.rng.randf() < def.bonus_chance) findBonus(world, entity, def.bonus_table);
+      else world.message(entity.id, 'Nothing but dirt.');
+      return false;
+    }
     let got = def.loot;
     if (def.rare_loot && world.rng.randf() < def.rare_chance) got = def.rare_loot;
     if (!entity.inventory.add(got)) {
       this._inventoryFull(world, entity, def);
       return false;
     }
-    world.message(entity.id, `You ${def.verb} some ${got.display_name.toLowerCase()}.`);
+    world.message(entity.id, `You ${def.verb} ${got.stackable || got.container ? 'some' : 'a'} ${got.display_name.toLowerCase()}.`);
     world.grantXp(entity, def.skill, def.xp);
     if (def.bonus_table && world.rng.randf() < def.bonus_chance) findBonus(world, entity, def.bonus_table);
     Features.call('onGather', world, entity, node);
@@ -135,6 +144,8 @@ export class GatherTask extends Task {
       world.message(entity.id, `The ${def.display_name.toLowerCase()} has been stripped bare.`);
       return false;
     }
+    // Specimens: one per click, so a click never fills the pack with jars.
+    if (def.keep_one) return false;
     if (!this._hasRoom(entity, def)) {
       this._inventoryFull(world, entity, def);
       return false;

@@ -406,10 +406,14 @@ export class ArenaAction extends Action {
     const [outside, inside] = Arena.doorSides(world, door, boss);
     const isInside = world.inZone(player.tile, boss.def.boss.zone);
     if (this.command === 'enter' || this.command === 'leave') {
-      if (boss.fight) {
+      // Mid-fight the door stays shut to newcomers, but anyone inside can bail
+      // out through the hatch beside it. The fight carries on without them,
+      // and resets if that was the last of them.
+      if (boss.fight && !(this.command === 'leave' && isInside)) {
         world.message(player.id, bossText(boss, isInside ? 'sealed_inside' : 'sealed_outside'));
         return;
       }
+      if (boss.fight) world.message(player.id, bossText(boss, 'fled'));
       const to = this.command === 'enter' ? inside : outside;
       if (!to) return;
       player.teleport(to);

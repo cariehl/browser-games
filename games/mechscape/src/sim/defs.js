@@ -65,6 +65,8 @@ export class ItemDef {
       lore: '',
       /** Cosmetics: which part of your look it changes (hat, decal, paint) and to what. */
       cosmetic_part: '', cosmetic_look: '',
+      /** Weapons: a model other than its type's plain one (see view/player_appearance.js buildWeapon), e.g. pipe. */
+      weapon_look: '',
       /** Pets: the NPC def id that follows you when it's out. */
       pet_npc: '',
       /** Fun weapons: what a hit does instead of hurting (paint, confetti). */
@@ -119,6 +121,8 @@ export class GatherNodeDef {
       bonus_table: null, bonus_chance: 0,
       /** Items only found while on a quest stage: [{ quest, stage, item, chance }]. */
       quest_drops: [],
+      /** Specimens: one per click, and only one in your pack; with one already, sampling just looks for seeds. */
+      keep_one: false,
       model: null, depleted_model: null, model_scale: 1,
       look: 'wreck', color: [0.5, 0.5, 0.5, 1], size: 1,
     }, raw);
@@ -185,6 +189,8 @@ export class NpcDef {
       husk: null,
       /** Dropped on the ground on death, each line rolled separately: [{item, min_count, max_count, chance}] */
       drops: [],
+      /** A repaint and extra parts for its model (see view/npc_variants.js), or empty. */
+      variant: '',
       model: null, model_scale: 1, walk_cycle_distance: 2, attack_windup_frames: 0,
       /** A procedural model instead of an imported one (see view/mech_view.js), or ''. */
       shape: '',
@@ -258,8 +264,8 @@ export class StationDef {
   constructor(raw) {
     assign(this, {
       id: '', display_name: '',
-      /** What Examine says about it. */
-      description: '',
+      /** What Examine says about it, and the word on its left-click ('' for Use, or Scan for a landmark). */
+      description: '', verb: '',
       skill: 'engineering', recipes: [],
       kind: StationKind.CRAFT,
       blocks_movement: true, blocks_sight: false,
@@ -278,6 +284,7 @@ export class StationDef {
   }
 
   resolve(content) {
+    if (!this.verb) this.verb = this.kind === StationKind.LANDMARK ? 'Scan' : 'Use';
     this.recipes = this.recipes.map((id) => content.ref('recipes', id));
     this.gives = content.ref('items', this.gives);
     if (this.needs) this.needs = { count: 1, ...this.needs, item: content.ref('items', this.needs.item) };
@@ -426,9 +433,9 @@ export class DecorDef {
       /** Which procedural model draws it (see view/decor_view.js). */
       shape: 'scrap_pile',
       color: [0.4, 0.38, 0.36, 1], accent: [1, 0.6, 0.2, 1], scale: 1,
-      /** A light it gives off: { color, intensity, distance }, or null. */
-      light: null,
-      /** Clickable, with an Examine option that puts its description in the chat box. Flat things (grass, puddles) aren't. */
+      /** A light it gives off: { color, intensity, distance }, or null, and how high above the ground it sits (metres). */
+      light: null, light_height: 0.6,
+      /** Clickable, with an Examine option that puts its description in the chat box. Grass and the like aren't. */
       inspect: true, description: '',
       /** Solid: nobody walks through it (trees, rocks). It never blocks shots. */
       blocks_movement: false,

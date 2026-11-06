@@ -29,6 +29,8 @@ import { Combat } from '../sim/combat.js';
 import { InspectInfo } from '../ui/inspect_info.js';
 import { lookOptions } from '../ui/examine.js';
 
+/** How many things under the mouse a right-click menu lists. */
+const MAX_TARGETS = 6;
 
 export class PlayerController {
   constructor(canvas, { link, marker, hover, menu, inspector, build }) {
@@ -63,11 +65,14 @@ export class PlayerController {
     });
     window.addEventListener('keydown', (e) => {
       if (e.repeat || isTyping(e) || e.ctrlKey || e.metaKey || e.altKey) return;
-      if (e.key === 'r' || e.key === 'R') {
-        const me = ClientState.me();
-        if (me) this.link.send(ClientState.localPlayerId, new SetRunAction(!me.running));
-      }
+      if (e.key === 'r' || e.key === 'R') this.toggleRun();
     });
+  }
+
+  /** Run on, run off (the R key, and the run globe by the minimap). */
+  toggleRun() {
+    const me = ClientState.me();
+    if (me) this.link.send(ClientState.localPlayerId, new SetRunAction(!me.running));
   }
 
   update() {
@@ -115,11 +120,22 @@ export class PlayerController {
     return lookOptions({ link: this.link, inspector: this.inspector, target, color, x, y, ...extra });
   }
 
-  /** Options for whatever hitbox is under the mouse, or [] for none (with ids, when the debug window shows them). */
+  /**
+   * Options for everything under the mouse, nearest first (with ids, when the
+   * debug window shows them): every target's actions, then every target's
+   * Inspect and Examine, like OSRS listing a sentry and the husk under it.
+   * A left click does the first action, so the nearest thing still wins.
+   */
   targetOptions(x, y) {
-    const hitbox = Hitbox.pick(Screen.ray(x, y));
-    if (!hitbox) return [];
-    return withIds(this._optionsFor(hitbox, x, y), debugId(hitbox, ClientState.world));
+    const world = ClientState.world;
+    const actions = [];
+    const looks = [];
+    for (const hitbox of Hitbox.pickAll(Screen.ray(x, y)).slice(0, MAX_TARGETS)) {
+      for (const option of withIds(this._optionsFor(hitbox, x, y), debugId(hitbox, world))) {
+        (option.look ? looks : actions).push(option);
+      }
+    }
+    return [...actions, ...looks];
   }
 
   _optionsFor(hitbox, x, y) {
@@ -167,6 +183,7 @@ export class PlayerController {
         verb = 'Salvage';
         look = { source: () => InspectInfo.wreck(ClientState.world, object) };
       } else if (object instanceof Station) {
+        verb = object.def.verb;
         look = { kind: 'station', defId: object.def.id };
       }
       return [

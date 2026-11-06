@@ -2,7 +2,7 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { act, World, Content, DEFAULT_MAP, runUntil } from './helpers.js';
+import { act, World, Content, DEFAULT_MAP, runUntil, messages } from './helpers.js';
 import { InteractAction } from '../src/sim/actions.js';
 import { Survey } from '../src/sim/survey.js';
 import { SaveGame } from '../src/sim/save_game.js';
@@ -37,7 +37,7 @@ test('the bridge winch takes scrap and mends the bridge for everyone', () => {
   assert.ok(Survey.isOpen(world, 'broken_bridge'));
   assert.equal(ann.inventory.countOf(item('scrap_metal')), 0);
   assert.ok(bridge.every((t) => world.isWalkable(t) && world.terrainAt(t).id === 'mended_bridge'));
-  assert.ok((ann.xp.xenobiology || 0) > 0);
+  assert.ok((ann.xp.engineering || 0) > 0, 'mending a winch is engineering');
   // Using it again costs nothing.
   ann.inventory.add(item('scrap_metal'), 5);
   use(world, ann, winch);
@@ -86,4 +86,23 @@ test('every kind of specimen grows in the Reach, and sampling one says so', () =
   runUntil(world, () => (sampled = sampled || world.events.some((e) => e.type === 'sampled' && e.entity === ann.id)), 200);
   assert.ok(sampled);
   assert.ok(ann.inventory.countOf(item('skyfern_specimen')) > 0);
+});
+
+test('a specimen is one jar per click, and with one in your pack you only rummage for seeds', () => {
+  const world = fresh();
+  const ann = world.spawnPlayer('Ann');
+  const node = [...world.nodes.values()].find((n) => n.def.id === 'ruin_orchid');
+  ann.xp.xenobiology = 1e6;
+  ann.teleport(node.interactionTiles().find((t) => world.isWalkable(t)));
+  act(world, ann, new InteractAction(node.id));
+  runUntil(world, () => !ann.task, 400);
+  assert.equal(ann.inventory.countOf(item('ruin_orchid_specimen')), 1, 'it stops after one');
+  const xp = ann.xp.xenobiology;
+  for (let i = 0; i < 5; i++) {
+    act(world, ann, new InteractAction(node.id));
+    runUntil(world, () => !ann.task, 400);
+  }
+  assert.equal(ann.inventory.countOf(item('ruin_orchid_specimen')), 1, 'never a second jar');
+  assert.ok(ann.xp.xenobiology > xp, 'rummaging still teaches you something');
+  assert.ok(messages(world, ann.id).some((m) => m.includes('poke about the roots')));
 });

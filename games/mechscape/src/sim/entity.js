@@ -60,8 +60,10 @@ export class EntityState {
     this.paint = null;
     /** Tiles across: its footprint is size × size with [tile] the top-left. 1 for all but mechs. */
     this.size = 1;
-    /** Players aboard a mech: { mech, seat }, or null. Not saved (crew load dismounted). */
+    /** Players aboard a mech: { mech, seat, def }, or null. Saved, so a reload puts you back in your seat. */
     this.riding = null;
+    /** The tick a dead pilot is reprinted on, or -1 while alive. */
+    this.dying_until = -1;
 
     for (const skill of Skills.ALL) if (Skills.startingLevel(skill) > 1) this.xp[skill] = Skills.xpForLevel(Skills.startingLevel(skill));
     this.hp = this.level(TOUGHNESS);
@@ -106,8 +108,9 @@ export class EntityState {
     return this.level(TOUGHNESS);
   }
 
+  /** A pilot who's down: true from death until the manufactory reprints them (see World.kill). */
   isDead() {
-    return false;
+    return this.dying_until >= 0;
   }
 
   isNpc() {

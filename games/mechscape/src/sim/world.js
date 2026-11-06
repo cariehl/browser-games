@@ -32,6 +32,8 @@ export class World {
   static TICK_SECONDS = TICK_SECONDS;
   /** A player's wreck crumbles this long after they die. */
   static get WRECK_TICKS() { return Content.rules.world.wreck_ticks; }
+  /** Ticks a dead pilot lies where they fell before being reprinted. */
+  static get DYING_TICKS() { return Content.rules.world.dying_ticks ?? 5; }
   /** How far from where they fell a wreck may be placed, if the tile is taken. */
   static WRECK_RADIUS = 8;
   /** Players take ids from 1 up to this; NPC ids start above it. */
@@ -247,6 +249,11 @@ export class World {
       const order = queued.map((_, i) => i).sort((a, b) => (queued[a].seq - queued[b].seq) || (a - b));
       for (const i of order) {
         const action = queued[i];
+        // Lying in the dirt waiting to be reprinted: you can still talk, nothing else.
+        if (entity.isDead() && action.constructor.TYPE !== 'chat') {
+          entity.last_action_seq = Math.max(entity.last_action_seq, action.seq);
+          continue;
+        }
         try {
           if (entity.trade_id >= 0 && !action.keepsTrade()) {
             const trade = Trading.of(this, entity);
@@ -308,7 +315,10 @@ export class World {
       }
     }
 
-    // 6. Clean up husks that were finished off or left too long, wrecks,
+    // 6. Pilots who've finished dying are reprinted.
+    for (const player of this.players()) if (player.dying_until >= 0 && this.tick >= player.dying_until) this._reprint(player);
+
+    // 7. Clean up husks that were finished off or left too long, wrecks,
     //    and ground items nobody took.
     for (const node of [...this.nodes.values()]) if (node.isGone(this.tick)) this.removeObject(node.id);
     for (const wreck of [...this.wrecks.values()]) {
@@ -499,6 +509,7 @@ export class World {
    * the manufactory (the map's spawn point) with full HP.
    */
   kill(entity, killer) {
+    if (entity.dying_until >= 0) return; // Already down, waiting to be reprinted.
     entity.hp = 0;
     entity.clearTask();
     entity.path = [];
@@ -530,7 +541,15 @@ export class World {
       }
       return;
     }
+    // A pilot lies where they fell for a few ticks (the death animation),
+    // then _reprint() drops their things in a wreck and prints them fresh.
     this.message(entity.id, Text.get('death.dead'));
+    entity.dying_until = this.tick + World.DYING_TICKS;
+  }
+
+  /** The manufactory prints a dead pilot again: their belongings stay behind in a wreck. */
+  _reprint(entity) {
+    entity.dying_until = -1;
     const wreck = this._wreckBelongings(entity);
     entity.teleport(this.spawn_point);
     entity.hp = entity.maxHp();

@@ -1,6 +1,8 @@
 // A gathering node: its imported model when its def has one, otherwise one
-// of two gray-box looks, picked by the def:
+// of the procedural looks, picked by the def:
 //   wreck: a heap of tilted boxes with a small glowing core (Salvaging).
+//   hauler: a cargo hauler on its side, crates spilling out (Salvaging);
+//          stripped, the crates are gone.
 //   vent:  a squat rock ring with a glowing mouth and rising gas puffs
 //          (Siphoning).
 // While depleted it shows its def's depleted model, or slumps and darkens.
@@ -44,7 +46,10 @@ export class GatherNodeView extends THREE.Group {
       if (def.look === 'vent') this._buildPuffs();
       return;
     }
-    if (def.look === 'vent') {
+    if (def.look === 'hauler') {
+      this._buildHauler();
+      this.add(new Hitbox(HitboxKind.OBJECT, node.id, new THREE.Vector3(1.1, 0.8, 1.1).multiplyScalar(Math.min(s, 1.1)), new THREE.Vector3(0, 0.4 * s, 0)));
+    } else if (def.look === 'vent') {
       this._buildVent();
       this.add(new Hitbox(HitboxKind.OBJECT, node.id, new THREE.Vector3(0.8, 0.55, 0.8).multiplyScalar(s), new THREE.Vector3(0, 0.27 * s, 0)));
     } else {
@@ -73,6 +78,48 @@ export class GatherNodeView extends THREE.Group {
     }
     const core = this._addMesh(new THREE.BoxGeometry(0.12 * s, 0.12 * s, 0.12 * s), this._glow);
     core.position.y = 0.42 * s;
+  }
+
+  /** A six-wheeled cargo hauler rolled onto its side, its load spilled. The load is what you salvage. */
+  _buildHauler() {
+    this._setGlow([1, 0.55, 0.15]);
+    const rng = seeded(this.node.id);
+    const s = this.node.def.size * 0.8;
+    const dark = new THREE.MeshStandardMaterial({ color: color([0.12, 0.12, 0.13]), roughness: 0.9 });
+    const body = new THREE.Group();
+    const part = (geometry, material, x, y, z) => {
+      const mesh = new THREE.Mesh(geometry, material);
+      mesh.position.set(x * s, y * s, z * s);
+      mesh.castShadow = true;
+      mesh.receiveShadow = true;
+      body.add(mesh);
+      return mesh;
+    };
+    // Built upright along +x, then tipped over onto its side.
+    part(new THREE.BoxGeometry(0.42 * s, 0.42 * s, 0.5 * s), this._material, 0.5, 0.36, 0);
+    part(new THREE.BoxGeometry(0.06 * s, 0.18 * s, 0.4 * s), this._glow, 0.72, 0.42, 0);
+    part(new THREE.BoxGeometry(0.9 * s, 0.08 * s, 0.56 * s), this._material, -0.18, 0.2, 0);
+    part(new THREE.BoxGeometry(0.06 * s, 0.22 * s, 0.56 * s), this._material, -0.6, 0.33, 0);
+    for (const x of [-0.45, -0.1, 0.5]) {
+      for (const z of [-0.3, 0.3]) {
+        part(new THREE.CylinderGeometry(0.13 * s, 0.13 * s, 0.1 * s, 12), dark, x, 0.13, z).rotation.x = Math.PI / 2;
+      }
+    }
+    body.rotation.set(rng.range(1.25, 1.45), rng.range(0, Math.PI * 2), 0, 'YXZ');
+    body.position.y = 0.3 * s;
+    this._pieces.add(body);
+    // The load, spilled across the dirt.
+    this._cargo = new THREE.Group();
+    for (let i = 0; i < 3; i++) {
+      const size = rng.range(0.2, 0.3) * s;
+      const crate = new THREE.Mesh(new THREE.BoxGeometry(size, size * 0.8, size), this._material);
+      crate.position.set(rng.range(-0.5, 0.5) * s, size * 0.4, rng.range(0.25, 0.55) * s * (i % 2 ? 1 : -1));
+      crate.rotation.y = rng.range(0, Math.PI);
+      crate.castShadow = true;
+      crate.receiveShadow = true;
+      this._cargo.add(crate);
+    }
+    this._pieces.add(this._cargo);
   }
 
   _buildVent() {
@@ -170,7 +217,8 @@ export class GatherNodeView extends THREE.Group {
       this._showModelDepleted(depleted);
       return;
     }
-    this._pieces.scale.set(1, depleted ? 0.35 : 1, 1);
+    if (this._cargo) this._cargo.visible = !depleted;
+    else this._pieces.scale.set(1, depleted ? 0.35 : 1, 1);
     this._material.color.copy(color(depleted ? darkened(this._baseColor, 0.55) : this._baseColor));
     this._glow.emissiveIntensity = depleted ? 0 : 1.5;
   }

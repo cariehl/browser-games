@@ -30,7 +30,7 @@ import { Combat } from './combat.js';
 import { Task, AttackTask, StationHandlers, findBonus } from './tasks.js';
 import { GatherNode } from './objects.js';
 import { NO_TARGET, eq, chebyshev } from './grid.js';
-import { FIREARMS, ENGINEERING } from './skills.js';
+import { Skills, FIREARMS, ENGINEERING } from './skills.js';
 import { Text } from './text.js';
 
 export const SEATS = ['pilot', 'gunner'];
@@ -166,7 +166,7 @@ export const Mechs = {
   board(world, player, mech, seat) {
     if (player.riding) Mechs.leaveSeat(world, player);
     mech.crew[seat] = player.id;
-    player.riding = { mech: mech.id, seat };
+    player.riding = { mech: mech.id, seat, def: mech.mech ? mech.mech.id : '' };
     player.clearTask();
     player.path = [];
     player.teleport(mech.tile);
@@ -341,7 +341,7 @@ export class MechSalvageTask extends Task {
     }
     if (this._next < 0) {
       if (player.level(def.skill) < def.level_required) {
-        world.message(player.id, `You need ${def.level_required} ${def.skill} to ${def.verb} this.`);
+        world.message(player.id, `You need ${Skills.withArticle(def.skill)} level of ${def.level_required} to ${def.verb} this.`);
         return false;
       }
       this._next = world.tick + def.action_ticks;
@@ -472,7 +472,8 @@ export class InstallComponentAction extends Action {
     world.grantXp(player, ENGINEERING, def.install_xp);
     world.emitEvent(station.id, 'mech_install', { station: station.id, item: item.id, player: player.id });
     const left = Mechs.missing(def, build).reduce((n, c) => n + c.count, 0);
-    world.message(player.id, `You bolt the ${item.display_name.toLowerCase()} into place. ${left ? `${left} component${left === 1 ? '' : 's'} to go.` : ''}`);
+    const togo = left === 1 ? ' One part to go!' : left > 1 ? ` ${left} parts to go.` : '';
+    world.message(player.id, `You bolt the ${item.display_name.toLowerCase()} into place.${togo}`);
     if (left === 0 && !Mechs.of(world, build)) {
       Mechs.assemble(world, def, build);
       world.flags.mech_complete = true;
@@ -687,6 +688,14 @@ function buildToData(build) {
   return { installed: { ...build.installed }, contributors: build.contributors.map((c) => ({ ...c })), mech_id: build.mech_id, deployed: build.deployed };
 }
 
+/** Puts [player] back in the seat they saved in, if the mech is up and the seat's free. */
+function reseat(world, player, data) {
+  const mech = Mechs.of(world, Mechs.build(world, Content.mechs[data.def]));
+  if (!mech || mech.isDead() || mech.crew[data.seat] >= 0) return false;
+  Mechs.board(world, player, mech, data.seat);
+  return true;
+}
+
 Features.register({
   id: 'mech',
 
@@ -700,6 +709,18 @@ Features.register({
 
   initPlayer(_world, player) {
     player.riding = null;
+  },
+
+  /** The seat you were in, so a reload (or a dropped connection) puts you back in it. */
+  savePlayer(player) {
+    return player.riding && player.riding.def ? { def: player.riding.def, seat: player.riding.seat } : null;
+  },
+
+  loadPlayer(world, player, data) {
+    if (!data || !Content.mechs[data.def]) return;
+    // A whole-world load brings players back before the mech is rebuilt, so
+    // hold on to the seat until load() below has put the mech back.
+    if (!reseat(world, player, data)) player.resume_seat = data;
   },
 
   /** The foreman's "Power it up!": the first time, the mech wakes and can be deployed. */
@@ -819,6 +840,10 @@ Features.register({
         mech.ammo = saved.mech.ammo;
         build.deployed = !!saved.deployed;
       }
+    }
+    for (const player of world.players()) {
+      if (player.resume_seat) reseat(world, player, player.resume_seat);
+      delete player.resume_seat;
     }
   },
 

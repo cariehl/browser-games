@@ -5,6 +5,7 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 ## Art
 
 - **Everything new is procedural geometry**, not Blender models: the walker mech, the hab furniture, the puzzle machines, the landmarks, the boss's shield and the tile warnings. They're built in `src/view/mech_view.js`, `station_shapes.js` and `piece_view.js`, so swapping in a `.glb` later is a def's `model` field, as for stations.
+- **The enemy models are two `.glb` files with variants.** `"variant"` on an NPC def (see `src/view/npc_variants.js`) repaints the hull and glow and bolts procedural parts onto the bones: the loader's horn and forks, the warden's pauldrons, the press's paint tank, the colossus's spikes, the foundry drone's chimney. Real models for each can replace them later.
 - **Head and chassis parts are shells on the bones**, because `player.glb` is one skinned mesh with no separate parts. The plan asked for each part as its own mesh in the model.
 
 ## The mech
@@ -15,7 +16,7 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 
 ## The pilot boss
 
-- **The arena is a sealed room, not an instance.** One group fights at a time, and the door stays shut until the fight ends.
+- **The arena is a sealed room, not an instance.** One group fights at a time, and the door stays shut to newcomers until the fight ends. Anyone inside can bail out through the crew hatch; once nobody's left inside, the press resets.
 - **Panel runs use one shared path per phase** rather than a path for each player.
 
 ## The hab
@@ -30,14 +31,14 @@ Where the three.js build of the alpha (October 2026) took a shortcut or differs 
 ## The survey
 
 - **Puzzles are shared.** Once someone mends the bridge, feeds the blast door or switches off the veil, it stays open for everyone, and the save remembers it. A late joiner finds the paths already open, which suits a co-op evening.
-- **The specimens sit behind the puzzles,** one kind behind each: skyfern past the bridge, glowcap in the cavern, ruin orchid on the overlook. Sampling has a 60% chance of a seed for the hab's grow beds.
+- **The specimens sit behind the puzzles,** one kind behind each: skyfern past the bridge, glowcap in the cavern, ruin orchid on the overlook. Sampling has a 60% chance of a seed for the hab's grow beds. Each click gives one specimen, and only one of each kind goes in your pack: sample one you already carry and you just rummage for seeds (and a bit of XP).
 - **The survey log is a line in the quest journal**, not its own window.
 
 ## After the first look (Cooper's feedback)
 
 - **Every mech component needs level 15**, and refined sub-parts: refined metal (10 scrap at the metal press, Engineering 12), control boards (3 relic circuitry and a refined metal at the weapons bench, 13) and servo assemblies (a servo actuator and 2 refined metal at the metal press, 14). The hab workbench can make all three. A full walker takes about 34 refined metal, so roughly 340 scrap.
 - **The new areas sit far off in the void** (Undercroft at 0,220, Deadfields at 260,0, Quiet Reach at 260,220), past the fog, so none can be seen from the Scrapyard. A save with a player or the mech in an area's old place puts them back at spawn or on the pad.
-- **Scenery is clickable; trees and rocks are solid.** Most decor props and the rocks have a hitbox with a right-click Inspect. Dead trees and stones (`"blocks_movement": true` in `data/decor.json`) block walking but not shots; the rest can be walked through. `npm run check-reach` (also run by the tests) checks that every station, node and NPC can still be reached from spawn once the puzzles are solved. Flat things (grass, puddles, flowers, cables, creepers) have no hitbox (`"inspect": false`).
+- **Scenery is clickable; trees and rocks are solid.** Most decor props and the rocks have a hitbox with a right-click Inspect. Dead trees and stones (`"blocks_movement": true` in `data/decor.json`) block walking but not shots; the rest can be walked through. `npm run check-reach` (also run by the tests) checks that every station, node and NPC can still be reached from spawn once the puzzles are solved. Flat things (grass, flowers, cables, creepers) have no hitbox (`"inspect": false`). Puddles, coolant pools and slag do, so they can be examined.
 - **People are dressed as pilots.** The foreman, the scrap artist and the surveyor have a `look` and `cosmetics` in `data/npcs.json`, drawn with the player model's parts.
 - **The survey lift runs out on a cable**, level from the tower and off the edge of the map, fading out (`"cable"` on the lift stations).
 

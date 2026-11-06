@@ -34,6 +34,7 @@ export class MessageLog {
       for (const event of ClientState.world.events) {
         if (event.type === 'chat') this.pushChat(event.data.name, event.data.text, event.entity === ClientState.localPlayerId);
         else if (event.type === 'broadcast') this.push(event.data.text, 'broadcast');
+        else if (event.type === 'say' && event.data.to === ClientState.localPlayerId) this.pushChat(event.data.name, event.data.text, false);
         else if (event.entity !== ClientState.localPlayerId) continue;
         else if (event.type === 'message') this.push(event.data.text);
         else if (event.type === 'trade_request') this._tradeRequest(event.data.from, event.data.name);

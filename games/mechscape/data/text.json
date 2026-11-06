@@ -21,5 +21,7 @@
  "hab.rested": "You feel rested. +{bonus}% XP for the next {minutes} minutes.",
  "hab.too_bare": "The hab's a bit bare to really rest in (comfort {comfort} of {needed}). More furniture would help.",
  "hab.trophy_wall_bare": "The trophy wall is bare. Trophies come from tough fights: {trophies}...",
- "survey.puzzle_solved": "{player} got the {puzzle|lower} working in the {area}."
+ "survey.puzzle_solved": "{player} got the {puzzle|lower} working in the {area}.",
+ "survey.puzzle_needs": "The {puzzle} will take {count} {item}. You've got {have}.",
+ "quest.lost_items": "Hang on, you're missing something {quest} needs. Your journal flips back a page."
 }

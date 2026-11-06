@@ -162,6 +162,19 @@ input.number { width: 110px; }
 .minimap-map { width: 172px; height: 172px; border-radius: 50%; display: block; cursor: pointer; box-shadow: 0 0 0 3px rgba(20, 23, 28, 0.9), 0 0 0 4px rgba(255, 255, 255, 0.18); }
 .minimap-compass { position: absolute; left: -4px; top: -4px; width: 34px; height: 34px; padding: 0; border-radius: 50%; background: var(--panel-solid); }
 .minimap-compass .needle { width: 100%; height: 100%; display: flex; align-items: flex-start; justify-content: center; font-size: 12px; font-weight: 700; color: rgb(255, 110, 100); line-height: 1; padding-top: 3px; }
+.minimap-globes { position: absolute; left: -54px; top: 46px; display: flex; flex-direction: column; gap: 6px; }
+.globe { display: flex; align-items: center; gap: 4px; padding: 0; background: none; border: none; cursor: default; flex-direction: row-reverse; }
+.globe-run { cursor: pointer; }
+.globe-ball { position: relative; width: 30px; height: 30px; border-radius: 50%; overflow: hidden; background: rgb(28, 30, 34); box-shadow: 0 0 0 2px rgba(20, 23, 28, 0.9), 0 0 0 3px rgba(255, 255, 255, 0.18); }
+.globe-fill { position: absolute; left: 0; right: 0; bottom: 0; height: 100%; transition: height 0.3s; }
+.globe-hp .globe-fill { background: radial-gradient(circle at 35% 30%, rgb(235, 80, 70), rgb(140, 20, 20)); }
+.globe-hp.low .globe-fill { animation: globe-pulse 0.8s ease-in-out infinite alternate; }
+.globe-run .globe-fill { background: radial-gradient(circle at 35% 30%, rgb(250, 220, 90), rgb(170, 120, 20)); }
+.globe-icon { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; font-size: 15px; color: rgba(255, 255, 255, 0.9); text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8); }
+.globe-value { font-size: 12px; font-weight: 700; color: rgb(120, 255, 120); text-shadow: 1px 1px 0 #000; min-width: 22px; text-align: right; }
+.globe-run .globe-value { color: rgb(230, 230, 230); }
+.globe-run.on .globe-value { color: rgb(255, 225, 90); }
+@keyframes globe-pulse { from { opacity: 1; } to { opacity: 0.55; } }
 .minimap-caption { font-size: 12px; color: var(--muted); text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.8); min-height: 15px; }
 
 /* Player panel (bottom-right, tabs along its bottom edge so they stay put whatever the page's height) */
@@ -219,7 +232,8 @@ input.number { width: 110px; }
 .storage-inventory { display: grid; grid-template-columns: repeat(4, 116px); gap: 4px; margin-top: 4px; }
 .cell { height: 34px; background: var(--cell); border-radius: 4px; padding: 4px; display: flex; align-items: center; gap: 6px; cursor: default; }
 .cell .swatch { width: 16px; height: 16px; }
-.cell-name { font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; }
+.cell-name { font-size: 12px; overflow: hidden; white-space: nowrap; text-overflow: ellipsis; flex: 1 1 auto; min-width: 0; }
+.cell-count { font-size: 12px; font-weight: bold; color: #ffd84a; flex: 0 0 auto; text-shadow: 1px 1px 0 #000; }
 .cell:hover { background: var(--hover); }
 .trade-window { z-index: 24; display: flex; flex-direction: column; gap: 8px; }
 .trade-window .columns { display: flex; gap: 16px; align-items: flex-start; }
